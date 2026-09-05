@@ -1,0 +1,186 @@
+from datetime import datetime
+
+from dishka.integrations.fastapi import FromDishka, inject
+from fastapi import APIRouter, Query, status
+
+from apps.api.deps.auth import CurrentUser
+from modules.tasks.domain.enums import TaskStatus
+from modules.tasks.dtos.task_dtos import (
+    TaskBulkUpdateDTO,
+    TaskCreateDTO,
+    TaskUpdateDTO,
+)
+from modules.tasks.use_cases import (
+    BulkUpdateTasksUseCase,
+    CreateTaskUseCase,
+    DeleteTaskUseCase,
+    GetTaskUseCase,
+    ListTasksUseCase,
+    UpdateTaskUseCase,
+)
+
+router = APIRouter(prefix="/api/v1/tasks", tags=["Tasks"])
+
+
+@router.get(
+    "",
+    summary="List tasks with query filters",
+)
+@inject
+async def list_tasks(
+    current_user: CurrentUser,
+    use_case: FromDishka[ListTasksUseCase],
+    workspace_id: str = Query(..., alias="workspaceId"),
+    project_id: str | None = Query(None, alias="projectId"),
+    assignee_id: str | None = Query(None, alias="assigneeId"),
+    task_status: TaskStatus | None = Query(None, alias="status"),
+    search: str | None = Query(None),
+    due_date: datetime | str | None = Query(None, alias="dueDate"),
+) -> dict:
+    parsed_due_date = None
+    if isinstance(due_date, str):
+        try:
+            parsed_due_date = datetime.fromisoformat(due_date.replace("Z", "+00:00"))
+        except Exception:
+            pass
+    elif isinstance(due_date, datetime):
+        parsed_due_date = due_date
+
+    result = await use_case.execute(
+        workspace_id=workspace_id,
+        user_id=str(current_user.id),
+        project_id=project_id,
+        assignee_id=assignee_id,
+        status=task_status,
+        search=search,
+        due_date=parsed_due_date,
+    )
+    return {"data": result}
+
+
+@router.post(
+    "",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new task",
+)
+@inject
+async def create_task(
+    payload: TaskCreateDTO,
+    current_user: CurrentUser,
+    use_case: FromDishka[CreateTaskUseCase],
+) -> dict:
+    parsed_due_date = None
+    if isinstance(payload.due_date, str):
+        try:
+            parsed_due_date = datetime.fromisoformat(
+                payload.due_date.replace("Z", "+00:00")
+            )
+        except Exception:
+            pass
+    elif isinstance(payload.due_date, datetime):
+        parsed_due_date = payload.due_date
+
+    result = await use_case.execute(
+        name=payload.name,
+        status=payload.status,
+        workspace_id=payload.workspace_id,
+        project_id=payload.project_id,
+        user_id=str(current_user.id),
+        due_date=parsed_due_date,
+        assignee_id=payload.assignee_id,
+        description=payload.description,
+    )
+    return {"data": result}
+
+
+@router.get(
+    "/{task_id}",
+    summary="Get single task details",
+)
+@inject
+async def get_task(
+    task_id: str,
+    current_user: CurrentUser,
+    use_case: FromDishka[GetTaskUseCase],
+) -> dict:
+    result = await use_case.execute(
+        task_id=task_id,
+        user_id=str(current_user.id),
+    )
+    return {"data": result}
+
+
+@router.patch(
+    "/{task_id}",
+    summary="Update task",
+)
+@inject
+async def update_task(
+    task_id: str,
+    payload: TaskUpdateDTO,
+    current_user: CurrentUser,
+    use_case: FromDishka[UpdateTaskUseCase],
+) -> dict:
+    parsed_due_date = None
+    if isinstance(payload.due_date, str):
+        try:
+            parsed_due_date = datetime.fromisoformat(
+                payload.due_date.replace("Z", "+00:00")
+            )
+        except Exception:
+            pass
+    elif isinstance(payload.due_date, datetime):
+        parsed_due_date = payload.due_date
+
+    result = await use_case.execute(
+        task_id=task_id,
+        user_id=str(current_user.id),
+        name=payload.name,
+        status=payload.status,
+        project_id=payload.project_id,
+        assignee_id=payload.assignee_id,
+        due_date=parsed_due_date,
+        description=payload.description,
+    )
+    return {"data": result}
+
+
+@router.post(
+    "/bulk-update",
+    summary="Bulk update task positions and status",
+)
+@inject
+async def bulk_update_tasks(
+    payload: TaskBulkUpdateDTO,
+    current_user: CurrentUser,
+    use_case: FromDishka[BulkUpdateTasksUseCase],
+) -> dict:
+    updated = await use_case.execute(
+        items=payload.tasks,
+        user_id=str(current_user.id),
+    )
+    workspace_id = updated[0].workspace_id if updated else ""
+    return {
+        "data": {
+            "updatedTasks": updated,
+            "workspaceId": workspace_id,
+            "workspace_id": workspace_id,
+        }
+    }
+
+
+@router.delete(
+    "/{task_id}",
+    summary="Delete task",
+)
+@inject
+async def delete_task(
+    task_id: str,
+    current_user: CurrentUser,
+    use_case: FromDishka[DeleteTaskUseCase],
+) -> dict:
+    await use_case.execute(
+        task_id=task_id,
+        user_id=str(current_user.id),
+    )
+    return {"data": {"id": task_id}}

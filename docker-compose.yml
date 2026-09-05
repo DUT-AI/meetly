@@ -1,0 +1,121 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: meetly-db
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-meetly}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-meetly_password}
+      POSTGRES_DB: ${POSTGRES_DB:-meetly_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - meetly-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-meetly} -d ${POSTGRES_DB:-meetly_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: meetly-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - meetly-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  minio:
+    image: minio/minio:latest
+    container_name: meetly-minio
+    restart: always
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-meetly_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-meetly_minio_secret}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    networks:
+      - meetly-net
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  createbuckets:
+    image: minio/mc:latest
+    container_name: meetly-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    networks:
+      - meetly-net
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-meetly_minio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-meetly_minio_secret}
+      DEFAULT_BUCKET: ${DEFAULT_BUCKET:-meetly-uploads}
+    entrypoint: >
+      /bin/sh -c "
+      /usr/bin/mc alias set myminio http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD};
+      /usr/bin/mc mb --ignore-existing myminio/$${DEFAULT_BUCKET};
+      /usr/bin/mc anonymous set download myminio/$${DEFAULT_BUCKET};
+      exit 0;
+      "
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: meetly-api
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./.env
+    networks:
+      - meetly-net
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      createbuckets:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: meetly-web
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./web/.env
+    networks:
+      - meetly-net
+
+networks:
+  meetly-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:

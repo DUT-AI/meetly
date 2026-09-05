@@ -1,0 +1,363 @@
+import random
+import string
+from typing import BinaryIO
+
+from core.config import s3_settings
+from core.exceptions import BadRequestException, ForbiddenException, NotFoundException
+from core.storage.interface import IStorageProvider
+from core.storage.url_builder import parse_storage_uri
+from modules.members.domain.enums import MemberRole
+from modules.members.domain.interfaces import IMemberRepository
+from modules.workspaces.domain.interfaces import IWorkspaceRepository
+from modules.workspaces.dtos.workspace_dtos import (
+    WorkspaceAnalyticsDTO,
+    WorkspaceInfoResponseDTO,
+    WorkspaceListResponseDTO,
+    WorkspaceResponseDTO,
+)
+
+
+def generate_invite_code(length: int = 6) -> str:
+    chars = string.ascii_letters + string.digits
+    return "".join(random.choices(chars, k=length))
+
+
+class CreateWorkspaceUseCase:
+    """Create a new workspace and add creator as ADMIN."""
+
+    def __init__(
+        self,
+        workspace_repo: IWorkspaceRepository,
+        member_repo: IMemberRepository,
+        storage_provider: IStorageProvider,
+    ) -> None:
+        self.workspace_repo = workspace_repo
+        self.member_repo = member_repo
+        self.storage_provider = storage_provider
+
+    async def execute(
+        self,
+        name: str,
+        user_id: str,
+        image_data: BinaryIO | None = None,
+        image_filename: str | None = None,
+        content_type: str | None = None,
+    ) -> WorkspaceResponseDTO:
+        image_url: str | None = None
+        if image_data and image_filename:
+            file_ext = image_filename.split(".")[-1] if "." in image_filename else "png"
+            key = f"workspaces/{generate_invite_code(12)}.{file_ext}"
+            image_url = await self.storage_provider.upload(
+                bucket=s3_settings.default_bucket,
+                key=key,
+                data=image_data,
+                content_type=content_type or "image/png",
+            )
+            image_url = self.storage_provider.build_public_url(image_url)
+
+        invite_code = generate_invite_code(6)
+        ws = await self.workspace_repo.create(
+            name=name,
+            owner_id=user_id,
+            invite_code=invite_code,
+            image_url=image_url,
+        )
+
+        # Automatically add creator as ADMIN
+        await self.member_repo.add_member(
+            workspace_id=ws.id,
+            user_id=user_id,
+            role=MemberRole.ADMIN,
+        )
+
+        return WorkspaceResponseDTO(
+            id=ws.id,
+            name=ws.name,
+            owner_id=ws.owner_id,
+            invite_code=ws.invite_code,
+            image_url=ws.image_url,
+            created_at=ws.created_at,
+            updated_at=ws.updated_at,
+        )
+
+
+class ListUserWorkspacesUseCase:
+    """List all workspaces where current user is a member."""
+
+    def __init__(
+        self,
+        workspace_repo: IWorkspaceRepository,
+        member_repo: IMemberRepository,
+    ) -> None:
+        self.workspace_repo = workspace_repo
+        self.member_repo = member_repo
+
+    async def execute(self, user_id: str) -> WorkspaceListResponseDTO:
+        memberships = await self.member_repo.list_by_user(user_id)
+        if not memberships:
+            return WorkspaceListResponseDTO(documents=[], total=0)
+
+        workspace_ids = [m.workspace_id for m in memberships]
+        workspaces = await self.workspace_repo.get_by_ids(workspace_ids)
+
+        documents = [
+            WorkspaceResponseDTO(
+                id=ws.id,
+                name=ws.name,
+                owner_id=ws.owner_id,
+                invite_code=ws.invite_code,
+                image_url=ws.image_url,
+                created_at=ws.created_at,
+                updated_at=ws.updated_at,
+            )
+            for ws in workspaces
+        ]
+        return WorkspaceListResponseDTO(documents=documents, total=len(documents))
+
+
+class GetWorkspaceUseCase:
+    """Get single workspace by ID."""
+
+    def __init__(
+        self,
+        workspace_repo: IWorkspaceRepository,
+        member_repo: IMemberRepository,
+    ) -> None:
+        self.workspace_repo = workspace_repo
+        self.member_repo = member_repo
+
+    async def execute(self, workspace_id: str, user_id: str) -> WorkspaceResponseDTO:
+        member = await self.member_repo.get_member(workspace_id, user_id)
+        if not member:
+            raise ForbiddenException("Unauthorized.")
+
+        ws = await self.workspace_repo.get_by_id(workspace_id)
+        if not ws:
+            raise NotFoundException("Workspace not found.")
+
+        return WorkspaceResponseDTO(
+            id=ws.id,
+            name=ws.name,
+            owner_id=ws.owner_id,
+            invite_code=ws.invite_code,
+            image_url=ws.image_url,
+            created_at=ws.created_at,
+            updated_at=ws.updated_at,
+        )
+
+
+class GetWorkspaceInfoUseCase:
+    """Get public summary of workspace for invite link."""
+
+    def __init__(self, workspace_repo: IWorkspaceRepository) -> None:
+        self.workspace_repo = workspace_repo
+
+    async def execute(self, workspace_id: str) -> WorkspaceInfoResponseDTO:
+        ws = await self.workspace_repo.get_by_id(workspace_id)
+        if not ws:
+            raise NotFoundException("Workspace not found.")
+        return WorkspaceInfoResponseDTO(id=ws.id, name=ws.name, image_url=ws.image_url)
+
+
+class UpdateWorkspaceUseCase:
+    """Update workspace name or image (ADMIN only)."""
+
+    def __init__(
+        self,
+        workspace_repo: IWorkspaceRepository,
+        member_repo: IMemberRepository,
+        storage_provider: IStorageProvider,
+    ) -> None:
+        self.workspace_repo = workspace_repo
+        self.member_repo = member_repo
+        self.storage_provider = storage_provider
+
+    async def execute(
+        self,
+        workspace_id: str,
+        user_id: str,
+        name: str | None = None,
+        image_data: BinaryIO | None = None,
+        image_filename: str | None = None,
+        content_type: str | None = None,
+    ) -> WorkspaceResponseDTO:
+        member = await self.member_repo.get_member(workspace_id, user_id)
+        if not member or member.role != MemberRole.ADMIN:
+            raise ForbiddenException("Unauthorized.")
+
+        ws = await self.workspace_repo.get_by_id(workspace_id)
+        if not ws:
+            raise NotFoundException("Workspace not found.")
+
+        new_image_url: str | None = None
+        if image_data and image_filename:
+            file_ext = image_filename.split(".")[-1] if "." in image_filename else "png"
+            key = f"workspaces/{generate_invite_code(12)}.{file_ext}"
+            new_image_url = await self.storage_provider.upload(
+                bucket=s3_settings.default_bucket,
+                key=key,
+                data=image_data,
+                content_type=content_type or "image/png",
+            )
+            new_image_url = self.storage_provider.build_public_url(new_image_url)
+
+            # Delete old image if existed
+            if ws.image_url:
+                try:
+                    bucket, old_key = parse_storage_uri(
+                        ws.image_url, s3_settings.default_bucket
+                    )
+                    await self.storage_provider.delete(bucket, old_key)
+                except Exception:
+                    pass
+
+        updated = await self.workspace_repo.update(
+            workspace_id=workspace_id,
+            name=name,
+            image_url=new_image_url,
+        )
+        return WorkspaceResponseDTO(
+            id=updated.id,
+            name=updated.name,
+            owner_id=updated.owner_id,
+            invite_code=updated.invite_code,
+            image_url=updated.image_url,
+            created_at=updated.created_at,
+            updated_at=updated.updated_at,
+        )
+
+
+class DeleteWorkspaceUseCase:
+    """Delete workspace (ADMIN only)."""
+
+    def __init__(
+        self,
+        workspace_repo: IWorkspaceRepository,
+        member_repo: IMemberRepository,
+        storage_provider: IStorageProvider,
+    ) -> None:
+        self.workspace_repo = workspace_repo
+        self.member_repo = member_repo
+        self.storage_provider = storage_provider
+
+    async def execute(self, workspace_id: str, user_id: str) -> None:
+        member = await self.member_repo.get_member(workspace_id, user_id)
+        if not member or member.role != MemberRole.ADMIN:
+            raise ForbiddenException("Unauthorized.")
+
+        ws = await self.workspace_repo.get_by_id(workspace_id)
+        if not ws:
+            raise NotFoundException("Workspace not found.")
+
+        if ws.image_url:
+            try:
+                bucket, key = parse_storage_uri(
+                    ws.image_url, s3_settings.default_bucket
+                )
+                await self.storage_provider.delete(bucket, key)
+            except Exception:
+                pass
+
+        await self.workspace_repo.delete(workspace_id)
+
+
+class ResetInviteCodeUseCase:
+    """Generate a new invite code for workspace (ADMIN only)."""
+
+    def __init__(
+        self,
+        workspace_repo: IWorkspaceRepository,
+        member_repo: IMemberRepository,
+    ) -> None:
+        self.workspace_repo = workspace_repo
+        self.member_repo = member_repo
+
+    async def execute(self, workspace_id: str, user_id: str) -> WorkspaceResponseDTO:
+        member = await self.member_repo.get_member(workspace_id, user_id)
+        if not member or member.role != MemberRole.ADMIN:
+            raise ForbiddenException("Unauthorized.")
+
+        new_code = generate_invite_code(6)
+        updated = await self.workspace_repo.update(
+            workspace_id=workspace_id, invite_code=new_code
+        )
+        return WorkspaceResponseDTO(
+            id=updated.id,
+            name=updated.name,
+            owner_id=updated.owner_id,
+            invite_code=updated.invite_code,
+            image_url=updated.image_url,
+            created_at=updated.created_at,
+            updated_at=updated.updated_at,
+        )
+
+
+class JoinWorkspaceUseCase:
+    """Join workspace using invite code."""
+
+    def __init__(
+        self,
+        workspace_repo: IWorkspaceRepository,
+        member_repo: IMemberRepository,
+    ) -> None:
+        self.workspace_repo = workspace_repo
+        self.member_repo = member_repo
+
+    async def execute(
+        self, workspace_id: str, code: str, user_id: str
+    ) -> WorkspaceResponseDTO:
+        member = await self.member_repo.get_member(workspace_id, user_id)
+        if member:
+            raise BadRequestException("Already a member.")
+
+        ws = await self.workspace_repo.get_by_id(workspace_id)
+        if not ws:
+            raise NotFoundException("Workspace not found.")
+
+        if ws.invite_code != code:
+            raise BadRequestException("Invalid invite code.")
+
+        await self.member_repo.add_member(
+            workspace_id=workspace_id, user_id=user_id, role=MemberRole.MEMBER
+        )
+
+        return WorkspaceResponseDTO(
+            id=ws.id,
+            name=ws.name,
+            owner_id=ws.owner_id,
+            invite_code=ws.invite_code,
+            image_url=ws.image_url,
+            created_at=ws.created_at,
+            updated_at=ws.updated_at,
+        )
+
+
+class GetWorkspaceAnalyticsUseCase:
+    """Compute analytics for tasks in a workspace."""
+
+    def __init__(
+        self,
+        workspace_repo: IWorkspaceRepository,
+        member_repo: IMemberRepository,
+    ) -> None:
+        self.workspace_repo = workspace_repo
+        self.member_repo = member_repo
+
+    async def execute(self, workspace_id: str, user_id: str) -> WorkspaceAnalyticsDTO:
+        member = await self.member_repo.get_member(workspace_id, user_id)
+        if not member:
+            raise ForbiddenException("Unauthorized.")
+
+        # Default analytics zeros (will be enhanced via task stats)
+        return WorkspaceAnalyticsDTO(
+            task_count=0,
+            task_difference=0,
+            assigned_task_count=0,
+            assigned_task_difference=0,
+            completed_task_count=0,
+            completed_task_difference=0,
+            incomplete_task_count=0,
+            incomplete_task_difference=0,
+            overdue_task_count=0,
+            overdue_task_difference=0,
+        )
