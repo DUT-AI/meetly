@@ -88,7 +88,7 @@ export const globalColumns = columnHelper.columns([
         <div className="flex items-center gap-x-2 text-sm font-medium">
           <ProjectAvatar className="size-6" name={project.name} image={project.imageUrl} />
           <Link
-            href={`/workspaces/${workspaceId}/projects/${project.$id}`}
+            href={`/workspaces/${workspaceId}/projects/${project.$id || project.id}`}
             className="line-clamp-1 hover:underline text-neutral-700"
           >
             {project.name}

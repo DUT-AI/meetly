@@ -1,5 +1,5 @@
 import { type Member, normalizeMember } from '@/features/members/types';
-import type { Project } from '@/features/projects/types';
+import { type Project, normalizeProject } from '@/features/projects/types';
 
 export enum TaskStatus {
   BACKLOG = 'BACKLOG',
@@ -138,7 +138,7 @@ export function normalizeTask(t: any): PopulatedTask {
     dueDate: t.dueDate ?? t.due_date,
     due_date: t.due_date ?? t.dueDate,
     description: t.description || undefined,
-    project: t.project,
+    project: t.project ? normalizeProject(t.project) : t.project,
     assignee: t.assignee ? normalizeMember(t.assignee) : t.assignee,
     workspace: t.workspace,
     $createdAt: t.$createdAt ?? t.created_at,
