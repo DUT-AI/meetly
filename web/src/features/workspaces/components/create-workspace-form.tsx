@@ -74,7 +74,7 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
   return (
     <Card className="size-full border-none shadow-none">
       <CardHeader className="flex p-7">
-        <CardTitle className="text-xl font-bold">Create a new workspace</CardTitle>
+        <CardTitle className="text-xl font-bold">Tạo phòng ban mới</CardTitle>
       </CardHeader>
 
       <div className="px-7">
@@ -91,10 +91,10 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Workspace Name</FormLabel>
+                    <FormLabel>Tên phòng ban</FormLabel>
 
                     <FormControl>
-                      <Input {...field} type="text" placeholder="Enter workspace name" />
+                      <Input {...field} type="text" placeholder="Nhập tên phòng ban (ví dụ: Phòng Công nghệ, Phòng Marketing)" />
                     </FormControl>
 
                     <FormMessage />
@@ -113,7 +113,7 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                         <div className="relative size-[72px] overflow-hidden rounded-md">
                           <Image
                             src={field.value instanceof File ? URL.createObjectURL(field.value) : field.value}
-                            alt="Workspace Logo"
+                            alt="Logo phòng ban"
                             fill
                             className="object-cover"
                           />
@@ -127,8 +127,8 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                       )}
 
                       <div className="flex flex-col">
-                        <p className="text-sm">Workspace Icon</p>
-                        <p className="text-xs text-muted-foreground">JPG, PNG, or JPEG, max 1MB</p>
+                        <p className="text-sm font-medium">Biểu tượng phòng ban</p>
+                        <p className="text-xs text-muted-foreground">JPG, PNG, hoặc JPEG, tối đa 1MB</p>
 
                         <input
                           type="file"
@@ -152,7 +152,7 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                               if (inputRef.current) inputRef.current.value = '';
                             }}
                           >
-                            Remove Image
+                            Xóa ảnh
                           </Button>
                         ) : (
                           <Button
@@ -163,7 +163,7 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                             className="mt-2 w-fit"
                             onClick={() => inputRef.current?.click()}
                           >
-                            Upload Image
+                            Tải ảnh lên
                           </Button>
                         )}
                       </div>
@@ -184,11 +184,11 @@ export const CreateWorkspaceForm = ({ onCancel }: CreateWorkspaceFormProps) => {
                 onClick={onCancel}
                 className={cn(!onCancel && 'invisible')}
               >
-                Cancel
+                Hủy
               </Button>
 
               <Button disabled={isPending} type="submit" size="lg">
-                Create workspace
+                Tạo phòng ban
               </Button>
             </div>
           </form>

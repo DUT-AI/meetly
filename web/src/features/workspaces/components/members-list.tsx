@@ -19,7 +19,7 @@ import { useConfirm } from '@/hooks/use-confirm';
 
 export const MembersList = () => {
   const workspaceId = useWorkspaceId();
-  const [ConfirmDialog, confirm] = useConfirm('Remove member', 'This member will be removed from this workspace.', 'destructive');
+  const [ConfirmDialog, confirm] = useConfirm('Xóa nhân sự', 'Nhân sự này sẽ bị xóa khỏi phòng ban.', 'destructive');
 
   const { data: members } = useGetMembers({ workspaceId });
   const { mutate: deleteMember, isPending: isDeletingMember } = useDeleteMember();
@@ -57,11 +57,11 @@ export const MembersList = () => {
         <Button variant="secondary" size="sm" asChild>
           <Link href={`/workspaces/${workspaceId}`}>
             <ArrowLeft className="mr-2 size-4" />
-            Back
+            Quay lại
           </Link>
         </Button>
 
-        <CardTitle className="text-xl font-bold">Members list</CardTitle>
+        <CardTitle className="text-xl font-bold">Danh sách nhân sự phòng ban</CardTitle>
       </CardHeader>
 
       <div className="px-7">
@@ -72,16 +72,16 @@ export const MembersList = () => {
         {members?.documents.map((member, i) => (
           <Fragment key={member.$id}>
             <div className="flex items-center gap-2">
-              <MemberAvatar name={member.name} className="size-10" fallbackClassName="text-lg" />
+              <MemberAvatar name={member.name} image={member.avatar_url} className="size-10" fallbackClassName="text-lg" />
 
               <div className="flex flex-col">
                 <p className="text-sm font-medium">{member.name}</p>
-                <p className="to-muted-foreground text-xs">{member.email}</p>
+                <p className="text-muted-foreground text-xs">{member.email}</p>
               </div>
 
               <DropdownMenu>
                 <DropdownMenuTrigger disabled={isPending} asChild>
-                  <Button title="View options" className="ml-auto" variant="secondary" size="icon">
+                  <Button title="Tùy chọn" className="ml-auto" variant="secondary" size="icon">
                     <MoreVertical className="size-4 text-muted-foreground" />
                   </Button>
                 </DropdownMenuTrigger>
@@ -92,7 +92,7 @@ export const MembersList = () => {
                     onClick={() => handleUpdateMember(member.$id, MemberRole.ADMIN)}
                     disabled={isPending}
                   >
-                    Set as Administrator
+                    Chỉ định làm Trưởng phòng (Admin)
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
@@ -100,7 +100,7 @@ export const MembersList = () => {
                     onClick={() => handleUpdateMember(member.$id, MemberRole.MEMBER)}
                     disabled={isPending}
                   >
-                    Set as Member
+                    Chỉ định làm Nhân viên (Member)
                   </DropdownMenuItem>
 
                   <DropdownMenuItem
@@ -108,7 +108,7 @@ export const MembersList = () => {
                     onClick={() => handleDeleteMember(member.$id)}
                     disabled={isPending}
                   >
-                    Remove {member.name}
+                    Xóa khỏi phòng ban
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

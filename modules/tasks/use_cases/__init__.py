@@ -3,6 +3,7 @@ from modules.tasks.use_cases.task_use_cases import (
     CreateTaskUseCase,
     DeleteTaskUseCase,
     GetTaskUseCase,
+    ListMyGlobalTasksUseCase,
     ListTasksUseCase,
     UpdateTaskUseCase,
 )
@@ -12,6 +13,7 @@ __all__ = [
     "CreateTaskUseCase",
     "DeleteTaskUseCase",
     "GetTaskUseCase",
+    "ListMyGlobalTasksUseCase",
     "ListTasksUseCase",
     "UpdateTaskUseCase",
 ]

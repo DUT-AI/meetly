@@ -45,6 +45,7 @@ class LoginUseCase:
             "sub": str(auth_user.id),
             "email": auth_user.email,
             "name": auth_user.name,
+            "avatar_url": auth_user.avatar_url,
             "role_names": auth_user.role_names,
         }
         platform_access_token = create_access_token(platform_jwt_claims)

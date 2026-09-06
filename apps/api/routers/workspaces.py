@@ -2,18 +2,26 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, File, Form, UploadFile, status
 
 from apps.api.deps.auth import CurrentUser
+from modules.workspaces.dtos.label_dtos import (
+    WorkspaceLabelCreateDTO,
+    WorkspaceLabelUpdateDTO,
+)
 from modules.workspaces.dtos.workspace_dtos import (
     WorkspaceJoinDTO,
 )
 from modules.workspaces.use_cases import (
+    CreateWorkspaceLabelUseCase,
     CreateWorkspaceUseCase,
+    DeleteWorkspaceLabelUseCase,
     DeleteWorkspaceUseCase,
     GetWorkspaceAnalyticsUseCase,
     GetWorkspaceInfoUseCase,
     GetWorkspaceUseCase,
     JoinWorkspaceUseCase,
     ListUserWorkspacesUseCase,
+    ListWorkspaceLabelsUseCase,
     ResetInviteCodeUseCase,
+    UpdateWorkspaceLabelUseCase,
     UpdateWorkspaceUseCase,
 )
 
@@ -185,3 +193,85 @@ async def get_workspace_analytics(
         user_id=str(current_user.id),
     )
     return {"data": result}
+
+
+# --- Workspace Labels Endpoints ---
+
+
+@router.get(
+    "/{workspace_id}/labels",
+    summary="List workspace labels",
+)
+@inject
+async def list_workspace_labels(
+    workspace_id: str,
+    current_user: CurrentUser,
+    use_case: FromDishka[ListWorkspaceLabelsUseCase],
+) -> dict:
+    result = await use_case.execute(
+        workspace_id=workspace_id,
+        user_id=str(current_user.id),
+    )
+    return {"data": result}
+
+
+@router.post(
+    "/{workspace_id}/labels",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new workspace label",
+)
+@inject
+async def create_workspace_label(
+    workspace_id: str,
+    payload: WorkspaceLabelCreateDTO,
+    current_user: CurrentUser,
+    use_case: FromDishka[CreateWorkspaceLabelUseCase],
+) -> dict:
+    result = await use_case.execute(
+        workspace_id=workspace_id,
+        user_id=str(current_user.id),
+        name=payload.name,
+        color=payload.color,
+    )
+    return {"data": result}
+
+
+@router.patch(
+    "/{workspace_id}/labels/{label_id}",
+    summary="Update a workspace label",
+)
+@inject
+async def update_workspace_label(
+    workspace_id: str,
+    label_id: str,
+    payload: WorkspaceLabelUpdateDTO,
+    current_user: CurrentUser,
+    use_case: FromDishka[UpdateWorkspaceLabelUseCase],
+) -> dict:
+    result = await use_case.execute(
+        workspace_id=workspace_id,
+        label_id=label_id,
+        user_id=str(current_user.id),
+        name=payload.name,
+        color=payload.color,
+    )
+    return {"data": result}
+
+
+@router.delete(
+    "/{workspace_id}/labels/{label_id}",
+    summary="Delete a workspace label",
+)
+@inject
+async def delete_workspace_label(
+    workspace_id: str,
+    label_id: str,
+    current_user: CurrentUser,
+    use_case: FromDishka[DeleteWorkspaceLabelUseCase],
+) -> dict:
+    await use_case.execute(
+        workspace_id=workspace_id,
+        label_id=label_id,
+        user_id=str(current_user.id),
+    )
+    return {"data": {"id": label_id}}

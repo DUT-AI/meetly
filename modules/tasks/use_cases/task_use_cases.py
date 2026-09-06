@@ -6,7 +6,7 @@ from modules.members.domain.interfaces import IMemberRepository
 from modules.members.dtos.member_dtos import MemberResponseDTO
 from modules.projects.domain.interfaces import IProjectRepository
 from modules.projects.dtos.project_dtos import ProjectResponseDTO
-from modules.tasks.domain.enums import TaskStatus
+from modules.tasks.domain.enums import TaskPriority, TaskStatus
 from modules.tasks.domain.interfaces import ITaskRepository
 from modules.tasks.dtos.task_dtos import (
     PopulatedTaskResponseDTO,
@@ -14,6 +14,8 @@ from modules.tasks.dtos.task_dtos import (
     TaskListResponseDTO,
     TaskResponseDTO,
 )
+from modules.workspaces.domain.interfaces import IWorkspaceRepository
+from modules.workspaces.dtos.workspace_dtos import WorkspaceInfoResponseDTO
 
 
 class CreateTaskUseCase:
@@ -34,6 +36,8 @@ class CreateTaskUseCase:
         workspace_id: str,
         project_id: str,
         user_id: str,
+        priority: TaskPriority = TaskPriority.MEDIUM,
+        labels: list[str] | None = None,
         due_date: datetime | None = None,
         assignee_id: str | None = None,
         description: str | None = None,
@@ -51,6 +55,8 @@ class CreateTaskUseCase:
             workspace_id=workspace_id,
             project_id=project_id,
             position=new_position,
+            priority=priority,
+            labels=labels or [],
             due_date=due_date,
             assignee_id=assignee_id,
             description=description,
@@ -60,6 +66,8 @@ class CreateTaskUseCase:
             id=task.id,
             name=task.name,
             status=task.status,
+            priority=task.priority,
+            labels=task.labels,
             workspace_id=task.workspace_id,
             project_id=task.project_id,
             assignee_id=task.assignee_id,
@@ -171,6 +179,8 @@ class ListTasksUseCase:
                     id=t.id,
                     name=t.name,
                     status=t.status,
+                    priority=t.priority,
+                    labels=t.labels,
                     workspace_id=t.workspace_id,
                     project_id=t.project_id,
                     assignee_id=t.assignee_id,
@@ -251,6 +261,8 @@ class GetTaskUseCase:
             id=task.id,
             name=task.name,
             status=task.status,
+            priority=task.priority,
+            labels=task.labels,
             workspace_id=task.workspace_id,
             project_id=task.project_id,
             assignee_id=task.assignee_id,
@@ -288,6 +300,8 @@ class UpdateTaskUseCase:
         user_id: str,
         name: str | None = None,
         status: TaskStatus | None = None,
+        priority: TaskPriority | None = None,
+        labels: list[str] | None = None,
         project_id: str | None = None,
         assignee_id: str | None = None,
         due_date: datetime | None = None,
@@ -305,6 +319,8 @@ class UpdateTaskUseCase:
             task_id=task_id,
             name=name,
             status=status,
+            priority=priority,
+            labels=labels,
             project_id=project_id,
             assignee_id=assignee_id,
             due_date=due_date,
@@ -315,6 +331,8 @@ class UpdateTaskUseCase:
             id=updated.id,
             name=updated.name,
             status=updated.status,
+            priority=updated.priority,
+            labels=updated.labels,
             workspace_id=updated.workspace_id,
             project_id=updated.project_id,
             assignee_id=updated.assignee_id,
@@ -365,6 +383,8 @@ class BulkUpdateTasksUseCase:
                 id=t.id,
                 name=t.name,
                 status=t.status,
+                priority=t.priority,
+                labels=t.labels,
                 workspace_id=t.workspace_id,
                 project_id=t.project_id,
                 assignee_id=t.assignee_id,
@@ -399,3 +419,142 @@ class DeleteTaskUseCase:
             raise ForbiddenException("Unauthorized.")
 
         await self.task_repo.delete(task_id)
+
+
+class ListMyGlobalTasksUseCase:
+    """List all tasks assigned to the current user across all workspaces they belong to."""
+
+    def __init__(
+        self,
+        task_repo: ITaskRepository,
+        member_repo: IMemberRepository,
+        workspace_repo: IWorkspaceRepository,
+        project_repo: IProjectRepository,
+        manage_client: ManageClient,
+    ) -> None:
+        self.task_repo = task_repo
+        self.member_repo = member_repo
+        self.workspace_repo = workspace_repo
+        self.project_repo = project_repo
+        self.manage_client = manage_client
+
+    async def execute(
+        self,
+        user_id: str,
+        status: TaskStatus | None = None,
+        search: str | None = None,
+        due_date: datetime | None = None,
+    ) -> TaskListResponseDTO:
+        user_memberships = await self.member_repo.list_by_user(user_id)
+        if not user_memberships:
+            return TaskListResponseDTO(documents=[], total=0)
+
+        workspace_ids = [m.workspace_id for m in user_memberships]
+        user_member_ids = [m.id for m in user_memberships]
+
+        tasks = await self.task_repo.list_by_workspace_ids(
+            workspace_ids=workspace_ids,
+            assignee_ids=user_member_ids,
+            status=status,
+            search=search,
+            due_date=due_date,
+        )
+
+        if not tasks:
+            return TaskListResponseDTO(documents=[], total=0)
+
+        # Batch fetch projects
+        project_ids = list({t.project_id for t in tasks})
+        projects = await self.project_repo.get_by_ids(project_ids)
+        project_map = {
+            p.id: ProjectResponseDTO(
+                id=p.id,
+                name=p.name,
+                workspace_id=p.workspace_id,
+                image_url=p.image_url,
+                created_at=p.created_at,
+                updated_at=p.updated_at,
+            )
+            for p in projects
+        }
+
+        # Batch fetch workspaces
+        task_ws_ids = list({t.workspace_id for t in tasks})
+        workspaces = await self.workspace_repo.get_by_ids(task_ws_ids)
+        workspace_map = {
+            w.id: WorkspaceInfoResponseDTO(
+                id=w.id,
+                name=w.name,
+                image_url=w.image_url,
+            )
+            for w in workspaces
+        }
+
+        # Assignee profiles
+        member_map = {m.id: m for m in user_memberships}
+        user_info_map: dict[str, dict[str, str | None]] = {}
+        try:
+            manage_resp = await self.manage_client.list_users(page=1, page_size=200)
+            for u in manage_resp.items:
+                user_info_map[str(u.id)] = {
+                    "name": u.name,
+                    "email": u.email,
+                    "avatar_url": u.avatar_url,
+                }
+        except Exception:
+            pass
+
+        populated: list[PopulatedTaskResponseDTO] = []
+        for t in tasks:
+            proj_dto = project_map.get(
+                t.project_id,
+                ProjectResponseDTO(
+                    id=t.project_id,
+                    name="Unknown Project",
+                    workspace_id=t.workspace_id,
+                    image_url=None,
+                    created_at=t.created_at,
+                    updated_at=t.updated_at,
+                ),
+            )
+
+            assignee_dto = None
+            if t.assignee_id and t.assignee_id in member_map:
+                m = member_map[t.assignee_id]
+                u_info = user_info_map.get(m.user_id, {})
+                assignee_dto = MemberResponseDTO(
+                    id=m.id,
+                    workspace_id=m.workspace_id,
+                    user_id=m.user_id,
+                    role=m.role,
+                    name=u_info.get("name") or "User",
+                    email=u_info.get("email") or "",
+                    avatar_url=u_info.get("avatar_url"),
+                    created_at=m.created_at,
+                    updated_at=m.updated_at,
+                )
+
+            ws_dto = workspace_map.get(t.workspace_id)
+
+            populated.append(
+                PopulatedTaskResponseDTO(
+                    id=t.id,
+                    name=t.name,
+                    status=t.status,
+                    priority=t.priority,
+                    labels=t.labels,
+                    workspace_id=t.workspace_id,
+                    project_id=t.project_id,
+                    assignee_id=t.assignee_id,
+                    position=t.position,
+                    due_date=t.due_date,
+                    description=t.description,
+                    created_at=t.created_at,
+                    updated_at=t.updated_at,
+                    project=proj_dto,
+                    assignee=assignee_dto,
+                    workspace=ws_dto,
+                )
+            )
+
+        return TaskListResponseDTO(documents=populated, total=len(populated))

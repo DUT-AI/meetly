@@ -5,7 +5,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from modules.tasks.domain.entities import TaskEntity
-from modules.tasks.domain.enums import TaskStatus
+from modules.tasks.domain.enums import TaskPriority, TaskStatus
 from modules.tasks.domain.interfaces import ITaskRepository
 from modules.tasks.models.task import TaskModel
 
@@ -23,6 +23,8 @@ class SqlTaskRepository(ITaskRepository):
         workspace_id: str,
         project_id: str,
         position: int,
+        priority: TaskPriority = TaskPriority.MEDIUM,
+        labels: list[str] | None = None,
         due_date: datetime | None = None,
         assignee_id: str | None = None,
         description: str | None = None,
@@ -30,6 +32,8 @@ class SqlTaskRepository(ITaskRepository):
         model = TaskModel(
             name=name,
             status=status.value,
+            priority=priority.value,
+            labels=labels or [],
             workspace_id=workspace_id,
             project_id=project_id,
             position=position,
@@ -92,11 +96,45 @@ class SqlTaskRepository(ITaskRepository):
         models = result.scalars().all()
         return [m.to_entity() for m in models]
 
+    async def list_by_workspace_ids(
+        self,
+        workspace_ids: Sequence[str],
+        assignee_ids: Sequence[str] | None = None,
+        status: TaskStatus | None = None,
+        search: str | None = None,
+        due_date: datetime | None = None,
+    ) -> list[TaskEntity]:
+        if not workspace_ids:
+            return []
+
+        stmt = (
+            select(TaskModel)
+            .where(TaskModel.workspace_id.in_(workspace_ids))
+            .order_by(
+                TaskModel.due_date.asc().nulls_last(), TaskModel.created_at.desc()
+            )
+        )
+
+        if assignee_ids is not None:
+            stmt = stmt.where(TaskModel.assignee_id.in_(assignee_ids))
+        if status:
+            stmt = stmt.where(TaskModel.status == status.value)
+        if due_date:
+            stmt = stmt.where(TaskModel.due_date <= due_date)
+        if search and search.strip():
+            stmt = stmt.where(TaskModel.name.ilike(f"%{search.strip()}%"))
+
+        result = await self.session.execute(stmt)
+        models = result.scalars().all()
+        return [m.to_entity() for m in models]
+
     async def update(
         self,
         task_id: str,
         name: str | None = None,
         status: TaskStatus | None = None,
+        priority: TaskPriority | None = None,
+        labels: list[str] | None = None,
         project_id: str | None = None,
         assignee_id: str | None = None,
         due_date: datetime | None = None,
@@ -111,6 +149,10 @@ class SqlTaskRepository(ITaskRepository):
             model.name = name
         if status is not None:
             model.status = status.value
+        if priority is not None:
+            model.priority = priority.value
+        if labels is not None:
+            model.labels = labels
         if project_id is not None:
             model.project_id = project_id
         if assignee_id is not None:

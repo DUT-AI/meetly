@@ -14,8 +14,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useUpdateTask } from '@/features/tasks/api/use-update-task';
+import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
 import { createTaskSchema } from '@/features/tasks/schema';
-import { type PopulatedTask, TaskStatus } from '@/features/tasks/types';
+import { type PopulatedTask, TaskPriority, TaskStatus } from '@/features/tasks/types';
+import { useGetLabels } from '@/features/workspaces/api/use-get-labels';
 import { cn } from '@/lib/utils';
 
 interface EditTaskFormProps {
@@ -26,7 +28,8 @@ interface EditTaskFormProps {
 }
 
 export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialValues }: EditTaskFormProps) => {
-  const { mutate: createTask, isPending } = useUpdateTask();
+  const { data: workspaceLabels } = useGetLabels({ workspaceId: initialValues.workspaceId });
+  const { mutate: updateTask, isPending } = useUpdateTask();
 
   const editTaskSchema = createTaskSchema.omit({ workspaceId: true, description: true });
   type EditTaskValues = z.infer<typeof editTaskSchema>;
@@ -36,6 +39,8 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
     defaultValues: {
       name: initialValues.name,
       status: initialValues.status,
+      priority: initialValues.priority || TaskPriority.MEDIUM,
+      labels: initialValues.labels || [],
       projectId: initialValues.projectId,
       assigneeId: initialValues.assigneeId,
       dueDate: initialValues.dueDate ? new Date(initialValues.dueDate) : undefined,
@@ -43,7 +48,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
   });
 
   const onSubmit = (values: EditTaskValues) => {
-    createTask(
+    updateTask(
       {
         json: values,
         param: { taskId: initialValues.id || initialValues.$id },
@@ -187,6 +192,99 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                         ))}
                       </SelectContent>
                     </Select>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={editTaskForm.control}
+                name="priority"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Priority (Độ ưu tiên)</FormLabel>
+
+                    <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Chọn độ ưu tiên" />
+                        </SelectTrigger>
+                      </FormControl>
+
+                      <FormMessage />
+
+                      <SelectContent>
+                        <SelectItem value={TaskPriority.LOW}>
+                          <div className="flex items-center gap-x-2">
+                            <TaskPriorityBadge priority={TaskPriority.LOW} />
+                          </div>
+                        </SelectItem>
+                        <SelectItem value={TaskPriority.MEDIUM}>
+                          <div className="flex items-center gap-x-2">
+                            <TaskPriorityBadge priority={TaskPriority.MEDIUM} />
+                          </div>
+                        </SelectItem>
+                        <SelectItem value={TaskPriority.HIGH}>
+                          <div className="flex items-center gap-x-2">
+                            <TaskPriorityBadge priority={TaskPriority.HIGH} />
+                          </div>
+                        </SelectItem>
+                        <SelectItem value={TaskPriority.URGENT}>
+                          <div className="flex items-center gap-x-2">
+                            <TaskPriorityBadge priority={TaskPriority.URGENT} />
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                disabled={isPending}
+                control={editTaskForm.control}
+                name="labels"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Labels (Nhãn công việc)</FormLabel>
+
+                    <div className="flex flex-wrap gap-1.5 p-2 rounded-md border min-h-[42px] bg-background">
+                      {(!workspaceLabels || workspaceLabels.length === 0) ? (
+                        <p className="text-xs text-muted-foreground italic py-1">
+                          Chưa có nhãn trong phòng ban. Bạn có thể thêm nhãn tại Cài đặt phòng ban.
+                        </p>
+                      ) : (
+                        workspaceLabels.map((lbl) => {
+                          const isSelected = (field.value || []).includes(lbl.name);
+                          return (
+                            <button
+                              key={lbl.id}
+                              type="button"
+                              onClick={() => {
+                                const current = field.value || [];
+                                if (isSelected) {
+                                  field.onChange(current.filter((name: string) => name !== lbl.name));
+                                } else {
+                                  field.onChange([...current, lbl.name]);
+                                }
+                              }}
+                              className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition cursor-pointer ${
+                                isSelected
+                                  ? 'text-white ring-2 ring-offset-1 ring-primary shadow-sm'
+                                  : 'text-neutral-600 bg-neutral-100 hover:bg-neutral-200 opacity-70'
+                              }`}
+                              style={{
+                                backgroundColor: isSelected ? lbl.color : undefined,
+                              }}
+                            >
+                              {lbl.name}
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+
+                    <FormMessage />
                   </FormItem>
                 )}
               />

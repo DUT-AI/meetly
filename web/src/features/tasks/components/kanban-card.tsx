@@ -3,6 +3,8 @@ import { MoreHorizontal } from 'lucide-react';
 import { DottedSeparator } from '@/components/dotted-separator';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
+import { TaskLabels } from '@/features/tasks/components/task-labels';
+import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
 import type { PopulatedTask } from '@/features/tasks/types';
 
 import { TaskActions } from './task-actions';
@@ -16,24 +18,32 @@ export const KanbanCard = ({ task }: KanbanCardProps) => {
   return (
     <div className="mb-1.5 space-y-3 rounded bg-white p-2.5 shadow-sm">
       <div className="flex items-start justify-between gap-x-2">
-        <p className="line-clamp-2 text-sm">{task.name}</p>
+        <p className="line-clamp-2 text-sm font-medium">{task.name}</p>
 
         <TaskActions id={task.$id} projectId={task.projectId}>
           <MoreHorizontal className="size-[18px] shrink-0 cursor-pointer stroke-1 text-neutral-700 transition hover:opacity-75" />
         </TaskActions>
       </div>
 
+      {task.labels && task.labels.length > 0 && (
+        <TaskLabels labels={task.labels} maxDisplay={3} />
+      )}
+
       <DottedSeparator />
 
-      <div className="flex items-center gap-x-1.5">
-        <MemberAvatar name={task.assignee.name} fallbackClassName="text-[10px]" />
-        <div aria-hidden className="size-1 rounded-full bg-neutral-300" />
-        <TaskDate value={task.dueDate} className="text-xs" />
+      <div className="flex items-center justify-between gap-x-1.5">
+        <div className="flex items-center gap-x-1.5">
+          <MemberAvatar name={task.assignee.name} image={task.assignee.avatar_url} fallbackClassName="text-[10px]" />
+          <div aria-hidden className="size-1 rounded-full bg-neutral-300" />
+          <TaskDate value={task.dueDate} className="text-xs" />
+        </div>
+
+        <TaskPriorityBadge priority={task.priority} />
       </div>
 
       <div className="flex items-center gap-x-1.5">
         <ProjectAvatar name={task.project.name} image={task.project.imageUrl} fallbackClassName="text-[10px]" />
-        <span className="text-xs font-medium">{task.project.name}</span>
+        <span className="text-xs font-medium text-neutral-600">{task.project.name}</span>
       </div>
     </div>
   );

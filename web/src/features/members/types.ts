@@ -13,6 +13,8 @@ export type Member = {
   name: string;
   email: string;
   role: MemberRole;
+  avatar_url?: string | null;
+  avatarUrl?: string | null;
   $createdAt?: string;
   $updatedAt?: string;
   created_at?: string;
@@ -22,6 +24,7 @@ export type Member = {
 export function normalizeMember(m: any): Member {
   if (!m) return m;
   const id = m.id ?? m.$id;
+  const avatarUrl = m.avatarUrl ?? m.avatar_url ?? null;
   return {
     ...m,
     id,
@@ -32,6 +35,8 @@ export function normalizeMember(m: any): Member {
     user_id: m.user_id ?? m.userId,
     name: m.name ?? '',
     email: m.email ?? '',
+    avatar_url: avatarUrl,
+    avatarUrl: avatarUrl,
     role: m.role as MemberRole,
     $createdAt: m.$createdAt ?? m.created_at,
     $updatedAt: m.$updatedAt ?? m.updated_at,

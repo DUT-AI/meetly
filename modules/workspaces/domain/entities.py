@@ -11,3 +11,13 @@ class WorkspaceEntity:
     image_url: str | None
     created_at: datetime
     updated_at: datetime
+
+
+@dataclass
+class WorkspaceLabelEntity:
+    id: str
+    workspace_id: str
+    name: str
+    color: str
+    created_at: datetime
+    updated_at: datetime

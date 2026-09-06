@@ -40,10 +40,10 @@ export const JoinWorkspaceForm = ({ initialValues }: JoinWorkspaceFormProps) => 
   return (
     <Card className="size-full border-none shadow-none">
       <CardHeader className="p-7">
-        <CardTitle className="text-xl font-bold">Join workspace</CardTitle>
+        <CardTitle className="text-xl font-bold">Tham gia phòng ban</CardTitle>
 
         <CardDescription>
-          You&apos;ve been invited to join <strong>{initialValues.name}</strong> workspace.
+          Bạn được mời tham gia vào phòng ban <strong>{initialValues.name}</strong>.
         </CardDescription>
       </CardHeader>
 
@@ -54,11 +54,11 @@ export const JoinWorkspaceForm = ({ initialValues }: JoinWorkspaceFormProps) => 
       <CardContent className="p-7">
         <div className="flex flex-col items-center justify-between gap-2 md:flex-row">
           <Button disabled={isPending} size="lg" variant="secondary" type="button" className="w-full md:w-fit" asChild>
-            <Link href="/">Cancel</Link>
+            <Link href="/">Hủy</Link>
           </Button>
 
           <Button disabled={isPending} size="lg" type="button" onClick={handleJoinWorkspace} className="w-full md:w-fit">
-            Join Workspace
+            Tham gia phòng ban
           </Button>
         </div>
       </CardContent>

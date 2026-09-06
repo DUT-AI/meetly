@@ -18,6 +18,7 @@ import { Input } from '@/components/ui/input';
 import { useDeleteWorkspace } from '@/features/workspaces/api/use-delete-workspace';
 import { useResetInviteCode } from '@/features/workspaces/api/use-reset-invite-code';
 import { useUpdateWorkspace } from '@/features/workspaces/api/use-update-workspace';
+import { WorkspaceLabelManagement } from '@/features/workspaces/components/workspace-label-management';
 import { updateWorkspaceSchema } from '@/features/workspaces/schema';
 import type { Workspace } from '@/features/workspaces/types';
 import { useConfirm } from '@/hooks/use-confirm';
@@ -142,10 +143,10 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Workspace Name</FormLabel>
+                      <FormLabel>Tên phòng ban</FormLabel>
 
                       <FormControl>
-                        <Input {...field} type="text" placeholder="Enter workspace name" />
+                        <Input {...field} type="text" placeholder="Nhập tên phòng ban" />
                       </FormControl>
 
                       <FormMessage />
@@ -164,7 +165,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                           <div className="relative size-[72px] overflow-hidden rounded-md">
                             <Image
                               src={field.value instanceof File ? URL.createObjectURL(field.value) : field.value}
-                              alt="Workspace Logo"
+                              alt="Logo phòng ban"
                               fill
                               className="object-cover"
                             />
@@ -178,8 +179,8 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                         )}
 
                         <div className="flex flex-col">
-                          <p className="text-sm">Workspace Icon</p>
-                          <p className="text-xs text-muted-foreground">JPG, PNG, or JPEG, max 1MB</p>
+                          <p className="text-sm font-medium">Biểu tượng phòng ban</p>
+                          <p className="text-xs text-muted-foreground">JPG, PNG, hoặc JPEG, tối đa 1MB</p>
 
                           <input
                             type="file"
@@ -203,7 +204,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                                 if (inputRef.current) inputRef.current.value = '';
                               }}
                             >
-                              Remove Image
+                              Xóa ảnh
                             </Button>
                           ) : (
                             <Button
@@ -214,7 +215,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                               className="mt-2 w-fit"
                               onClick={() => inputRef.current?.click()}
                             >
-                              Upload Image
+                              Tải ảnh lên
                             </Button>
                           )}
                         </div>
@@ -237,11 +238,11 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                   onClick={onCancel}
                   className={cn(!onCancel && 'invisible')}
                 >
-                  Cancel
+                  Hủy
                 </Button>
 
                 <Button disabled={isPending} type="submit" size="lg">
-                  Save Changes
+                  Lưu thay đổi
                 </Button>
               </div>
             </form>
@@ -252,9 +253,9 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
       <Card className="size-full border-none shadow-none">
         <CardContent className="p-7">
           <div className="flex flex-col">
-            <h3 className="font-bold">Invite Members</h3>
+            <h3 className="font-bold">Mời nhân sự vào phòng ban</h3>
 
-            <p className="text-sm text-muted-foreground">Use the invite link to add members to your workspace.</p>
+            <p className="text-sm text-muted-foreground">Sử dụng liên kết mời để thêm nhân sự vào phòng ban của bạn.</p>
 
             <div className="mt-4">
               <div className="flex items-center gap-x-2">
@@ -276,18 +277,20 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
               onClick={handleResetInviteCode}
               className="ml-auto mt-6 w-fit"
             >
-              Reset invite link
+              Tạo lại mã mời
             </Button>
           </div>
         </CardContent>
       </Card>
 
+      <WorkspaceLabelManagement workspaceId={initialValues.$id} />
+
       <Card className="size-full border-none shadow-none">
         <CardContent className="p-7">
           <div className="flex flex-col">
-            <h3 className="font-bold">Danger Zone</h3>
+            <h3 className="font-bold text-red-600">Vùng nguy hiểm</h3>
 
-            <p className="text-sm text-muted-foreground">Deleting a workspace is irreversible and will remove all associated data.</p>
+            <p className="text-sm text-muted-foreground">Xóa phòng ban là hành động không thể khôi phục và sẽ xóa toàn bộ dự án, công việc liên quan.</p>
 
             <DottedSeparator className="py-7" />
 
@@ -299,7 +302,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
               onClick={handleDelete}
               className="ml-auto mt-6 w-fit"
             >
-              Delete Workspace
+              Xóa phòng ban
             </Button>
           </div>
         </CardContent>

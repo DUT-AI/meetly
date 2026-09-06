@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.database.base import Base, TimestampMixin, ULIDPrimaryKeyMixin
 from modules.tasks.domain.entities import TaskEntity
-from modules.tasks.domain.enums import TaskStatus
+from modules.tasks.domain.enums import TaskPriority, TaskStatus
 
 
 class TaskModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
@@ -17,6 +17,10 @@ class TaskModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
     status: Mapped[str] = mapped_column(
         String(50), default=TaskStatus.TODO.value, index=True, nullable=False
     )
+    priority: Mapped[str] = mapped_column(
+        String(20), default=TaskPriority.MEDIUM.value, index=True, nullable=False
+    )
+    labels: Mapped[list[str]] = mapped_column(JSON, default=list, nullable=False)
     workspace_id: Mapped[str] = mapped_column(
         String(26),
         ForeignKey("workspaces.id", ondelete="CASCADE"),
@@ -46,6 +50,8 @@ class TaskModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
             id=self.id,
             name=self.name,
             status=TaskStatus(self.status),
+            priority=TaskPriority(self.priority),
+            labels=self.labels or [],
             workspace_id=self.workspace_id,
             project_id=self.project_id,
             assignee_id=self.assignee_id,

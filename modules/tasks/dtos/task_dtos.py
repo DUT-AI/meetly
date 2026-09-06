@@ -4,12 +4,15 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from modules.members.dtos.member_dtos import MemberResponseDTO
 from modules.projects.dtos.project_dtos import ProjectResponseDTO
-from modules.tasks.domain.enums import TaskStatus
+from modules.tasks.domain.enums import TaskPriority, TaskStatus
+from modules.workspaces.dtos.workspace_dtos import WorkspaceInfoResponseDTO
 
 
 class TaskCreateDTO(BaseModel):
     name: str
     status: TaskStatus
+    priority: TaskPriority = TaskPriority.MEDIUM
+    labels: list[str] = Field(default_factory=list)
     workspace_id: str
     project_id: str
     due_date: datetime | str | None = None
@@ -20,6 +23,8 @@ class TaskCreateDTO(BaseModel):
 class TaskUpdateDTO(BaseModel):
     name: str | None = None
     status: TaskStatus | None = None
+    priority: TaskPriority | None = None
+    labels: list[str] | None = None
     project_id: str | None = None
     due_date: datetime | str | None = None
     assignee_id: str | None = None
@@ -44,6 +49,8 @@ class TaskResponseDTO(BaseModel):
     id: str
     name: str
     status: TaskStatus
+    priority: TaskPriority = TaskPriority.MEDIUM
+    labels: list[str] = Field(default_factory=list)
     workspace_id: str
     project_id: str
     assignee_id: str | None = None
@@ -57,6 +64,7 @@ class TaskResponseDTO(BaseModel):
 class PopulatedTaskResponseDTO(TaskResponseDTO):
     project: ProjectResponseDTO
     assignee: MemberResponseDTO | None = None
+    workspace: WorkspaceInfoResponseDTO | None = None
 
 
 class TaskListResponseDTO(BaseModel):

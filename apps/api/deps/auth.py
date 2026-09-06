@@ -58,6 +58,7 @@ async def get_current_user(
         id=user_id,
         email=payload.get("email", ""),
         name=payload.get("name", ""),
+        avatar_url=payload.get("avatar_url"),
         role_names=payload.get("role_names", []),
         status="ACTIVE",
     )

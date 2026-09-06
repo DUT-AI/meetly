@@ -8,6 +8,7 @@ from modules.tasks.use_cases import (
     CreateTaskUseCase,
     DeleteTaskUseCase,
     GetTaskUseCase,
+    ListMyGlobalTasksUseCase,
     ListTasksUseCase,
     UpdateTaskUseCase,
 )
@@ -24,6 +25,7 @@ class TaskProvider(Provider):
 
     create_task_uc = provide(CreateTaskUseCase)
     list_tasks_uc = provide(ListTasksUseCase)
+    list_my_global_tasks_uc = provide(ListMyGlobalTasksUseCase)
     get_task_uc = provide(GetTaskUseCase)
     update_task_uc = provide(UpdateTaskUseCase)
     bulk_update_tasks_uc = provide(BulkUpdateTasksUseCase)

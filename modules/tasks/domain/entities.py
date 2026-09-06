@@ -3,7 +3,7 @@ from datetime import datetime
 
 from modules.members.dtos.member_dtos import MemberResponseDTO
 from modules.projects.dtos.project_dtos import ProjectResponseDTO
-from modules.tasks.domain.enums import TaskStatus
+from modules.tasks.domain.enums import TaskPriority, TaskStatus
 
 
 @dataclass
@@ -11,6 +11,8 @@ class TaskEntity:
     id: str
     name: str
     status: TaskStatus
+    priority: TaskPriority
+    labels: list[str]
     workspace_id: str
     project_id: str
     assignee_id: str | None
@@ -26,6 +28,8 @@ class PopulatedTaskEntity:
     id: str
     name: str
     status: TaskStatus
+    priority: TaskPriority
+    labels: list[str]
     workspace_id: str
     project_id: str
     assignee_id: str | None

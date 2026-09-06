@@ -30,6 +30,7 @@ export const UserButton = () => {
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger disabled={isPending} className="relative rounded-full outline-none focus-visible:ring-1 focus-visible:ring-ring">
         <Avatar className="size-10 border border-neutral-300 transition hover:opacity-75">
+          {user.avatar_url ? <AvatarImage src={user.avatar_url} alt={name || 'Avatar'} /> : null}
           <AvatarFallback className="flex items-center justify-center bg-neutral-200 font-medium text-neutral-500">
             {avatarFallback}
           </AvatarFallback>
@@ -39,6 +40,7 @@ export const UserButton = () => {
       <DropdownMenuContent align="end" side="bottom" className="w-60" sideOffset={10}>
         <div className="flex flex-col items-center justify-center gap-2 px-2.5 py-4">
           <Avatar className="size-[52px] border border-neutral-300">
+            {user.avatar_url ? <AvatarImage src={user.avatar_url} alt={name || 'Avatar'} /> : null}
             <AvatarFallback className="flex items-center justify-center bg-neutral-200 text-xl font-medium text-neutral-500">
               {avatarFallback}
             </AvatarFallback>

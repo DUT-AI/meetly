@@ -37,8 +37,12 @@ class ListMembersUseCase:
                     "email": u.email,
                     "avatar_url": u.avatar_url,
                 }
-        except Exception:
-            pass
+        except Exception as exc:
+            from loguru import logger
+
+            logger.warning(
+                f"Failed to fetch users from ManageClient in ListMembersUseCase: {exc}"
+            )
 
         result: list[MemberResponseDTO] = []
         for m in members:

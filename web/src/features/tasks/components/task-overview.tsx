@@ -4,6 +4,8 @@ import { DottedSeparator } from '@/components/dotted-separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
+import { TaskLabels } from '@/features/tasks/components/task-labels';
+import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
 import { useEditTaskModal } from '@/features/tasks/hooks/use-edit-task-modal';
 import type { PopulatedTask } from '@/features/tasks/types';
 import { snakeCaseToTitleCase } from '@/lib/utils';
@@ -34,7 +36,7 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
 
         <div className="flex flex-col gap-y-4">
           <OverviewProperty label="Assignee">
-            <MemberAvatar name={task.assignee.name} className="size-6" />
+            <MemberAvatar name={task.assignee.name} image={task.assignee.avatar_url} className="size-6" />
 
             <p className="text-sm font-medium">{task.assignee.name}</p>
           </OverviewProperty>
@@ -46,6 +48,16 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
           <OverviewProperty label="Status">
             <Badge variant={task.status}>{snakeCaseToTitleCase(task.status)}</Badge>
           </OverviewProperty>
+
+          <OverviewProperty label="Priority">
+            <TaskPriorityBadge priority={task.priority} />
+          </OverviewProperty>
+
+          {task.labels && task.labels.length > 0 && (
+            <OverviewProperty label="Labels">
+              <TaskLabels labels={task.labels} />
+            </OverviewProperty>
+          )}
         </div>
       </div>
     </div>

@@ -57,6 +57,26 @@ export const taskApi = {
     };
   },
 
+  getMyGlobalTasks: async (params?: {
+    status?: TaskStatus | null;
+    search?: string | null;
+    dueDate?: string | null;
+  }): Promise<{ documents: PopulatedTask[]; total: number }> => {
+    const queryParams: Record<string, any> = {};
+    if (params?.status) queryParams.status = params.status;
+    if (params?.search) queryParams.search = params.search;
+    if (params?.dueDate) queryParams.dueDate = params.dueDate;
+
+    const response = await api.get<{ data: { documents: any[]; total: number } }>('/tasks/my-tasks', {
+      params: queryParams,
+    });
+    const result = response.data?.data ?? response.data;
+    return {
+      documents: (result.documents || []).map(normalizeTask),
+      total: result.total || 0,
+    };
+  },
+
   getTask: async (taskId: string): Promise<PopulatedTask> => {
     const response = await api.get<{ data: any }>(`/tasks/${taskId}`);
     const result = response.data?.data ?? response.data;

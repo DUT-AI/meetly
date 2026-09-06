@@ -23,6 +23,37 @@ export type WorkspaceInfo = {
   image_url?: string;
 };
 
+export type WorkspaceLabel = {
+  id: string;
+  $id: string;
+  workspaceId: string;
+  workspace_id?: string;
+  name: string;
+  color: string;
+  createdAt?: string;
+  updatedAt?: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export function normalizeWorkspaceLabel(l: any): WorkspaceLabel {
+  if (!l) return l;
+  const id = l.id ?? l.$id;
+  return {
+    ...l,
+    id,
+    $id: id,
+    workspaceId: l.workspaceId ?? l.workspace_id,
+    workspace_id: l.workspace_id ?? l.workspaceId,
+    name: l.name,
+    color: l.color || '#3b82f6',
+    createdAt: l.createdAt ?? l.created_at,
+    updatedAt: l.updatedAt ?? l.updated_at,
+    created_at: l.created_at ?? l.createdAt,
+    updated_at: l.updated_at ?? l.updatedAt,
+  };
+}
+
 export type WorkspaceAnalytics = {
   taskCount: number;
   taskDifference: number;

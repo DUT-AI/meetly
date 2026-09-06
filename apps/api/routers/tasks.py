@@ -15,11 +15,42 @@ from modules.tasks.use_cases import (
     CreateTaskUseCase,
     DeleteTaskUseCase,
     GetTaskUseCase,
+    ListMyGlobalTasksUseCase,
     ListTasksUseCase,
     UpdateTaskUseCase,
 )
 
 router = APIRouter(prefix="/api/v1/tasks", tags=["Tasks"])
+
+
+@router.get(
+    "/my-tasks",
+    summary="List all tasks assigned to the current user across all workspaces",
+)
+@inject
+async def list_my_global_tasks(
+    current_user: CurrentUser,
+    use_case: FromDishka[ListMyGlobalTasksUseCase],
+    task_status: TaskStatus | None = Query(None, alias="status"),
+    search: str | None = Query(None),
+    due_date: datetime | str | None = Query(None, alias="dueDate"),
+) -> dict:
+    parsed_due_date = None
+    if isinstance(due_date, str):
+        try:
+            parsed_due_date = datetime.fromisoformat(due_date.replace("Z", "+00:00"))
+        except Exception:
+            pass
+    elif isinstance(due_date, datetime):
+        parsed_due_date = due_date
+
+    result = await use_case.execute(
+        user_id=str(current_user.id),
+        status=task_status,
+        search=search,
+        due_date=parsed_due_date,
+    )
+    return {"data": result}
 
 
 @router.get(
@@ -86,6 +117,8 @@ async def create_task(
         workspace_id=payload.workspace_id,
         project_id=payload.project_id,
         user_id=str(current_user.id),
+        priority=payload.priority,
+        labels=payload.labels,
         due_date=parsed_due_date,
         assignee_id=payload.assignee_id,
         description=payload.description,
@@ -137,6 +170,8 @@ async def update_task(
         user_id=str(current_user.id),
         name=payload.name,
         status=payload.status,
+        priority=payload.priority,
+        labels=payload.labels,
         project_id=payload.project_id,
         assignee_id=payload.assignee_id,
         due_date=parsed_due_date,
