@@ -45,6 +45,7 @@ export const columns = columnHelper.columns([
     },
     cell: ({ row }) => {
       const project = row.original.project;
+      if (!project) return null;
 
       return (
         <div className="flex items-center gap-x-2 text-sm font-medium">
@@ -66,6 +67,9 @@ export const columns = columnHelper.columns([
     },
     cell: ({ row }) => {
       const assignee = row.original.assignee;
+      if (!assignee) {
+        return <span className="text-xs text-muted-foreground italic">Chưa giao</span>;
+      }
 
       return (
         <div className="flex items-center gap-x-2 text-sm font-medium">
@@ -130,8 +134,8 @@ export const columns = columnHelper.columns([
   columnHelper.display({
     id: 'actions',
     cell: ({ row }) => {
-      const id = row.original.$id;
-      const projectId = row.original.projectId;
+      const id = row.original.$id || row.original.id;
+      const projectId = row.original.projectId || row.original.project_id;
 
       return (
         <TaskActions id={id} projectId={projectId}>

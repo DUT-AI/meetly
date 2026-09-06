@@ -48,7 +48,7 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
 
   return (
     <div className="flex flex-col gap-2 lg:flex-row">
-      <Select defaultValue={status ?? undefined} onValueChange={onStatusChange}>
+      <Select defaultValue={status ?? undefined} value={status ?? 'all'} onValueChange={onStatusChange}>
         <SelectTrigger className="h-8 w-full lg:w-auto">
           <div className="flex items-center pr-2">
             <ListChecks className="mr-2 size-4" />
@@ -68,7 +68,7 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
         </SelectContent>
       </Select>
 
-      <Select defaultValue={assigneeId ?? undefined} onValueChange={onAssigneeChange}>
+      <Select defaultValue={assigneeId ?? undefined} value={assigneeId ?? 'all'} onValueChange={onAssigneeChange}>
         <SelectTrigger className="h-8 w-full lg:w-auto">
           <div className="flex items-center pr-2">
             <UserIcon className="mr-2 size-4" />
@@ -89,7 +89,7 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
       </Select>
 
       {!hideProjectFilter && (
-        <Select defaultValue={projectId ?? undefined} onValueChange={onProjectChange}>
+        <Select defaultValue={projectId ?? undefined} value={projectId ?? 'all'} onValueChange={onProjectChange}>
           <SelectTrigger className="h-8 w-full lg:w-auto">
             <div className="flex items-center pr-2">
               <Folder className="mr-2 size-4" />
