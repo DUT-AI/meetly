@@ -47,7 +47,9 @@ class INotificationRepository(ABC):
         """Count unread notifications for a user."""
 
     @abstractmethod
-    async def mark_as_read(self, notification_id: str, user_id: str) -> NotificationEntity | None:
+    async def mark_as_read(
+        self, notification_id: str, user_id: str
+    ) -> NotificationEntity | None:
         """Mark a specific notification as read."""
 
     @abstractmethod
@@ -59,5 +61,7 @@ class INotificationChannel(ABC):
     """Interface for a notification dispatch channel (Strategy Pattern)."""
 
     @abstractmethod
-    async def send(self, recipient: ManageUserDTO, message: NotificationMessage) -> bool:
+    async def send(
+        self, recipient: ManageUserDTO, message: NotificationMessage
+    ) -> bool:
         """Send notification to the recipient. Returns True if successfully sent."""

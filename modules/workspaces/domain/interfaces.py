@@ -39,6 +39,8 @@ class IWorkspaceRepository(ABC):
         name: str | None = None,
         image_url: str | None = None,
         invite_code: str | None = None,
+        note: str | None = None,
+        discord_room_id: str | None = None,
     ) -> WorkspaceEntity:
         """Update workspace details."""
 

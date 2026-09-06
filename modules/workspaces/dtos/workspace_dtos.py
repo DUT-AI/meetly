@@ -13,6 +13,8 @@ class WorkspaceResponseDTO(BaseModel):
     owner_id: str
     invite_code: str
     image_url: str | None = None
+    note: str | None = None
+    discord_room_id: str | None = None
     created_at: datetime
     updated_at: datetime
 

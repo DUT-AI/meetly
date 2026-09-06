@@ -1,17 +1,14 @@
 import { redirect } from 'next/navigation';
 
-import { getCurrent } from '@/features/auth/queries';
-import { MembersList } from '@/features/workspaces/components/members-list';
+interface WorkspaceIdMembersPageProps {
+  params: Promise<{
+    workspaceId: string;
+  }>;
+}
 
-const WorkspaceIdMembersPage = async () => {
-  const user = await getCurrent();
-
-  if (!user) redirect('/sign-in');
-
-  return (
-    <div className="w-full lg:max-w-xl">
-      <MembersList />
-    </div>
-  );
+const WorkspaceIdMembersPage = async ({ params }: WorkspaceIdMembersPageProps) => {
+  const { workspaceId } = await params;
+  redirect(`/workspaces/${workspaceId}/settings`);
 };
+
 export default WorkspaceIdMembersPage;

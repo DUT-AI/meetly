@@ -1,9 +1,12 @@
-import { Pencil } from 'lucide-react';
+import { Pencil, XIcon } from 'lucide-react';
+import { useState } from 'react';
 
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
+import { useUpdateTask } from '@/features/tasks/api/use-update-task';
 import { TaskLabels } from '@/features/tasks/components/task-labels';
 import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
 import { useEditTaskModal } from '@/features/tasks/hooks/use-edit-task-modal';
@@ -19,46 +22,109 @@ interface TaskOverviewProps {
 
 export const TaskOverview = ({ task }: TaskOverviewProps) => {
   const { open } = useEditTaskModal();
+  const [isEditingDesc, setIsEditingDesc] = useState(false);
+  const [descValue, setDescValue] = useState(task.description);
+  const { mutate: editTask, isPending } = useUpdateTask();
+
+  const handleSaveDesc = () => {
+    editTask(
+      {
+        json: { description: descValue },
+        param: { taskId: task.$id || task.id },
+      },
+      {
+        onSuccess: () => setIsEditingDesc(false),
+      },
+    );
+  };
 
   return (
-    <div className="col-span-1 flex flex-col gap-y-4">
-      <div className="rounded-lg bg-muted p-4">
-        <div className="flex items-center justify-between">
-          <p className="text-lg font-semibold">Overview</p>
+    <div className="flex flex-col rounded-lg border bg-white p-6 shadow-sm">
+      {/* Overview Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-neutral-900">Overview</h2>
 
-          <Button onClick={() => open(task.$id)} size="sm" variant="secondary">
-            <Pencil className="mr-2 size-4" />
-            Edit
+        <Button onClick={() => open(task.$id || task.id)} size="sm" variant="secondary">
+          <Pencil className="mr-2 size-4" />
+          Edit
+        </Button>
+      </div>
+
+      <DottedSeparator className="my-4" />
+
+      {/* Properties Grid */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <OverviewProperty label="Assignee">
+          <MemberAvatar name={task.assignee?.name} image={task.assignee?.avatar_url} className="size-6" />
+          <p className="text-sm font-medium">{task.assignee?.name || 'Chưa giao'}</p>
+        </OverviewProperty>
+
+        <OverviewProperty label="Due Date">
+          <TaskDate value={task.dueDate} className="text-sm font-medium" />
+        </OverviewProperty>
+
+        <OverviewProperty label="Status">
+          <Badge variant={task.status}>{snakeCaseToTitleCase(task.status)}</Badge>
+        </OverviewProperty>
+
+        <OverviewProperty label="Priority">
+          <TaskPriorityBadge priority={task.priority} />
+        </OverviewProperty>
+
+        <div className="col-span-full">
+          <OverviewProperty label="Labels">
+            {task.labels && task.labels.length > 0 ? (
+              <TaskLabels labels={task.labels} />
+            ) : (
+              <span className="text-xs text-muted-foreground italic">Chưa gắn nhãn</span>
+            )}
+          </OverviewProperty>
+        </div>
+      </div>
+
+      <DottedSeparator className="my-6" />
+
+      {/* Description Section */}
+      <div>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-neutral-900">Description</h3>
+          <Button
+            onClick={() => {
+              setDescValue(task.description);
+              setIsEditingDesc((prev) => !prev);
+            }}
+            size="sm"
+            variant="secondary"
+          >
+            {isEditingDesc ? <XIcon className="mr-2 size-4" /> : <Pencil className="mr-2 size-4" />}
+            {isEditingDesc ? 'Cancel' : 'Edit'}
           </Button>
         </div>
 
-        <DottedSeparator className="my-4" />
-
-        <div className="flex flex-col gap-y-4">
-          <OverviewProperty label="Assignee">
-            <MemberAvatar name={task.assignee?.name} image={task.assignee?.avatar_url} className="size-6" />
-
-            <p className="text-sm font-medium">{task.assignee?.name || 'Chưa giao'}</p>
-          </OverviewProperty>
-
-          <OverviewProperty label="Due Date">
-            <TaskDate value={task.dueDate} className="text-sm font-medium" />
-          </OverviewProperty>
-
-          <OverviewProperty label="Status">
-            <Badge variant={task.status}>{snakeCaseToTitleCase(task.status)}</Badge>
-          </OverviewProperty>
-
-          <OverviewProperty label="Priority">
-            <TaskPriorityBadge priority={task.priority} />
-          </OverviewProperty>
-
-          {task.labels && task.labels.length > 0 && (
-            <OverviewProperty label="Labels">
-              <TaskLabels labels={task.labels} />
-            </OverviewProperty>
-          )}
-        </div>
+        {isEditingDesc ? (
+          <div className="flex flex-col gap-y-3">
+            <Textarea
+              autoFocus
+              placeholder="Add a description..."
+              value={descValue || ''}
+              rows={10}
+              onChange={(e) => setDescValue(e.target.value)}
+              disabled={isPending}
+            />
+            <div className="flex justify-end gap-2">
+              <Button size="sm" variant="outline" onClick={() => setIsEditingDesc(false)} disabled={isPending}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveDesc} disabled={isPending}>
+                {isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="rounded-md bg-muted/40 p-4 text-sm leading-relaxed text-neutral-800 whitespace-pre-wrap">
+            {task.description || <span className="italic text-muted-foreground">No description set...</span>}
+          </div>
+        )}
       </div>
     </div>
   );

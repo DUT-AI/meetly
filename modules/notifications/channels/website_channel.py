@@ -14,7 +14,9 @@ class WebsiteInAppChannel(INotificationChannel):
     def __init__(self, notification_repo: INotificationRepository) -> None:
         self.notification_repo = notification_repo
 
-    async def send(self, recipient: ManageUserDTO, message: NotificationMessage) -> bool:
+    async def send(
+        self, recipient: ManageUserDTO, message: NotificationMessage
+    ) -> bool:
         try:
             await self.notification_repo.create(
                 user_id=str(recipient.id),
@@ -32,5 +34,7 @@ class WebsiteInAppChannel(INotificationChannel):
             logger.debug(f"Created in-app notification for user {recipient.id}")
             return True
         except Exception as e:
-            logger.error(f"Failed to create in-app notification for user {recipient.id}: {e}")
+            logger.error(
+                f"Failed to create in-app notification for user {recipient.id}: {e}"
+            )
             return False

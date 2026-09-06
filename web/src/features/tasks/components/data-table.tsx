@@ -7,6 +7,7 @@ import {
   type SortingState,
   useTable,
 } from '@tanstack/react-table';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -17,9 +18,11 @@ import { features, type DataTableFeatures } from './data-table-features';
 interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DataTableFeatures, TData>[];
   data: TData[];
+  onRowClick?: (row: TData) => void;
 }
 
-export function DataTable<TData extends RowData>({ columns, data }: DataTableProps<TData>) {
+export function DataTable<TData extends RowData>({ columns, data, onRowClick }: DataTableProps<TData>) {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
 
@@ -34,6 +37,34 @@ export function DataTable<TData extends RowData>({ columns, data }: DataTablePro
       sorting,
     },
   });
+
+  const handleRowClick = (e: React.MouseEvent, rowData: TData) => {
+    // Prevent row navigation if clicking on interactive elements like buttons, dropdowns, links
+    const target = e.target as HTMLElement;
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('[role="menuitem"]') ||
+      target.closest('[data-radix-collection-item]')
+    ) {
+      return;
+    }
+
+    if (onRowClick) {
+      onRowClick(rowData);
+    } else {
+      // Default task navigation if rowData has workspaceId and id
+      const item = rowData as any;
+      const workspaceId =
+        item.workspaceId ||
+        item.workspace_id ||
+        (item.workspace && (item.workspace.$id || item.workspace.id));
+      const taskId = item.$id || item.id;
+      if (workspaceId && taskId) {
+        router.push(`/workspaces/${workspaceId}/tasks/${taskId}`);
+      }
+    }
+  };
 
   return (
     <div>
@@ -56,7 +87,12 @@ export function DataTable<TData extends RowData>({ columns, data }: DataTablePro
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} data-state={row.getIsSelected() && 'selected'}>
+                <TableRow
+                  key={row.id}
+                  data-state={row.getIsSelected() && 'selected'}
+                  onClick={(e) => handleRowClick(e, row.original)}
+                  className="cursor-pointer transition hover:bg-muted/50"
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       <table.FlexRender cell={cell} />

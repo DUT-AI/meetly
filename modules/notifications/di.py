@@ -27,7 +27,9 @@ class NotificationProvider(Provider):
     """Dishka provider for Notifications module."""
 
     @provide(scope=Scope.REQUEST)
-    def get_notification_repository(self, session: AsyncSession) -> INotificationRepository:
+    def get_notification_repository(
+        self, session: AsyncSession
+    ) -> INotificationRepository:
         return SqlNotificationRepository(session)
 
     @provide(scope=Scope.APP)

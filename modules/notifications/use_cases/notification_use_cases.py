@@ -65,8 +65,12 @@ class MarkNotificationReadUseCase:
     def __init__(self, repo: INotificationRepository) -> None:
         self.repo = repo
 
-    async def execute(self, notification_id: str, user_id: str) -> NotificationResponseDTO | None:
-        entity = await self.repo.mark_as_read(notification_id=notification_id, user_id=user_id)
+    async def execute(
+        self, notification_id: str, user_id: str
+    ) -> NotificationResponseDTO | None:
+        entity = await self.repo.mark_as_read(
+            notification_id=notification_id, user_id=user_id
+        )
         if not entity:
             return None
         return NotificationResponseDTO(
@@ -101,7 +105,7 @@ class MarkAllNotificationsReadUseCase:
 
 class SendNotificationUseCase:
     """Use Case to execute dispatch of a notification message to all channels.
-    
+
     Can be called by ARQ Worker, Background Tasks, or Fallback in-process.
     """
 

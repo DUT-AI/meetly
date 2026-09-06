@@ -129,7 +129,9 @@ class CreateTaskCommentUseCase:
             pass
 
         # Dispatch notifications to mentioned users
-        logger.info(f"Comment created on task {task.id}: clean_mentions={clean_mentions}")
+        logger.info(
+            f"Comment created on task {task.id}: clean_mentions={clean_mentions}"
+        )
         notified_user_ids = set()
         action_url = f"/workspaces/{task.workspace_id}/tasks/{task.id}"
 
@@ -139,7 +141,8 @@ class CreateTaskCommentUseCase:
                 recipient_user_id=str(mentioned_id),
                 event_type="task_comment_mention",
                 title=title,
-                content=clean_content[:200] + ("..." if len(clean_content) > 200 else ""),
+                content=clean_content[:200]
+                + ("..." if len(clean_content) > 200 else ""),
                 action_url=action_url,
                 actor_id=user_id,
                 actor_name=user_name,
@@ -154,12 +157,16 @@ class CreateTaskCommentUseCase:
         # Notify task assignee about new comment if not already notified
         if task.assignee_id:
             assignee_member = await self.member_repo.get_by_id(task.assignee_id)
-            if assignee_member and str(assignee_member.user_id) not in notified_user_ids:
+            if (
+                assignee_member
+                and str(assignee_member.user_id) not in notified_user_ids
+            ):
                 msg = NotificationMessage(
                     recipient_user_id=str(assignee_member.user_id),
                     event_type="task_new_comment",
                     title=f"{user_name or 'Đồng nghiệp'} đã bình luận về công việc của bạn",
-                    content=clean_content[:200] + ("..." if len(clean_content) > 200 else ""),
+                    content=clean_content[:200]
+                    + ("..." if len(clean_content) > 200 else ""),
                     action_url=action_url,
                     actor_id=user_id,
                     actor_name=user_name,

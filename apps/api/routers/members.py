@@ -2,14 +2,34 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import APIRouter, Query
 
 from apps.api.deps.auth import CurrentUser
-from modules.members.dtos.member_dtos import UpdateMemberRoleDTO
+from modules.members.dtos.member_dtos import AddMemberDTO, UpdateMemberRoleDTO
 from modules.members.use_cases import (
+    AddMemberUseCase,
     ListMembersUseCase,
     RemoveMemberUseCase,
     UpdateMemberRoleUseCase,
 )
 
 router = APIRouter(prefix="/api/v1/members", tags=["Members"])
+
+
+@router.post(
+    "",
+    summary="Add a user as member to workspace",
+)
+@inject
+async def add_member(
+    payload: AddMemberDTO,
+    current_user: CurrentUser,
+    use_case: FromDishka[AddMemberUseCase],
+) -> dict:
+    new_member = await use_case.execute(
+        workspace_id=payload.workspace_id,
+        target_user_id=payload.user_id,
+        role=payload.role,
+        current_user_id=str(current_user.id),
+    )
+    return {"data": new_member}
 
 
 @router.get(

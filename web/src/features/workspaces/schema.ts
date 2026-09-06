@@ -7,5 +7,7 @@ export const createWorkspaceSchema = z.object({
 
 export const updateWorkspaceSchema = z.object({
   name: z.string().trim().min(1, 'Workspace name must be 1 or more characters.').optional(),
+  note: z.string().optional(),
+  discord_room_id: z.string().optional(),
   image: z.union([z.instanceof(File), z.string().transform((value) => (value === '' ? undefined : value))]).optional(),
 });

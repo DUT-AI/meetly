@@ -13,7 +13,9 @@ class ZaloBotChannel(INotificationChannel):
     def __init__(self, zalo_client: ZaloBotClient) -> None:
         self.zalo_client = zalo_client
 
-    async def send(self, recipient: ManageUserDTO, message: NotificationMessage) -> bool:
+    async def send(
+        self, recipient: ManageUserDTO, message: NotificationMessage
+    ) -> bool:
         if not recipient.zalo_bot_id:
             return False
 
@@ -25,9 +27,7 @@ class ZaloBotChannel(INotificationChannel):
                 action_link = f"\n👉 Xem chi tiết: {base_url}/{path}"
 
             text = (
-                f"🔔 [Meetly] {message.title}\n"
-                f"Nội dung: {message.content}"
-                f"{action_link}"
+                f"🔔 [Meetly] {message.title}\nNội dung: {message.content}{action_link}"
             )
 
             res = await self.zalo_client.send_message(
@@ -36,5 +36,7 @@ class ZaloBotChannel(INotificationChannel):
             )
             return res is not None
         except Exception as e:
-            logger.error(f"Failed to send Zalo Bot notification to user {recipient.id}: {e}")
+            logger.error(
+                f"Failed to send Zalo Bot notification to user {recipient.id}: {e}"
+            )
             return False

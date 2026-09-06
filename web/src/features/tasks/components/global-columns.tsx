@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { TaskLabels } from '@/features/tasks/components/task-labels';
 import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
@@ -97,26 +96,6 @@ export const globalColumns = columnHelper.columns([
       );
     },
   }),
-  columnHelper.accessor('assignee', {
-    header: ({ column }) => {
-      return (
-        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
-          Người thực hiện
-          <ArrowUpDown className="ml-2 h-4 w-4" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const assignee = row.original.assignee;
-
-      return (
-        <div className="flex items-center gap-x-2 text-sm font-medium">
-          <MemberAvatar fallbackClassName="text-xs" className="size-6" name={assignee.name} image={assignee.avatar_url} />
-          <p className="line-clamp-1">{assignee.name}</p>
-        </div>
-      );
-    },
-  }),
   columnHelper.accessor('dueDate', {
     header: ({ column }) => {
       return (
@@ -149,7 +128,10 @@ export const globalColumns = columnHelper.columns([
     header: () => <span className="text-xs font-semibold px-4">Nhãn</span>,
     cell: ({ row }) => {
       const labels = row.original.labels;
-      return <TaskLabels labels={labels || []} maxDisplay={2} />;
+      if (!labels || labels.length === 0) {
+        return <span className="text-xs text-muted-foreground italic px-4">-</span>;
+      }
+      return <TaskLabels labels={labels} maxDisplay={2} />;
     },
   }),
   columnHelper.accessor('status', {

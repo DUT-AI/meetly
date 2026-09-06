@@ -13,6 +13,16 @@ export const memberApi = {
     };
   },
 
+  addMember: async (payload: { workspaceId: string; userId: string | number; role?: MemberRole }): Promise<Member> => {
+    const response = await api.post<{ data: any }>('/members', {
+      workspace_id: payload.workspaceId,
+      user_id: payload.userId,
+      role: payload.role ?? MemberRole.MEMBER,
+    });
+    const result = response.data?.data ?? response.data;
+    return normalizeMember(result);
+  },
+
   updateMember: async (memberId: string, role: MemberRole): Promise<{ id: string; workspace_id?: string }> => {
     const response = await api.patch<{ data: { id: string; workspace_id?: string } }>(`/members/${memberId}`, {
       role,

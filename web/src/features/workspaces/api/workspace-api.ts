@@ -59,14 +59,16 @@ export const workspaceApi = {
 
   updateWorkspace: async (
     workspaceId: string,
-    data: FormData | { name?: string; image?: File | string },
+    data: FormData | { name?: string; note?: string; discord_room_id?: string; image?: File | string },
   ): Promise<Workspace> => {
     let payload: FormData;
     if (data instanceof FormData) {
       payload = data;
     } else {
       payload = new FormData();
-      if (data.name) payload.append('name', data.name);
+      if (data.name !== undefined) payload.append('name', data.name);
+      if (data.note !== undefined) payload.append('note', data.note ?? '');
+      if (data.discord_room_id !== undefined) payload.append('discord_room_id', data.discord_room_id ?? '');
       if (data.image instanceof File) {
         payload.append('image', data.image);
       }

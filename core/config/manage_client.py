@@ -19,6 +19,8 @@ class ManageSettings(BaseSettings):
     manage_api_token: str = ""
     auth_api_key: str = ""
     api_timeout: float = 10.0
+    user_cache_ttl: int = 86400  # 24 hours default for single user cache
+    users_list_cache_ttl: int = 300  # 5 minutes default for user list cache
 
     @property
     def token(self) -> str:

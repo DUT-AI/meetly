@@ -1,7 +1,7 @@
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
-import { CalendarIcon, PlusIcon, SettingsIcon } from 'lucide-react';
+import { CalendarIcon, Pencil, PlusIcon, SettingsIcon, StickyNote } from 'lucide-react';
 import Link from 'next/link';
 
 import { Analytics } from '@/components/analytics';
@@ -20,30 +20,74 @@ import type { Project } from '@/features/projects/types';
 import { useGetTasks } from '@/features/tasks/api/use-get-tasks';
 import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
 import type { PopulatedTask } from '@/features/tasks/types';
+import { useGetWorkspace } from '@/features/workspaces/api/use-get-workspace';
 import { useGetWorkspaceAnalytics } from '@/features/workspaces/api/use-get-workspace-analytics';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 
 export const WorkspaceIdClient = () => {
   const workspaceId = useWorkspaceId();
 
+  const { data: workspace, isLoading: isLoadingWorkspace } = useGetWorkspace({ workspaceId });
   const { data: workspaceAnalytics, isLoading: isLoadingAnalytics } = useGetWorkspaceAnalytics({ workspaceId });
   const { data: tasks, isLoading: isLoadingTasks } = useGetTasks({ workspaceId });
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
 
-  const isLoading = isLoadingAnalytics || isLoadingTasks || isLoadingProjects || isLoadingMembers;
+  const isLoading =
+    isLoadingWorkspace || isLoadingAnalytics || isLoadingTasks || isLoadingProjects || isLoadingMembers;
 
   if (isLoading) return <PageLoader />;
-  if (!workspaceAnalytics || !tasks || !projects || !members) return <PageError message="Failed to load workspace data." />;
+  if (!workspaceAnalytics || !tasks || !projects || !members)
+    return <PageError message="Failed to load workspace data." />;
 
   return (
     <div className="flex h-full flex-col space-y-4">
       <Analytics data={workspaceAnalytics} />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <TaskList data={tasks.documents.splice(0, 4)} total={tasks.total} />
+        <WorkspaceNote note={workspace?.note} workspaceId={workspaceId} />
+        <TaskList data={tasks.documents.slice(0, 4)} total={tasks.total} />
         <ProjectList data={projects.documents} total={projects.total} />
         <MemberList data={members.documents} total={members.total} />
+      </div>
+    </div>
+  );
+};
+
+interface WorkspaceNoteProps {
+  note?: string | null;
+  workspaceId: string;
+}
+
+export const WorkspaceNote = ({ note, workspaceId }: WorkspaceNoteProps) => {
+  return (
+    <div className="col-span-1 flex flex-col gap-y-4">
+      <div className="rounded-lg border bg-white p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-x-2">
+            <StickyNote className="size-4 text-muted-foreground" />
+            <p className="text-lg font-semibold text-neutral-900">Ghi chú phòng ban</p>
+          </div>
+
+          <Button title="Chỉnh sửa ghi chú" variant="secondary" size="sm" asChild>
+            <Link href={`/workspaces/${workspaceId}/settings`} className="text-xs">
+              <Pencil className="mr-1.5 size-3.5" />
+              Chỉnh sửa
+            </Link>
+          </Button>
+        </div>
+
+        <DottedSeparator className="my-3" />
+
+        {note ? (
+          <p className="text-sm leading-relaxed text-neutral-700 whitespace-pre-wrap">
+            {note}
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground italic">
+            Chưa có ghi chú hoặc thông báo chung cho phòng ban này.
+          </p>
+        )}
       </div>
     </div>
   );
@@ -163,8 +207,8 @@ export const MemberList = ({ data, total }: MemberListProps) => {
         <div className="flex items-center justify-between">
           <p className="text-lg font-semibold">Members ({total})</p>
 
-          <Button title="Create Project" variant="secondary" size="icon" asChild>
-            <Link href={`/workspaces/${workspaceId}/members`}>
+          <Button title="Cài đặt phòng ban & nhân sự" variant="secondary" size="icon" asChild>
+            <Link href={`/workspaces/${workspaceId}/settings`}>
               <SettingsIcon className="size-4 text-neutral-400" />
             </Link>
           </Button>
@@ -176,12 +220,17 @@ export const MemberList = ({ data, total }: MemberListProps) => {
           {data.map((member) => (
             <li key={member.$id}>
               <Card className="overflow-hidden rounded-lg shadow-none">
-                <CardContent className="flex flex-col items-center gap-x-2 p-3">
-                  <MemberAvatar name={member.name} className="size-12" />
+                <CardContent className="flex flex-col items-center gap-y-2 p-4">
+                  <MemberAvatar
+                    name={member.name}
+                    image={member.avatarUrl || member.avatar_url}
+                    className="size-12"
+                    fallbackClassName="text-lg font-medium"
+                  />
 
-                  <div className="flex flex-col items-center overflow-hidden">
-                    <p className="line-clamp-1 text-lg font-medium">{member.name.slice(0, 15)}</p>
-                    <p className="line-clamp-1 text-sm text-muted-foreground">{member.email.slice(0, 20)}</p>
+                  <div className="flex w-full flex-col items-center overflow-hidden">
+                    <p className="w-full truncate text-center text-base font-medium">{member.name}</p>
+                    <p className="w-full truncate text-center text-xs text-muted-foreground">{member.email}</p>
                   </div>
                 </CardContent>
               </Card>

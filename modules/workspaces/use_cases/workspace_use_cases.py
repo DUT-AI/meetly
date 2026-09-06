@@ -1,6 +1,7 @@
 import random
 import string
-from typing import BinaryIO
+from datetime import UTC, datetime
+from typing import Any, BinaryIO
 
 from core.config import s3_settings
 from core.exceptions import BadRequestException, ForbiddenException, NotFoundException
@@ -11,6 +12,9 @@ from modules.members.domain.enums import MemberRole
 from modules.members.domain.interfaces import IMemberRepository
 from modules.notifications.dispatcher import NotificationDispatcher
 from modules.notifications.domain.entities import NotificationMessage
+from modules.tasks.domain.entities import TaskEntity
+from modules.tasks.domain.enums import TaskStatus
+from modules.tasks.domain.interfaces import ITaskRepository
 from modules.workspaces.domain.interfaces import IWorkspaceRepository
 from modules.workspaces.dtos.workspace_dtos import (
     WorkspaceAnalyticsDTO,
@@ -20,9 +24,10 @@ from modules.workspaces.dtos.workspace_dtos import (
 )
 
 
-def generate_invite_code(length: int = 6) -> str:
-    chars = string.ascii_letters + string.digits
-    return "".join(random.choices(chars, k=length))
+from core.utils.task_analytics import (
+    compute_task_analytics,
+    generate_invite_code,
+)
 
 
 class CreateWorkspaceUseCase:
@@ -79,6 +84,8 @@ class CreateWorkspaceUseCase:
             owner_id=ws.owner_id,
             invite_code=ws.invite_code,
             image_url=ws.image_url,
+            note=ws.note,
+            discord_room_id=ws.discord_room_id,
             created_at=ws.created_at,
             updated_at=ws.updated_at,
         )
@@ -110,6 +117,8 @@ class ListUserWorkspacesUseCase:
                 owner_id=ws.owner_id,
                 invite_code=ws.invite_code,
                 image_url=ws.image_url,
+                note=ws.note,
+                discord_room_id=ws.discord_room_id,
                 created_at=ws.created_at,
                 updated_at=ws.updated_at,
             )
@@ -144,6 +153,8 @@ class GetWorkspaceUseCase:
             owner_id=ws.owner_id,
             invite_code=ws.invite_code,
             image_url=ws.image_url,
+            note=ws.note,
+            discord_room_id=ws.discord_room_id,
             created_at=ws.created_at,
             updated_at=ws.updated_at,
         )
@@ -163,7 +174,7 @@ class GetWorkspaceInfoUseCase:
 
 
 class UpdateWorkspaceUseCase:
-    """Update workspace name or image (ADMIN only)."""
+    """Update workspace name, note, image, or discord_room_id (ADMIN only)."""
 
     def __init__(
         self,
@@ -180,6 +191,8 @@ class UpdateWorkspaceUseCase:
         workspace_id: str,
         user_id: str,
         name: str | None = None,
+        note: str | None = None,
+        discord_room_id: str | None = None,
         image_data: BinaryIO | None = None,
         image_filename: str | None = None,
         content_type: str | None = None,
@@ -217,6 +230,8 @@ class UpdateWorkspaceUseCase:
         updated = await self.workspace_repo.update(
             workspace_id=workspace_id,
             name=name,
+            note=note,
+            discord_room_id=discord_room_id,
             image_url=new_image_url,
         )
         return WorkspaceResponseDTO(
@@ -225,6 +240,8 @@ class UpdateWorkspaceUseCase:
             owner_id=updated.owner_id,
             invite_code=updated.invite_code,
             image_url=updated.image_url,
+            note=updated.note,
+            discord_room_id=updated.discord_room_id,
             created_at=updated.created_at,
             updated_at=updated.updated_at,
         )
@@ -290,6 +307,8 @@ class ResetInviteCodeUseCase:
             owner_id=updated.owner_id,
             invite_code=updated.invite_code,
             image_url=updated.image_url,
+            note=updated.note,
+            discord_room_id=updated.discord_room_id,
             created_at=updated.created_at,
             updated_at=updated.updated_at,
         )
@@ -324,7 +343,7 @@ class JoinWorkspaceUseCase:
         if ws.invite_code != code:
             raise BadRequestException("Invalid invite code.")
 
-        new_member = await self.member_repo.add_member(
+        await self.member_repo.add_member(
             workspace_id=workspace_id, user_id=user_id, role=MemberRole.MEMBER
         )
 
@@ -370,6 +389,8 @@ class JoinWorkspaceUseCase:
             owner_id=ws.owner_id,
             invite_code=ws.invite_code,
             image_url=ws.image_url,
+            note=ws.note,
+            discord_room_id=ws.discord_room_id,
             created_at=ws.created_at,
             updated_at=ws.updated_at,
         )
@@ -382,25 +403,16 @@ class GetWorkspaceAnalyticsUseCase:
         self,
         workspace_repo: IWorkspaceRepository,
         member_repo: IMemberRepository,
+        task_repo: ITaskRepository,
     ) -> None:
         self.workspace_repo = workspace_repo
         self.member_repo = member_repo
+        self.task_repo = task_repo
 
     async def execute(self, workspace_id: str, user_id: str) -> WorkspaceAnalyticsDTO:
         member = await self.member_repo.get_member(workspace_id, user_id)
         if not member:
             raise ForbiddenException("Unauthorized.")
 
-        # Default analytics zeros (will be enhanced via task stats)
-        return WorkspaceAnalyticsDTO(
-            task_count=0,
-            task_difference=0,
-            assigned_task_count=0,
-            assigned_task_difference=0,
-            completed_task_count=0,
-            completed_task_difference=0,
-            incomplete_task_count=0,
-            incomplete_task_difference=0,
-            overdue_task_count=0,
-            overdue_task_difference=0,
-        )
+        tasks = await self.task_repo.list_tasks(workspace_id=workspace_id)
+        return compute_task_analytics(tasks, WorkspaceAnalyticsDTO)

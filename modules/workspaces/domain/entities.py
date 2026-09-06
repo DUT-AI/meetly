@@ -11,6 +11,8 @@ class WorkspaceEntity:
     image_url: str | None
     created_at: datetime
     updated_at: datetime
+    note: str | None = None
+    discord_room_id: str | None = None
 
 
 @dataclass

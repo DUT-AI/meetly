@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import type { PropsWithChildren } from 'react';
 
+import { NuqsAdapter } from 'nuqs/adapters/next/app';
+
 import { QueryProvider } from '@/components/query-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { siteConfig } from '@/config';
@@ -20,9 +22,11 @@ const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {
     <html lang="en">
       <body className={cn(inter.className, 'min-h-screen antialiased')}>
         <QueryProvider>
-          <Toaster theme="light" richColors closeButton />
+          <NuqsAdapter>
+            <Toaster theme="light" richColors closeButton />
 
-          {children}
+            {children}
+          </NuqsAdapter>
         </QueryProvider>
       </body>
     </html>

@@ -6,13 +6,21 @@ import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
 import { useDebounce } from '@/hooks/use-debounce';
 
 export const DataSearch = () => {
-  const [value, setValue] = useState('');
+  const [{ search }, setFilters] = useTaskFilters();
+  const [value, setValue] = useState(search ?? '');
 
   const debouncedValue = useDebounce(value);
-  const [_filters, setFilters] = useTaskFilters();
 
   useEffect(() => {
-    setFilters({ search: debouncedValue.trim().length > 0 ? debouncedValue : null });
+    setValue(search ?? '');
+  }, [search]);
+
+  useEffect(() => {
+    const currentSearch = search ?? '';
+    const trimmed = debouncedValue.trim();
+    if (trimmed !== currentSearch) {
+      setFilters({ search: trimmed.length > 0 ? trimmed : null });
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedValue]);
 

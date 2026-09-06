@@ -15,9 +15,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useDeleteWorkspace } from '@/features/workspaces/api/use-delete-workspace';
 import { useResetInviteCode } from '@/features/workspaces/api/use-reset-invite-code';
 import { useUpdateWorkspace } from '@/features/workspaces/api/use-update-workspace';
+import { MembersList } from '@/features/workspaces/components/members-list';
 import { WorkspaceLabelManagement } from '@/features/workspaces/components/workspace-label-management';
 import { updateWorkspaceSchema } from '@/features/workspaces/schema';
 import type { Workspace } from '@/features/workspaces/types';
@@ -48,6 +50,8 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
     resolver: zodResolver(updateWorkspaceSchema),
     defaultValues: {
       ...initialValues,
+      note: initialValues.note || '',
+      discord_room_id: initialValues.discord_room_id || initialValues.discordRoomId || '',
       image: initialValues.imageUrl ?? '',
     },
   });
@@ -116,17 +120,11 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
 
       <Card className="size-full border-none shadow-none">
         <CardHeader className="flex flex-row items-center gap-x-4 space-y-0 p-7">
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={onCancel ? onCancel : () => router.push(`/workspaces/${initialValues.$id}`)}
-            className="gap-x-1"
-          >
-            <ArrowLeft className="size-4" />
-            Back
-          </Button>
 
-          <CardTitle className="text-xl font-bold">{initialValues.name}</CardTitle>
+          <div className="flex flex-col">
+            <CardTitle className="text-xl font-bold">{initialValues.name}</CardTitle>
+            <p className="text-sm text-muted-foreground">Chỉnh sửa thông tin cơ bản của phòng ban.</p>
+          </div>
         </CardHeader>
 
         <div className="px-7">
@@ -148,6 +146,54 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                       <FormControl>
                         <Input {...field} type="text" placeholder="Nhập tên phòng ban" />
                       </FormControl>
+
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  disabled={isPending}
+                  control={updateWorkspaceForm.control}
+                  name="discord_room_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Discord Room / Channel ID (Kênh thông báo Discord)</FormLabel>
+
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type="text"
+                          placeholder="Ví dụ: 123456789012345678"
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Nhập Channel ID của Discord để nhận thông báo tức thời khi bất kỳ công việc nào trong phòng ban được chuyển trạng thái.
+                      </p>
+
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  disabled={isPending}
+                  control={updateWorkspaceForm.control}
+                  name="note"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ghi chú / Quy định phòng ban (Note)</FormLabel>
+
+                      <FormControl>
+                        <Textarea
+                          {...field}
+                          rows={4}
+                          placeholder="Nhập ghi chú, quy định hoặc thông báo chung của phòng ban..."
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        Ghi chú này sẽ được hiển thị nổi bật ở trang Tổng quan phòng ban cho toàn bộ thành viên.
+                      </p>
 
                       <FormMessage />
                     </FormItem>
@@ -282,6 +328,8 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
           </div>
         </CardContent>
       </Card>
+
+      <MembersList hideBackButton />
 
       <WorkspaceLabelManagement workspaceId={initialValues.$id} />
 

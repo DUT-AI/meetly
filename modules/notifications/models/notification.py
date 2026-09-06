@@ -16,15 +16,21 @@ class NotificationModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
     actor_id: Mapped[str | None] = mapped_column(String(26), nullable=True)
     actor_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
     actor_avatar_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    workspace_id: Mapped[str | None] = mapped_column(String(26), nullable=True, index=True)
+    workspace_id: Mapped[str | None] = mapped_column(
+        String(26), nullable=True, index=True
+    )
     type: Mapped[str] = mapped_column(String(50), nullable=False)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     entity_type: Mapped[str] = mapped_column(String(50), nullable=False)
     entity_id: Mapped[str] = mapped_column(String(26), nullable=False)
     action_url: Mapped[str | None] = mapped_column(Text, nullable=True)
-    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
-    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_read: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False, index=True
+    )
+    read_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     def to_entity(self) -> NotificationEntity:
         return NotificationEntity(

@@ -82,7 +82,9 @@ class SqlNotificationRepository(INotificationRepository):
         result = await self.session.execute(stmt)
         return int(result.scalar_one() or 0)
 
-    async def mark_as_read(self, notification_id: str, user_id: str) -> NotificationEntity | None:
+    async def mark_as_read(
+        self, notification_id: str, user_id: str
+    ) -> NotificationEntity | None:
         stmt = (
             select(NotificationModel)
             .where(NotificationModel.id == notification_id)

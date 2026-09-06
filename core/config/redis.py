@@ -20,3 +20,6 @@ class RedisSettings(BaseSettings):
     @property
     def url(self) -> str:
         return self.redis_url
+
+
+redis_settings = RedisSettings()

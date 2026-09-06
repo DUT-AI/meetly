@@ -59,7 +59,7 @@ export const TaskDescription = ({ task }: TaskDescriptionProps) => {
             autoFocus
             placeholder="Add a description..."
             value={value}
-            rows={4}
+            rows={10}
             onChange={(e) => setValue(e.target.value)}
             disabled={isPending}
           />

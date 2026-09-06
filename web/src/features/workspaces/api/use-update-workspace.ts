@@ -6,7 +6,9 @@ import { toast } from 'sonner';
 import { type Workspace } from '../types';
 import { workspaceApi } from './workspace-api';
 
-type UpdateWorkspacePayload = FormData | { name?: string; image?: File | string };
+type UpdateWorkspacePayload =
+  | FormData
+  | { name?: string; note?: string; discord_room_id?: string; image?: File | string };
 type RequestType = {
   form: UpdateWorkspacePayload;
   param: { workspaceId: string };

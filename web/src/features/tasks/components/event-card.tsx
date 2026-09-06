@@ -46,7 +46,7 @@ export const EventCard = ({ title, assignee, project, status, id }: EventCardPro
         <p>{title}</p>
 
         <div className="flex items-center gap-x-1">
-          <MemberAvatar name={assignee?.name} />
+          <MemberAvatar name={assignee?.name} image={assignee?.avatar_url || (assignee as any)?.avatarUrl} />
 
           <div aria-hidden className="size-1 rounded-full bg-neutral-300" />
           <ProjectAvatar name={project?.name} image={project?.imageUrl} />

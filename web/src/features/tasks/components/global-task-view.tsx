@@ -67,10 +67,12 @@ export const GlobalTaskView = () => {
     if (!tasks?.documents) return [];
     const map = new Map<string, { id: string; name: string }>();
     for (const task of tasks.documents) {
-      if (task.workspace) {
-        map.set(task.workspace.$id, {
-          id: task.workspace.$id,
-          name: task.workspace.name,
+      const wsId = task.workspace?.$id || task.workspace?.id || task.workspaceId;
+      const wsName = task.workspace?.name || 'Phòng ban';
+      if (wsId) {
+        map.set(wsId, {
+          id: String(wsId),
+          name: wsName,
         });
       }
     }

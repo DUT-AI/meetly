@@ -13,10 +13,10 @@ export const WorkspaceIdSettingsClient = () => {
 
   if (isLoading) return <PageLoader />;
 
-  if (!initialValues) return <PageError message="Workspace not found." />;
+  if (!initialValues) return <PageError message="Không tìm thấy phòng ban." />;
 
   return (
-    <div className="w-full lg:max-w-xl">
+    <div className="w-full">
       <EditWorkspaceForm initialValues={initialValues} />
     </div>
   );

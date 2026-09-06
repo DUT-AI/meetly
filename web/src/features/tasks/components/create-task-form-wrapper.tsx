@@ -26,8 +26,9 @@ export const CreateTaskFormWrapper = ({ initialStatus, onCancel }: CreateTaskFor
   }));
 
   const memberOptions = members?.documents.map((member) => ({
-    id: member.$id,
+    id: member.$id || member.id,
     name: member.name,
+    imageUrl: member.avatarUrl || member.avatar_url || undefined,
   }));
 
   const isLoading = isLoadingMembers || isLoadingProjects;

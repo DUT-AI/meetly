@@ -1,7 +1,8 @@
 import json
 
 import redis.asyncio as aioredis
-from arq.connections import ArqRedis, RedisSettings as ArqRedisSettings, create_pool
+from arq.connections import ArqRedis, create_pool
+from arq.connections import RedisSettings as ArqRedisSettings
 from loguru import logger
 
 from core.config import redis_settings
@@ -40,10 +41,14 @@ class NotificationQueueProducer:
             )
             return True
         except Exception as e:
-            logger.warning(f"Failed to enqueue to ARQ ({e}), attempting raw redis fallback...")
+            logger.warning(
+                f"Failed to enqueue to ARQ ({e}), attempting raw redis fallback..."
+            )
             try:
                 if self._redis is None:
-                    self._redis = aioredis.from_url(redis_settings.redis_url, decode_responses=True)
+                    self._redis = aioredis.from_url(
+                        redis_settings.redis_url, decode_responses=True
+                    )
                 payload = json.dumps(message.to_dict(), ensure_ascii=False)
                 self._redis.lpush(NOTIFICATION_QUEUE_KEY, payload)
                 return True

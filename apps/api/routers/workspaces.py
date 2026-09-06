@@ -108,6 +108,8 @@ async def update_workspace(
     current_user: CurrentUser,
     use_case: FromDishka[UpdateWorkspaceUseCase],
     name: str | None = Form(None),
+    note: str | None = Form(None),
+    discord_room_id: str | None = Form(None),
     image: UploadFile | None = File(None),
 ) -> dict:
     image_data = image.file if image else None
@@ -118,6 +120,8 @@ async def update_workspace(
         workspace_id=workspace_id,
         user_id=str(current_user.id),
         name=name,
+        note=note,
+        discord_room_id=discord_room_id,
         image_data=image_data,
         image_filename=image_filename,
         content_type=content_type,

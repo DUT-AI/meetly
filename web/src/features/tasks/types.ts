@@ -139,8 +139,15 @@ export function normalizeTask(t: any): PopulatedTask {
     due_date: t.due_date ?? t.dueDate,
     description: t.description || undefined,
     project: t.project ? normalizeProject(t.project) : t.project,
-    assignee: t.assignee ? normalizeMember(t.assignee) : t.assignee,
-    workspace: t.workspace,
+    workspace: t.workspace
+      ? {
+          ...t.workspace,
+          id: t.workspace.id ?? t.workspace.$id ?? t.workspaceId,
+          $id: t.workspace.$id ?? t.workspace.id ?? t.workspaceId,
+          imageUrl: t.workspace.imageUrl ?? t.workspace.image_url,
+          image_url: t.workspace.image_url ?? t.workspace.imageUrl,
+        }
+      : undefined,
     $createdAt: t.$createdAt ?? t.created_at,
     $updatedAt: t.$updatedAt ?? t.updated_at,
   };

@@ -12,12 +12,17 @@ import { Separator } from '@/components/ui/separator';
 import { useDeleteMember } from '@/features/members/api/use-delete-member';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useUpdateMember } from '@/features/members/api/use-update-member';
+import { AddMemberDialog } from '@/features/members/components/add-member-dialog';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { MemberRole } from '@/features/members/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { useConfirm } from '@/hooks/use-confirm';
 
-export const MembersList = () => {
+interface MembersListProps {
+  hideBackButton?: boolean;
+}
+
+export const MembersList = ({ hideBackButton }: MembersListProps = {}) => {
   const workspaceId = useWorkspaceId();
   const [ConfirmDialog, confirm] = useConfirm('Xóa nhân sự', 'Nhân sự này sẽ bị xóa khỏi phòng ban.', 'destructive');
 
@@ -30,14 +35,7 @@ export const MembersList = () => {
 
     if (!ok) return;
 
-    deleteMember(
-      { param: { memberId } },
-      {
-        onSuccess: () => {
-          window.location.reload();
-        },
-      },
-    );
+    deleteMember({ param: { memberId } });
   };
 
   const handleUpdateMember = (memberId: string, role: MemberRole) => {
@@ -53,15 +51,26 @@ export const MembersList = () => {
     <Card className="size-full border-none shadow-none">
       <ConfirmDialog />
 
-      <CardHeader className="flex flex-row items-center gap-x-4 space-y-0 p-7">
-        <Button variant="secondary" size="sm" asChild>
-          <Link href={`/workspaces/${workspaceId}`}>
-            <ArrowLeft className="mr-2 size-4" />
-            Quay lại
-          </Link>
-        </Button>
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 space-y-0 p-7">
+        <div className="flex items-center gap-x-4">
+          {!hideBackButton && (
+            <Button variant="secondary" size="sm" asChild>
+              <Link href={`/workspaces/${workspaceId}`}>
+                <ArrowLeft className="mr-2 size-4" />
+                Quay lại
+              </Link>
+            </Button>
+          )}
 
-        <CardTitle className="text-xl font-bold">Danh sách nhân sự phòng ban</CardTitle>
+          <div className="flex flex-col">
+            <CardTitle className="text-xl font-bold">Danh sách nhân sự phòng ban</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Quản lý thành viên và phân quyền vai trò trong phòng ban.
+            </p>
+          </div>
+        </div>
+
+        <AddMemberDialog />
       </CardHeader>
 
       <div className="px-7">

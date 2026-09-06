@@ -1,4 +1,4 @@
-from sqlalchemy import String
+from sqlalchemy import String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.database.base import Base, TimestampMixin, ULIDPrimaryKeyMixin
@@ -16,6 +16,8 @@ class WorkspaceModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
     invite_code: Mapped[str] = mapped_column(
         String(16), unique=True, index=True, nullable=False
     )
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    discord_room_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
     def to_entity(self) -> WorkspaceEntity:
         return WorkspaceEntity(
@@ -24,6 +26,8 @@ class WorkspaceModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
             owner_id=self.owner_id,
             invite_code=self.invite_code,
             image_url=self.image_url,
+            note=self.note,
+            discord_room_id=self.discord_room_id,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )

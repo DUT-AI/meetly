@@ -25,3 +25,11 @@ class UpdateMemberRoleDTO(BaseModel):
     """Payload to update member role."""
 
     role: MemberRole
+
+
+class AddMemberDTO(BaseModel):
+    """Payload to add a member to a workspace."""
+
+    workspace_id: str
+    user_id: str | int
+    role: MemberRole = MemberRole.MEMBER

@@ -11,18 +11,22 @@ import { SourceCode } from './source-code';
 
 const pathnameMap = {
   tasks: {
-    title: 'My Tasks',
-    description: 'View all of your tasks here.',
+    title: 'Công việc của tôi',
+    description: 'Xem tất cả các công việc của bạn tại đây.',
   },
   projects: {
-    title: 'My Project',
-    description: 'View tasks of your project here.',
+    title: 'Dự án',
+    description: 'Xem và quản lý các dự án trong phòng ban.',
+  },
+  settings: {
+    title: 'Cài đặt phòng ban',
+    description: 'Quản lý thông tin, nhân sự và cấu hình phòng ban.',
   },
 };
 
 const defaultMap = {
-  title: 'Home',
-  description: 'Monitor all of your projects and tasks here.',
+  title: 'Trang chủ',
+  description: 'Theo dõi tổng quan các dự án và công việc tại đây.',
 };
 
 export const Navbar = () => {
@@ -47,7 +51,6 @@ export const Navbar = () => {
 
         <UserButton />
 
-        <SourceCode />
       </div>
     </nav>
   );

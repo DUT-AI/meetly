@@ -2,6 +2,7 @@ import { api } from '@/lib/api';
 import {
   type PopulatedTask,
   type TaskComment,
+  TaskPriority,
   TaskStatus,
   normalizeTask,
   normalizeTaskComment,
@@ -19,6 +20,8 @@ export interface GetTasksParams {
 export interface CreateTaskPayload {
   name: string;
   status: TaskStatus;
+  priority?: TaskPriority;
+  labels?: string[];
   workspaceId: string;
   projectId: string;
   assigneeId: string;
@@ -29,6 +32,8 @@ export interface CreateTaskPayload {
 export interface UpdateTaskPayload {
   name?: string;
   status?: TaskStatus;
+  priority?: TaskPriority;
+  labels?: string[];
   projectId?: string;
   assigneeId?: string;
   dueDate?: Date | string;
@@ -95,6 +100,8 @@ export const taskApi = {
     const body = {
       name: payload.name,
       status: payload.status,
+      priority: payload.priority,
+      labels: payload.labels,
       workspace_id: payload.workspaceId,
       project_id: payload.projectId,
       assignee_id: payload.assigneeId,
@@ -110,6 +117,8 @@ export const taskApi = {
     const body: Record<string, any> = {};
     if (payload.name !== undefined) body.name = payload.name;
     if (payload.status !== undefined) body.status = payload.status;
+    if (payload.priority !== undefined) body.priority = payload.priority;
+    if (payload.labels !== undefined) body.labels = payload.labels;
     if (payload.projectId !== undefined) body.project_id = payload.projectId;
     if (payload.assigneeId !== undefined) body.assignee_id = payload.assigneeId;
     if (payload.dueDate !== undefined) {

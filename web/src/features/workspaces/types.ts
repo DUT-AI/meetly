@@ -9,6 +9,9 @@ export type Workspace = {
   owner_id?: string;
   inviteCode?: string;
   invite_code?: string;
+  note?: string | null;
+  discord_room_id?: string | null;
+  discordRoomId?: string | null;
   $createdAt?: string;
   $updatedAt?: string;
   created_at?: string;
@@ -87,6 +90,9 @@ export function normalizeWorkspace(w: any): Workspace {
     $id: id,
     imageUrl: img,
     image_url: img,
+    note: w.note ?? undefined,
+    discord_room_id: w.discord_room_id ?? w.discordRoomId ?? undefined,
+    discordRoomId: w.discord_room_id ?? w.discordRoomId ?? undefined,
     userId: w.userId ?? w.owner_id,
     owner_id: w.owner_id ?? w.userId,
     inviteCode: w.inviteCode ?? w.invite_code,

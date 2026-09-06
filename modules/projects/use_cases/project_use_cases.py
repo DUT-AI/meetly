@@ -236,6 +236,10 @@ class DeleteProjectUseCase:
         await self.project_repo.delete(project_id)
 
 
+from modules.tasks.domain.interfaces import ITaskRepository
+from core.utils.task_analytics import compute_task_analytics
+
+
 class GetProjectAnalyticsUseCase:
     """Compute analytics for tasks in a project."""
 
@@ -243,9 +247,11 @@ class GetProjectAnalyticsUseCase:
         self,
         project_repo: IProjectRepository,
         member_repo: IMemberRepository,
+        task_repo: ITaskRepository,
     ) -> None:
         self.project_repo = project_repo
         self.member_repo = member_repo
+        self.task_repo = task_repo
 
     async def execute(self, project_id: str, user_id: str) -> ProjectAnalyticsDTO:
         proj = await self.project_repo.get_by_id(project_id)
@@ -256,15 +262,7 @@ class GetProjectAnalyticsUseCase:
         if not member:
             raise ForbiddenException("Unauthorized.")
 
-        return ProjectAnalyticsDTO(
-            task_count=0,
-            task_difference=0,
-            assigned_task_count=0,
-            assigned_task_difference=0,
-            completed_task_count=0,
-            completed_task_difference=0,
-            incomplete_task_count=0,
-            incomplete_task_difference=0,
-            overdue_task_count=0,
-            overdue_task_difference=0,
+        tasks = await self.task_repo.list_tasks(
+            workspace_id=proj.workspace_id, project_id=project_id
         )
+        return compute_task_analytics(tasks, ProjectAnalyticsDTO)

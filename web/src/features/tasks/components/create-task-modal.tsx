@@ -14,6 +14,7 @@ export const CreateTaskModal = () => {
       description="Create a new task and organize them in your project."
       open={isOpen}
       onOpenChange={close}
+      className="sm:max-w-4xl lg:max-w-5xl"
     >
       <CreateTaskFormWrapper initialStatus={initialStatus} onCancel={close} />
     </ResponsiveModal>

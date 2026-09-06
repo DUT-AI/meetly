@@ -113,7 +113,10 @@ export const columns = columnHelper.columns([
     header: () => <span className="text-xs font-semibold px-4">Nhãn</span>,
     cell: ({ row }) => {
       const labels = row.original.labels;
-      return <TaskLabels labels={labels || []} maxDisplay={2} />;
+      if (!labels || labels.length === 0) {
+        return <span className="text-xs text-muted-foreground italic px-4">-</span>;
+      }
+      return <TaskLabels labels={labels} maxDisplay={2} />;
     },
   }),
   columnHelper.accessor('status', {
@@ -134,8 +137,8 @@ export const columns = columnHelper.columns([
   columnHelper.display({
     id: 'actions',
     cell: ({ row }) => {
-      const id = row.original.$id || row.original.id;
-      const projectId = row.original.projectId || row.original.project_id;
+      const id = row.original.$id || row.original.id || '';
+      const projectId = row.original.projectId || row.original.project_id || '';
 
       return (
         <TaskActions id={id} projectId={projectId}>

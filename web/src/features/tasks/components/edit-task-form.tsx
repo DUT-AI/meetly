@@ -23,7 +23,7 @@ import { cn } from '@/lib/utils';
 interface EditTaskFormProps {
   onCancel?: () => void;
   projectOptions: { id: string; name: string; imageUrl?: string }[];
-  memberOptions: { id: string; name: string }[];
+  memberOptions: { id: string; name: string; imageUrl?: string }[];
   initialValues: PopulatedTask;
 }
 
@@ -119,7 +119,24 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
 
                     <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <SelectTrigger>{field.value ? <SelectValue placeholder="Select assignee" /> : 'Select assignee'}</SelectTrigger>
+                        <SelectTrigger>
+                          {field.value ? (
+                            (() => {
+                              const selectedMember = memberOptions.find((m) => m.id === field.value);
+                              if (selectedMember) {
+                                return (
+                                  <div className="flex items-center gap-x-2 truncate">
+                                    <MemberAvatar className="size-5" name={selectedMember.name} image={selectedMember.imageUrl} />
+                                    <span className="truncate">{selectedMember.name}</span>
+                                  </div>
+                                );
+                              }
+                              return <SelectValue placeholder="Select assignee" />;
+                            })()
+                          ) : (
+                            'Select assignee'
+                          )}
+                        </SelectTrigger>
                       </FormControl>
 
                       <FormMessage />
@@ -128,8 +145,8 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                         {memberOptions.map((member) => (
                           <SelectItem key={member.id} value={member.id}>
                             <div className="flex items-center gap-x-2">
-                              <MemberAvatar className="size-6" name={member.name} />
-                              {member.name}
+                              <MemberAvatar className="size-5" name={member.name} image={member.imageUrl} />
+                              <span className="truncate">{member.name}</span>
                             </div>
                           </SelectItem>
                         ))}
@@ -176,7 +193,24 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
 
                     <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
                       <FormControl>
-                        <SelectTrigger>{field.value ? <SelectValue placeholder="Select project" /> : 'Select project'}</SelectTrigger>
+                        <SelectTrigger>
+                          {field.value ? (
+                            (() => {
+                              const selectedProject = projectOptions.find((p) => p.id === field.value);
+                              if (selectedProject) {
+                                return (
+                                  <div className="flex items-center gap-x-2 truncate">
+                                    <ProjectAvatar className="size-5" name={selectedProject.name} image={selectedProject.imageUrl} />
+                                    <span className="truncate">{selectedProject.name}</span>
+                                  </div>
+                                );
+                              }
+                              return <SelectValue placeholder="Select project" />;
+                            })()
+                          ) : (
+                            'Select project'
+                          )}
+                        </SelectTrigger>
                       </FormControl>
 
                       <FormMessage />

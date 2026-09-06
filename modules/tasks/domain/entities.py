@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
-from modules.members.dtos.member_dtos import MemberResponseDTO
-from modules.projects.dtos.project_dtos import ProjectResponseDTO
+if TYPE_CHECKING:
+    from modules.members.dtos.member_dtos import MemberResponseDTO
+    from modules.projects.dtos.project_dtos import ProjectResponseDTO
+
 from modules.tasks.domain.enums import TaskPriority, TaskStatus
 
 
@@ -38,8 +41,8 @@ class PopulatedTaskEntity:
     description: str | None
     created_at: datetime
     updated_at: datetime
-    project: ProjectResponseDTO
-    assignee: MemberResponseDTO | None = None
+    project: Any = None
+    assignee: Any | None = None
 
 
 @dataclass
@@ -60,4 +63,3 @@ class TaskCommentEntity:
     created_at: datetime
     updated_at: datetime
     user: TaskCommentUserEntity | None = None
-

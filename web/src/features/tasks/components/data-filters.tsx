@@ -2,7 +2,9 @@ import { Folder, ListChecks, UserIcon } from 'lucide-react';
 
 import { DatePicker } from '@/components/date-picker';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { useGetMembers } from '@/features/members/api/use-get-members';
+import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
 import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
 import { TaskStatus } from '@/features/tasks/types';
@@ -23,11 +25,13 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
   const projectOptions = projects?.documents.map((project) => ({
     value: project.$id,
     label: project.name,
+    imageUrl: project.imageUrl,
   }));
 
   const memberOptions = members?.documents.map((member) => ({
-    value: member.$id,
+    value: member.$id || member.id,
     label: member.name,
+    imageUrl: member.avatarUrl || member.avatar_url || undefined,
   }));
 
   const [{ status, assigneeId, projectId, dueDate }, setFilters] = useTaskFilters();
@@ -82,7 +86,10 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
 
           {memberOptions?.map((member) => (
             <SelectItem key={member.value} value={member.value}>
-              {member.label}
+              <div className="flex items-center gap-x-2">
+                <MemberAvatar className="size-5" name={member.label} image={member.imageUrl} />
+                <span>{member.label}</span>
+              </div>
             </SelectItem>
           ))}
         </SelectContent>
@@ -103,7 +110,10 @@ export const DataFilters = ({ hideProjectFilter }: DataFiltersProps) => {
 
             {projectOptions?.map((project) => (
               <SelectItem key={project.value} value={project.value}>
-                {project.label}
+                <div className="flex items-center gap-x-2">
+                  <ProjectAvatar className="size-5" name={project.label} image={project.imageUrl} />
+                  <span>{project.label}</span>
+                </div>
               </SelectItem>
             ))}
           </SelectContent>

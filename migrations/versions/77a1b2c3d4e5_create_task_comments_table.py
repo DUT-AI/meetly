@@ -31,8 +31,12 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["task_id"], ["tasks.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_task_comments_task_id"), "task_comments", ["task_id"], unique=False)
-    op.create_index(op.f("ix_task_comments_user_id"), "task_comments", ["user_id"], unique=False)
+    op.create_index(
+        op.f("ix_task_comments_task_id"), "task_comments", ["task_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_task_comments_user_id"), "task_comments", ["user_id"], unique=False
+    )
 
 
 def downgrade() -> None:

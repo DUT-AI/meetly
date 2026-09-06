@@ -40,7 +40,9 @@ class DiscordService:
             embed: Optional embed dictionary for rich content.
         """
         if not self.bot_token:
-            logger.warning(f"Discord Bot Token chưa được cấu hình, bỏ qua gửi DM tới {user_id}")
+            logger.warning(
+                f"Discord Bot Token chưa được cấu hình, bỏ qua gửi DM tới {user_id}"
+            )
             return {}
 
         try:
@@ -92,5 +94,60 @@ class DiscordService:
                     return result
 
         except aiohttp.ClientError as e:
-            logger.error(f"Network error while sending Discord message to user {user_id}: {e}")
+            logger.error(
+                f"Network error while sending Discord message to user {user_id}: {e}"
+            )
             raise DiscordServiceError(f"Network error: {e}") from e
+
+    async def send_message_to_channel(
+        self, channel_id: str, content: str = "", embed: dict | None = None
+    ) -> dict[str, Any]:
+        """
+        Send a message directly to a Discord channel / room.
+
+        Args:
+            channel_id: The Discord channel snowflake ID to send the message to.
+            content: The message content to send.
+            embed: Optional embed dictionary for rich content.
+        """
+        if not self.bot_token:
+            logger.warning(
+                f"Discord Bot Token chưa được cấu hình, bỏ qua gửi message tới channel {channel_id}"
+            )
+            return {}
+
+        try:
+            async with aiohttp.ClientSession() as session:
+                send_message_url = f"{self.BASE_URL}/channels/{channel_id}/messages"
+                message_payload: dict[str, Any] = {"content": content}
+
+                if embed:
+                    if "timestamp" not in embed:
+                        embed["timestamp"] = datetime.now(UTC).isoformat()
+                    message_payload["embeds"] = [embed]
+
+                async with session.post(
+                    send_message_url, json=message_payload, headers=self.headers
+                ) as response:
+                    if response.status not in (200, 201):
+                        error_text = await response.text()
+                        logger.error(
+                            f"Failed to send Discord message to channel {channel_id}: {error_text}"
+                        )
+                        raise DiscordServiceError(
+                            f"Failed to send message to channel {channel_id}: {error_text}",
+                            status_code=response.status,
+                        )
+
+                    result = await response.json()
+                    logger.info(
+                        f"Successfully sent Discord message to channel {channel_id}"
+                    )
+                    return result
+
+        except aiohttp.ClientError as e:
+            logger.error(
+                f"Network error while sending Discord message to channel {channel_id}: {e}"
+            )
+            raise DiscordServiceError(f"Network error: {e}") from e
+

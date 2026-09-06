@@ -39,9 +39,18 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.PrimaryKeyConstraint("id"),
     )
-    op.create_index(op.f("ix_notifications_user_id"), "notifications", ["user_id"], unique=False)
-    op.create_index(op.f("ix_notifications_workspace_id"), "notifications", ["workspace_id"], unique=False)
-    op.create_index(op.f("ix_notifications_is_read"), "notifications", ["is_read"], unique=False)
+    op.create_index(
+        op.f("ix_notifications_user_id"), "notifications", ["user_id"], unique=False
+    )
+    op.create_index(
+        op.f("ix_notifications_workspace_id"),
+        "notifications",
+        ["workspace_id"],
+        unique=False,
+    )
+    op.create_index(
+        op.f("ix_notifications_is_read"), "notifications", ["is_read"], unique=False
+    )
 
 
 def downgrade() -> None:

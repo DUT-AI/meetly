@@ -13,7 +13,9 @@ class DiscordChannel(INotificationChannel):
     def __init__(self, discord_service: DiscordService) -> None:
         self.discord_service = discord_service
 
-    async def send(self, recipient: ManageUserDTO, message: NotificationMessage) -> bool:
+    async def send(
+        self, recipient: ManageUserDTO, message: NotificationMessage
+    ) -> bool:
         if not recipient.discord_id:
             return False
 
@@ -42,5 +44,7 @@ class DiscordChannel(INotificationChannel):
             )
             return True
         except Exception as e:
-            logger.error(f"Failed to send Discord notification to user {recipient.id}: {e}")
+            logger.error(
+                f"Failed to send Discord notification to user {recipient.id}: {e}"
+            )
             return False

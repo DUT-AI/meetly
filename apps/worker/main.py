@@ -31,9 +31,7 @@ async def send_notification_job(ctx: dict[str, Any], payload: dict[str, Any]) ->
         use_case = await request_container.get(SendNotificationUseCase)
         await use_case.execute(message)
 
-    logger.info(
-        f"Notification job completed for recipient={message.recipient_user_id}"
-    )
+    logger.info(f"Notification job completed for recipient={message.recipient_user_id}")
 
 
 async def check_task_deadlines_job(ctx: dict[str, Any]) -> None:
@@ -77,9 +75,7 @@ class WorkerSettings:
 
 def main() -> None:
     """Worker entrypoint executing ARQ worker loop."""
-    logger.info(
-        f"Starting ARQ Worker listening on queue '{NOTIFICATION_QUEUE_KEY}'..."
-    )
+    logger.info(f"Starting ARQ Worker listening on queue '{NOTIFICATION_QUEUE_KEY}'...")
     run_worker(WorkerSettings)
 
 

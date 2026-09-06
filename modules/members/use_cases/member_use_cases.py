@@ -127,3 +127,63 @@ class RemoveMemberUseCase:
             raise ForbiddenException("Admin permissions required.")
 
         await self.member_repo.delete(member_id)
+
+
+class AddMemberUseCase:
+    """Add a member to a workspace directly by user_id."""
+
+    def __init__(
+        self,
+        member_repo: IMemberRepository,
+        manage_client: ManageClient,
+    ) -> None:
+        self.member_repo = member_repo
+        self.manage_client = manage_client
+
+    async def execute(
+        self,
+        workspace_id: str,
+        target_user_id: str | int,
+        role: MemberRole,
+        current_user_id: str,
+    ) -> MemberResponseDTO:
+        caller = await self.member_repo.get_member(
+            workspace_id=workspace_id, user_id=current_user_id
+        )
+        if not caller or caller.role != MemberRole.ADMIN:
+            raise ForbiddenException(
+                "Chỉ Quản trị viên (Admin) mới có quyền thêm nhân sự vào phòng ban."
+            )
+
+        target_user_id_str = str(target_user_id)
+
+        # Check if already a member
+        existing = await self.member_repo.get_member(
+            workspace_id=workspace_id, user_id=target_user_id_str
+        )
+        if existing:
+            raise BadRequestException("Người dùng này đã là nhân sự của phòng ban.")
+
+        user_info = await self.manage_client.get_user(target_user_id_str)
+        if not user_info:
+            raise NotFoundException(
+                "Không tìm thấy thông tin người dùng trên hệ thống."
+            )
+
+        new_member = await self.member_repo.add_member(
+            workspace_id=workspace_id,
+            user_id=target_user_id_str,
+            role=role,
+        )
+
+        return MemberResponseDTO(
+            id=new_member.id,
+            workspace_id=new_member.workspace_id,
+            user_id=new_member.user_id,
+            name=user_info.name or f"User {new_member.user_id}",
+            email=user_info.email or "",
+            avatar_url=user_info.avatar_url,
+            role=new_member.role,
+            created_at=new_member.created_at,
+            updated_at=new_member.updated_at,
+        )

@@ -8,7 +8,7 @@ export async function serverFetch<T>(
   options: RequestInit = {}
 ): Promise<T | null> {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const cookieHeader = cookieStore.toString();
 
     const url = endpoint.startsWith("http")
@@ -31,7 +31,10 @@ export async function serverFetch<T>(
 
     const json = await res.json();
     return json.data !== undefined ? json.data : json;
-  } catch (error) {
+  } catch (error: any) {
+    if (error?.digest === 'DYNAMIC_SERVER_USAGE' || error?.digest?.startsWith?.('NEXT_')) {
+      throw error;
+    }
     console.error(`Error in serverFetch for ${endpoint}:`, error);
     return null;
   }

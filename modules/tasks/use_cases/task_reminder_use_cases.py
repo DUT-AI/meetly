@@ -1,4 +1,5 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+
 import redis.asyncio as aioredis
 from loguru import logger
 
@@ -11,7 +12,7 @@ from modules.tasks.domain.interfaces import ITaskRepository
 
 class CheckTaskDeadlinesUseCase:
     """Check task deadlines periodically and dispatch due soon or overdue notifications.
-    
+
     Prevents duplicate notifications within the same day using Redis key tracking.
     """
 
@@ -28,11 +29,13 @@ class CheckTaskDeadlinesUseCase:
 
     async def _get_redis(self) -> aioredis.Redis:
         if self._redis is None:
-            self._redis = aioredis.from_url(redis_settings.redis_url, decode_responses=True)
+            self._redis = aioredis.from_url(
+                redis_settings.redis_url, decode_responses=True
+            )
         return self._redis
 
     async def execute(self) -> dict[str, int]:
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         today_str = now.strftime("%Y-%m-%d")
         redis_client = await self._get_redis()
 
@@ -46,7 +49,7 @@ class CheckTaskDeadlinesUseCase:
 
             due_date = task.due_date
             if due_date.tzinfo is None:
-                due_date = due_date.replace(tzinfo=timezone.utc)
+                due_date = due_date.replace(tzinfo=UTC)
 
             delta = due_date - now
             delta_seconds = delta.total_seconds()
@@ -95,7 +98,9 @@ class CheckTaskDeadlinesUseCase:
                 already_sent = await redis_client.get(cache_key)
                 if not already_sent:
                     hours_left = max(1, int(delta_seconds // 3600))
-                    title = f"⏰ Công việc '{task.name}' sắp đến hạn (còn {hours_left} giờ)"
+                    title = (
+                        f"⏰ Công việc '{task.name}' sắp đến hạn (còn {hours_left} giờ)"
+                    )
                     msg = NotificationMessage(
                         recipient_user_id=str(assignee_member.user_id),
                         event_type="task_due_soon",

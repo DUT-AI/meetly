@@ -309,4 +309,3 @@ async def delete_task_comment(
         user_id=str(current_user.id),
     )
     return {"data": {"id": comment_id}}
-

@@ -122,4 +122,3 @@ class ITaskCommentRepository(ABC):
     @abstractmethod
     async def delete(self, comment_id: str) -> None:
         """Delete comment by ID."""
-
