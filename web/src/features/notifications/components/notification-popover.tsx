@@ -3,6 +3,8 @@
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import {
+  AlertTriangle,
+  ArrowRightCircle,
   AtSign,
   Bell,
   CheckCheck,
@@ -10,6 +12,8 @@ import {
   Clock,
   Loader2,
   MessageSquare,
+  UserMinus,
+  UserPlus,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -54,12 +58,23 @@ export const NotificationPopover = () => {
     switch (type) {
       case 'task_comment_mention':
         return <AtSign className="size-3.5 text-blue-500" />;
+      case 'task_new_comment':
+        return <MessageSquare className="size-3.5 text-indigo-500" />;
       case 'task_assigned':
         return <CheckCircle2 className="size-3.5 text-emerald-500" />;
+      case 'task_unassigned':
+        return <UserMinus className="size-3.5 text-rose-500" />;
+      case 'task_status_changed':
+        return <ArrowRightCircle className="size-3.5 text-violet-500" />;
       case 'task_due_soon':
         return <Clock className="size-3.5 text-amber-500" />;
+      case 'task_overdue':
+        return <AlertTriangle className="size-3.5 text-red-600" />;
+      case 'member_joined_workspace':
+      case 'member_added_project':
+        return <UserPlus className="size-3.5 text-teal-500" />;
       default:
-        return <MessageSquare className="size-3.5 text-neutral-500" />;
+        return <Bell className="size-3.5 text-neutral-500" />;
     }
   };
 

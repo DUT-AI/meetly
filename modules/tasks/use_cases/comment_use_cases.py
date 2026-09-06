@@ -130,12 +130,13 @@ class CreateTaskCommentUseCase:
 
         # Dispatch notifications to mentioned users
         logger.info(f"Comment created on task {task.id}: clean_mentions={clean_mentions}")
+        notified_user_ids = set()
+        action_url = f"/workspaces/{task.workspace_id}/tasks/{task.id}"
+
         for mentioned_id in clean_mentions:
-            action_url = f"/workspaces/{task.workspace_id}/tasks/{task.id}"
             title = f"{user_name or 'Đồng nghiệp'} đã nhắc đến bạn trong một bình luận"
-        
             msg = NotificationMessage(
-                recipient_user_id=mentioned_id,
+                recipient_user_id=str(mentioned_id),
                 event_type="task_comment_mention",
                 title=title,
                 content=clean_content[:200] + ("..." if len(clean_content) > 200 else ""),
@@ -147,7 +148,27 @@ class CreateTaskCommentUseCase:
                 entity_type="task",
                 entity_id=task.id,
             )
+            notified_user_ids.add(str(mentioned_id))
             await self.notification_dispatcher.dispatch(msg)
+
+        # Notify task assignee about new comment if not already notified
+        if task.assignee_id:
+            assignee_member = await self.member_repo.get_by_id(task.assignee_id)
+            if assignee_member and str(assignee_member.user_id) not in notified_user_ids:
+                msg = NotificationMessage(
+                    recipient_user_id=str(assignee_member.user_id),
+                    event_type="task_new_comment",
+                    title=f"{user_name or 'Đồng nghiệp'} đã bình luận về công việc của bạn",
+                    content=clean_content[:200] + ("..." if len(clean_content) > 200 else ""),
+                    action_url=action_url,
+                    actor_id=user_id,
+                    actor_name=user_name,
+                    actor_avatar_url=user_avatar_url,
+                    workspace_id=task.workspace_id,
+                    entity_type="task",
+                    entity_id=task.id,
+                )
+                await self.notification_dispatcher.dispatch(msg)
 
         return TaskCommentResponseDTO(
             id=created.id,

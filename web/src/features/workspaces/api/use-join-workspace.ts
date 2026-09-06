@@ -31,6 +31,9 @@ export const useJoinWorkspace = () => {
         queryKey: ['workspace', workspaceId],
         exact: true,
       });
+      queryClient.invalidateQueries({
+        queryKey: ['notifications'],
+      });
     },
     onError: (error) => {
       console.error('[JOIN_WORKSPACE]: ', error);

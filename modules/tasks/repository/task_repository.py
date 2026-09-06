@@ -185,3 +185,17 @@ class SqlTaskRepository(ITaskRepository):
     async def delete(self, task_id: str) -> None:
         stmt = delete(TaskModel).where(TaskModel.id == task_id)
         await self.session.execute(stmt)
+
+    async def get_pending_tasks_with_deadlines(self) -> list[TaskEntity]:
+        stmt = (
+            select(TaskModel)
+            .where(
+                TaskModel.due_date.isnot(None),
+                TaskModel.status != TaskStatus.DONE.value,
+                TaskModel.assignee_id.isnot(None),
+            )
+            .order_by(TaskModel.due_date.asc())
+        )
+        result = await self.session.execute(stmt)
+        models = result.scalars().all()
+        return [m.to_entity() for m in models]

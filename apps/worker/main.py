@@ -1,6 +1,6 @@
 from typing import Any, ClassVar
 
-from arq import run_worker
+from arq import cron, run_worker
 from arq.connections import RedisSettings as ArqRedisSettings
 from loguru import logger
 
@@ -12,6 +12,9 @@ from modules.notifications.queue import (
 )
 from modules.notifications.use_cases.notification_use_cases import (
     SendNotificationUseCase,
+)
+from modules.tasks.use_cases.task_reminder_use_cases import (
+    CheckTaskDeadlinesUseCase,
 )
 
 
@@ -33,6 +36,16 @@ async def send_notification_job(ctx: dict[str, Any], payload: dict[str, Any]) ->
     )
 
 
+async def check_task_deadlines_job(ctx: dict[str, Any]) -> None:
+    """Scheduled Job Handler: Scans upcoming and overdue tasks and dispatches reminders."""
+    logger.info("ARQ Worker executing periodic deadline check...")
+    container = ctx["container"]
+    async with container() as request_container:
+        use_case = await request_container.get(CheckTaskDeadlinesUseCase)
+        result = await use_case.execute()
+        logger.info(f"Periodic deadline check completed: {result}")
+
+
 async def startup(ctx: dict[str, Any]) -> None:
     """Initialize DI container on worker startup."""
     logger.info("Meetly ARQ Worker starting up...")
@@ -50,7 +63,10 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """ARQ Worker configuration class."""
 
-    functions: ClassVar[list[Any]] = [send_notification_job]
+    functions: ClassVar[list[Any]] = [send_notification_job, check_task_deadlines_job]
+    cron_jobs: ClassVar[list[Any]] = [
+        cron(check_task_deadlines_job, minute={0, 15, 30, 45})  # Every 15 minutes
+    ]
     queue_name: str = NOTIFICATION_QUEUE_KEY
     on_startup = startup
     on_shutdown = shutdown

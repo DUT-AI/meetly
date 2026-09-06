@@ -40,6 +40,9 @@ export const useBulkUpdateTasks = () => {
         queryKey: ['project-analytics'],
         exact: false,
       });
+      queryClient.invalidateQueries({
+        queryKey: ['notifications'],
+      });
     },
     onError: (error) => {
       console.error('[BULK_UPDATE_TASKS]: ', error);

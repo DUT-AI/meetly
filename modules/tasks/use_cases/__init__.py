@@ -4,6 +4,9 @@ from modules.tasks.use_cases.comment_use_cases import (
     ListTaskCommentsUseCase,
     UpdateTaskCommentUseCase,
 )
+from modules.tasks.use_cases.task_reminder_use_cases import (
+    CheckTaskDeadlinesUseCase,
+)
 from modules.tasks.use_cases.task_use_cases import (
     BulkUpdateTasksUseCase,
     CreateTaskUseCase,
@@ -16,6 +19,7 @@ from modules.tasks.use_cases.task_use_cases import (
 
 __all__ = [
     "BulkUpdateTasksUseCase",
+    "CheckTaskDeadlinesUseCase",
     "CreateTaskCommentUseCase",
     "CreateTaskUseCase",
     "DeleteTaskCommentUseCase",

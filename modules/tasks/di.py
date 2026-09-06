@@ -9,6 +9,7 @@ from modules.tasks.repository.comment_repository import SqlTaskCommentRepository
 from modules.tasks.repository.task_repository import SqlTaskRepository
 from modules.tasks.use_cases import (
     BulkUpdateTasksUseCase,
+    CheckTaskDeadlinesUseCase,
     CreateTaskCommentUseCase,
     CreateTaskUseCase,
     DeleteTaskCommentUseCase,
@@ -44,6 +45,7 @@ class TaskProvider(Provider):
     update_task_uc = provide(UpdateTaskUseCase)
     bulk_update_tasks_uc = provide(BulkUpdateTasksUseCase)
     delete_task_uc = provide(DeleteTaskUseCase)
+    check_task_deadlines_uc = provide(CheckTaskDeadlinesUseCase)
 
     list_task_comments_uc = provide(ListTaskCommentsUseCase)
     create_task_comment_uc = provide(CreateTaskCommentUseCase)

@@ -84,6 +84,10 @@ class ITaskRepository(ABC):
     async def delete(self, task_id: str) -> None:
         """Delete task by ID."""
 
+    @abstractmethod
+    async def get_pending_tasks_with_deadlines(self) -> list[TaskEntity]:
+        """Fetch all non-completed tasks that have due_date set."""
+
 
 class ITaskCommentRepository(ABC):
     """Repository interface for Task Comments."""

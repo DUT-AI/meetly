@@ -6,8 +6,11 @@ from core.config import s3_settings
 from core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from core.storage.interface import IStorageProvider
 from core.storage.url_builder import parse_storage_uri
+from modules.identity.client.manage_client import ManageClient
 from modules.members.domain.enums import MemberRole
 from modules.members.domain.interfaces import IMemberRepository
+from modules.notifications.dispatcher import NotificationDispatcher
+from modules.notifications.domain.entities import NotificationMessage
 from modules.workspaces.domain.interfaces import IWorkspaceRepository
 from modules.workspaces.dtos.workspace_dtos import (
     WorkspaceAnalyticsDTO,
@@ -299,9 +302,13 @@ class JoinWorkspaceUseCase:
         self,
         workspace_repo: IWorkspaceRepository,
         member_repo: IMemberRepository,
+        manage_client: ManageClient,
+        notification_dispatcher: NotificationDispatcher,
     ) -> None:
         self.workspace_repo = workspace_repo
         self.member_repo = member_repo
+        self.manage_client = manage_client
+        self.notification_dispatcher = notification_dispatcher
 
     async def execute(
         self, workspace_id: str, code: str, user_id: str
@@ -317,9 +324,45 @@ class JoinWorkspaceUseCase:
         if ws.invite_code != code:
             raise BadRequestException("Invalid invite code.")
 
-        await self.member_repo.add_member(
+        new_member = await self.member_repo.add_member(
             workspace_id=workspace_id, user_id=user_id, role=MemberRole.MEMBER
         )
+
+        # Notify workspace owner & admins
+        try:
+            joiner = await self.manage_client.get_user(user_id)
+            joiner_name = joiner.name if joiner else "Thành viên mới"
+            joiner_avatar = joiner.avatar_url if joiner else None
+            action_url = f"/workspaces/{ws.id}/members"
+
+            # Find admins
+            all_members = await self.member_repo.list_by_workspace(workspace_id)
+            admin_user_ids = {
+                str(m.user_id)
+                for m in all_members
+                if m.role == MemberRole.ADMIN and str(m.user_id) != str(user_id)
+            }
+            if str(ws.owner_id) != str(user_id):
+                admin_user_ids.add(str(ws.owner_id))
+
+            for admin_id in admin_user_ids:
+                await self.notification_dispatcher.dispatch(
+                    NotificationMessage(
+                        recipient_user_id=admin_id,
+                        event_type="member_joined_workspace",
+                        title=f"{joiner_name} đã tham gia workspace",
+                        content=f"Thành viên mới đã gia nhập '{ws.name}' qua mã mời.",
+                        action_url=action_url,
+                        actor_id=user_id,
+                        actor_name=joiner_name,
+                        actor_avatar_url=joiner_avatar,
+                        workspace_id=ws.id,
+                        entity_type="workspace",
+                        entity_id=ws.id,
+                    )
+                )
+        except Exception:
+            pass
 
         return WorkspaceResponseDTO(
             id=ws.id,

@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from loguru import logger
 
@@ -326,9 +327,13 @@ class UpdateTaskUseCase:
         self,
         task_repo: ITaskRepository,
         member_repo: IMemberRepository,
+        manage_client: ManageClient,
+        notification_dispatcher: NotificationDispatcher,
     ) -> None:
         self.task_repo = task_repo
         self.member_repo = member_repo
+        self.manage_client = manage_client
+        self.notification_dispatcher = notification_dispatcher
 
     async def execute(
         self,
@@ -351,6 +356,9 @@ class UpdateTaskUseCase:
         if not member:
             raise ForbiddenException("Unauthorized.")
 
+        old_status = task.status
+        old_assignee_id = task.assignee_id
+
         updated = await self.task_repo.update(
             task_id=task_id,
             name=name,
@@ -362,6 +370,85 @@ class UpdateTaskUseCase:
             due_date=due_date,
             description=description,
         )
+
+        # Notify events asynchronously
+        try:
+            actor = await self.manage_client.get_user(user_id)
+            actor_name = actor.name if actor else "Đồng nghiệp"
+            actor_avatar = actor.avatar_url if actor else None
+            action_url = f"/workspaces/{task.workspace_id}/tasks/{task.id}"
+
+            # 1. Check assignee change (Unassigned / Reassigned)
+            if assignee_id is not None and assignee_id != old_assignee_id:
+                # Notify unassigned user
+                if old_assignee_id:
+                    old_assignee_member = await self.member_repo.get_by_id(old_assignee_id)
+                    if old_assignee_member:
+                        await self.notification_dispatcher.dispatch(
+                            NotificationMessage(
+                                recipient_user_id=str(old_assignee_member.user_id),
+                                event_type="task_unassigned",
+                                title=f"{actor_name} đã gỡ bạn khỏi công việc",
+                                content=f"Công việc: {updated.name}",
+                                action_url=action_url,
+                                actor_id=user_id,
+                                actor_name=actor_name,
+                                actor_avatar_url=actor_avatar,
+                                workspace_id=task.workspace_id,
+                                entity_type="task",
+                                entity_id=task.id,
+                            )
+                        )
+
+                # Notify newly assigned user
+                if assignee_id:
+                    new_assignee_member = await self.member_repo.get_by_id(assignee_id)
+                    if new_assignee_member:
+                        await self.notification_dispatcher.dispatch(
+                            NotificationMessage(
+                                recipient_user_id=str(new_assignee_member.user_id),
+                                event_type="task_assigned",
+                                title=f"{actor_name} đã giao việc cho bạn",
+                                content=f"Công việc: {updated.name}",
+                                action_url=action_url,
+                                actor_id=user_id,
+                                actor_name=actor_name,
+                                actor_avatar_url=actor_avatar,
+                                workspace_id=task.workspace_id,
+                                entity_type="task",
+                                entity_id=task.id,
+                            )
+                        )
+
+            # 2. Check status change
+            if status is not None and status != old_status and updated.assignee_id:
+                current_assignee = await self.member_repo.get_by_id(updated.assignee_id)
+                if current_assignee:
+                    status_label = {
+                        TaskStatus.BACKLOG: "Tồn đọng (Backlog)",
+                        TaskStatus.TODO: "Cần làm (Todo)",
+                        TaskStatus.IN_PROGRESS: "Đang làm (In Progress)",
+                        TaskStatus.IN_REVIEW: "Đang duyệt (In Review)",
+                        TaskStatus.DONE: "Đã hoàn thành (Done)",
+                    }.get(status, status.value)
+
+                    await self.notification_dispatcher.dispatch(
+                        NotificationMessage(
+                            recipient_user_id=str(current_assignee.user_id),
+                            event_type="task_status_changed",
+                            title=f"Trạng thái công việc đã đổi sang '{status_label}'",
+                            content=f"Công việc: {updated.name} (cập nhật bởi {actor_name})",
+                            action_url=action_url,
+                            actor_id=user_id,
+                            actor_name=actor_name,
+                            actor_avatar_url=actor_avatar,
+                            workspace_id=task.workspace_id,
+                            entity_type="task",
+                            entity_id=task.id,
+                        )
+                    )
+        except Exception as e:
+            logger.warning(f"Failed to dispatch update task notifications: {e}")
 
         return TaskResponseDTO(
             id=updated.id,
@@ -387,9 +474,13 @@ class BulkUpdateTasksUseCase:
         self,
         task_repo: ITaskRepository,
         member_repo: IMemberRepository,
+        manage_client: ManageClient,
+        notification_dispatcher: NotificationDispatcher,
     ) -> None:
         self.task_repo = task_repo
         self.member_repo = member_repo
+        self.manage_client = manage_client
+        self.notification_dispatcher = notification_dispatcher
 
     async def execute(
         self,
@@ -401,6 +492,7 @@ class BulkUpdateTasksUseCase:
 
         updates: list[tuple[str, TaskStatus, int]] = []
         workspace_id: str | None = None
+        status_changed_tasks: list[tuple[Any, TaskStatus]] = []
 
         for item in items:
             t = await self.task_repo.get_by_id(item.id)
@@ -411,9 +503,46 @@ class BulkUpdateTasksUseCase:
                 member = await self.member_repo.get_member(workspace_id, user_id)
                 if not member:
                     raise ForbiddenException("Unauthorized.")
+            if t.status != item.status and t.assignee_id:
+                status_changed_tasks.append((t, item.status))
             updates.append((item.id, item.status, item.position))
 
         updated_tasks = await self.task_repo.bulk_update_positions(updates)
+
+        # Notify status changes for dragged tasks
+        if status_changed_tasks:
+            try:
+                actor = await self.manage_client.get_user(user_id)
+                actor_name = actor.name if actor else "Đồng nghiệp"
+                actor_avatar = actor.avatar_url if actor else None
+                for orig_task, new_st in status_changed_tasks:
+                    assignee_member = await self.member_repo.get_by_id(orig_task.assignee_id)
+                    if assignee_member:
+                        st_label = {
+                            TaskStatus.BACKLOG: "Tồn đọng (Backlog)",
+                            TaskStatus.TODO: "Cần làm (Todo)",
+                            TaskStatus.IN_PROGRESS: "Đang làm (In Progress)",
+                            TaskStatus.IN_REVIEW: "Đang duyệt (In Review)",
+                            TaskStatus.DONE: "Đã hoàn thành (Done)",
+                        }.get(new_st, new_st.value)
+                        await self.notification_dispatcher.dispatch(
+                            NotificationMessage(
+                                recipient_user_id=str(assignee_member.user_id),
+                                event_type="task_status_changed",
+                                title=f"Trạng thái công việc đã đổi sang '{st_label}'",
+                                content=f"Công việc: {orig_task.name} (cập nhật bởi {actor_name})",
+                                action_url=f"/workspaces/{orig_task.workspace_id}/tasks/{orig_task.id}",
+                                actor_id=user_id,
+                                actor_name=actor_name,
+                                actor_avatar_url=actor_avatar,
+                                workspace_id=orig_task.workspace_id,
+                                entity_type="task",
+                                entity_id=orig_task.id,
+                            )
+                        )
+            except Exception as e:
+                logger.warning(f"Failed to dispatch bulk update task notifications: {e}")
+
         return [
             TaskResponseDTO(
                 id=t.id,

@@ -45,6 +45,9 @@ export const useUpdateTask = () => {
         queryKey: ['task', taskId],
         exact: true,
       });
+      queryClient.invalidateQueries({
+        queryKey: ['notifications'],
+      });
     },
     onError: (error) => {
       console.error('[UPDATE_TASK]: ', error);
