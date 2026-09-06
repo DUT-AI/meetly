@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Sequence
 from datetime import datetime
 
-from modules.tasks.domain.entities import TaskEntity
+from modules.tasks.domain.entities import TaskCommentEntity, TaskEntity
 from modules.tasks.domain.enums import TaskPriority, TaskStatus
 
 
@@ -83,3 +83,39 @@ class ITaskRepository(ABC):
     @abstractmethod
     async def delete(self, task_id: str) -> None:
         """Delete task by ID."""
+
+
+class ITaskCommentRepository(ABC):
+    """Repository interface for Task Comments."""
+
+    @abstractmethod
+    async def create(
+        self,
+        task_id: str,
+        user_id: str,
+        content: str,
+        mentions: list[str] | None = None,
+    ) -> TaskCommentEntity:
+        """Create a new comment."""
+
+    @abstractmethod
+    async def get_by_id(self, comment_id: str) -> TaskCommentEntity | None:
+        """Get comment by ID."""
+
+    @abstractmethod
+    async def list_by_task(self, task_id: str) -> list[TaskCommentEntity]:
+        """List comments for a task ordered chronologically."""
+
+    @abstractmethod
+    async def update(
+        self,
+        comment_id: str,
+        content: str,
+        mentions: list[str] | None = None,
+    ) -> TaskCommentEntity:
+        """Update comment content and mentions."""
+
+    @abstractmethod
+    async def delete(self, comment_id: str) -> None:
+        """Delete comment by ID."""
+

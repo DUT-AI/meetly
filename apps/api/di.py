@@ -6,6 +6,7 @@ from core.database.session import DatabaseProvider
 from core.storage.di import StorageProvider
 from modules.identity.di import IdentityProvider
 from modules.members.di import MemberProvider
+from modules.notifications.di import NotificationProvider
 from modules.projects.di import ProjectProvider
 from modules.tasks.di import TaskProvider
 from modules.workspaces.di import WorkspaceProvider
@@ -21,6 +22,7 @@ def create_container() -> AsyncContainer:
         MemberProvider(),
         ProjectProvider(),
         TaskProvider(),
+        NotificationProvider(),
     )
 
 

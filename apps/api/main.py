@@ -9,6 +9,7 @@ from apps.api.health import check_database, check_minio, check_redis
 from apps.api.routers import (
     identity_router,
     members_router,
+    notifications_router,
     projects_router,
     tasks_router,
     users_router,
@@ -61,6 +62,7 @@ app.include_router(workspaces_router)
 app.include_router(members_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)
+app.include_router(notifications_router)
 
 
 # 6. Health & Readiness Probes

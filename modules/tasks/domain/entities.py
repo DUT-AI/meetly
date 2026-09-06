@@ -40,3 +40,24 @@ class PopulatedTaskEntity:
     updated_at: datetime
     project: ProjectResponseDTO
     assignee: MemberResponseDTO | None = None
+
+
+@dataclass
+class TaskCommentUserEntity:
+    id: str
+    name: str
+    email: str
+    avatar_url: str | None = None
+
+
+@dataclass
+class TaskCommentEntity:
+    id: str
+    task_id: str
+    user_id: str
+    content: str
+    mentions: list[str]
+    created_at: datetime
+    updated_at: datetime
+    user: TaskCommentUserEntity | None = None
+

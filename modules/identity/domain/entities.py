@@ -13,6 +13,8 @@ class AuthUser(BaseModel):
     status: str = "ACTIVE"
     avatar_url: str | None = None
     role_names: list[str] = Field(default_factory=list)
+    discord_id: str | None = None
+    zalo_bot_id: str | None = None
 
 
 class TokenResponse(BaseModel):

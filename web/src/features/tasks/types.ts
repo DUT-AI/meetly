@@ -47,6 +47,79 @@ export type PopulatedTask = Task & {
   workspace?: WorkspaceInfo;
 };
 
+export type TaskCommentUser = {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string | null;
+  avatar_url?: string | null;
+};
+
+export type TaskComment = {
+  id: string;
+  $id: string;
+  taskId: string;
+  task_id?: string;
+  userId: string;
+  user_id?: string;
+  content: string;
+  mentions: string[];
+  createdAt: string;
+  updatedAt: string;
+  created_at?: string;
+  updated_at?: string;
+  user: TaskCommentUser;
+  // Backward compatibility convenience getters
+  userName?: string;
+  user_name?: string;
+  userEmail?: string;
+  user_email?: string;
+  userAvatarUrl?: string | null;
+  user_avatar_url?: string | null;
+};
+
+export function normalizeTaskComment(c: any): TaskComment {
+  if (!c) return c;
+  const id = c.id ?? c.$id;
+  const rawUser = c.user || {};
+  const userId = rawUser.id ?? c.userId ?? c.user_id ?? '';
+  const userName = rawUser.name ?? c.userName ?? c.user_name ?? `User ${userId}`;
+  const userEmail = rawUser.email ?? c.userEmail ?? c.user_email ?? '';
+  const userAvatarUrl =
+    rawUser.avatarUrl ?? rawUser.avatar_url ?? c.userAvatarUrl ?? c.user_avatar_url ?? null;
+
+  const user: TaskCommentUser = {
+    id: userId,
+    name: userName,
+    email: userEmail,
+    avatarUrl: userAvatarUrl,
+    avatar_url: userAvatarUrl,
+  };
+
+  return {
+    ...c,
+    id,
+    $id: id,
+    taskId: c.taskId ?? c.task_id,
+    task_id: c.task_id ?? c.taskId,
+    userId,
+    user_id: userId,
+    content: c.content || '',
+    mentions: Array.isArray(c.mentions) ? c.mentions : [],
+    createdAt: c.createdAt ?? c.created_at,
+    updatedAt: c.updatedAt ?? c.updated_at,
+    created_at: c.created_at ?? c.createdAt,
+    updated_at: c.updated_at ?? c.updatedAt,
+    user,
+    userName,
+    user_name: userName,
+    userEmail,
+    user_email: userEmail,
+    userAvatarUrl,
+    user_avatar_url: userAvatarUrl,
+  };
+}
+
 export function normalizeTask(t: any): PopulatedTask {
   if (!t) return t;
   const id = t.id ?? t.$id;

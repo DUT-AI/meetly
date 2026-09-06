@@ -1,9 +1,13 @@
 from datetime import datetime
 
+from loguru import logger
+
 from core.exceptions import ForbiddenException, NotFoundException
 from modules.identity.client.manage_client import ManageClient
 from modules.members.domain.interfaces import IMemberRepository
 from modules.members.dtos.member_dtos import MemberResponseDTO
+from modules.notifications.dispatcher import NotificationDispatcher
+from modules.notifications.domain.entities import NotificationMessage
 from modules.projects.domain.interfaces import IProjectRepository
 from modules.projects.dtos.project_dtos import ProjectResponseDTO
 from modules.tasks.domain.enums import TaskPriority, TaskStatus
@@ -19,15 +23,19 @@ from modules.workspaces.dtos.workspace_dtos import WorkspaceInfoResponseDTO
 
 
 class CreateTaskUseCase:
-    """Create a new task with automatic position calculation."""
+    """Create a new task with automatic position calculation and notification."""
 
     def __init__(
         self,
         task_repo: ITaskRepository,
         member_repo: IMemberRepository,
+        manage_client: ManageClient,
+        notification_dispatcher: NotificationDispatcher,
     ) -> None:
         self.task_repo = task_repo
         self.member_repo = member_repo
+        self.manage_client = manage_client
+        self.notification_dispatcher = notification_dispatcher
 
     async def execute(
         self,
@@ -61,6 +69,34 @@ class CreateTaskUseCase:
             assignee_id=assignee_id,
             description=description,
         )
+
+        # Notify assignee
+        logger.info(f"Task created: id={task.id}, assignee_id={assignee_id}")
+        if assignee_id:
+            assignee_member = await self.member_repo.get_by_id(assignee_id)
+            logger.info(f"Assignee member found: {assignee_member}")
+            if assignee_member:
+                creator_user = await self.manage_client.get_user(user_id)
+                creator_name = creator_user.name if creator_user else "Đồng nghiệp"
+                creator_avatar = creator_user.avatar_url if creator_user else None
+
+                title = f"{creator_name} đã giao việc cho bạn"
+
+                msg = NotificationMessage(
+                    recipient_user_id=assignee_member.user_id,
+                    event_type="task_assigned",
+                    title=title,
+                    content=f"Công việc: {task.name}",
+                    action_url=f"/workspaces/{task.workspace_id}/tasks/{task.id}",
+                    actor_id=user_id,
+                    actor_name=creator_name,
+                    actor_avatar_url=creator_avatar,
+                    workspace_id=task.workspace_id,
+                    entity_type="task",
+                    entity_id=task.id,
+                )
+                logger.info(f"Dispatching notification: recipient={msg.recipient_user_id}, title={msg.title}")
+                await self.notification_dispatcher.dispatch(msg)
 
         return TaskResponseDTO(
             id=task.id,

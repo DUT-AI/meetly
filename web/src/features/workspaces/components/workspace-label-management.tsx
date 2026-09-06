@@ -111,36 +111,42 @@ export const WorkspaceLabelManagement = ({ workspaceId }: WorkspaceLabelManageme
 
         <CardContent className="p-7 space-y-6">
           {/* Form thêm nhãn mới */}
-          <form onSubmit={handleCreate} className="space-y-3 rounded-lg border p-4 bg-muted/20">
+          <form onSubmit={handleCreate} className="space-y-4 rounded-lg border p-4 bg-muted/20">
             <h4 className="text-sm font-semibold">Tạo nhãn mới</h4>
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-              <div className="flex-1 w-full">
+
+            <div className="flex flex-col gap-y-3">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Tên nhãn</label>
                 <Input
                   value={newLabelName}
                   onChange={(e) => setNewLabelName(e.target.value)}
-                  placeholder="Tên nhãn (ví dụ: Bug, Frontend, Feature, Khẩn cấp...)"
+                  placeholder="Ví dụ: Bug, Frontend, Feature, Khẩn cấp, Thiết kế..."
                   disabled={isCreating}
+                  className="w-full bg-white"
                 />
               </div>
 
-              <div className="flex items-center gap-1.5 flex-wrap">
-                {PRESET_COLORS.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setNewLabelColor(c)}
-                    className={`size-6 rounded-full border-2 transition-transform ${
-                      newLabelColor === c ? 'scale-125 border-primary shadow' : 'border-transparent hover:scale-110'
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </div>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {PRESET_COLORS.map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setNewLabelColor(c)}
+                        className={`size-6 rounded-full border-2 transition-transform cursor-pointer ${newLabelColor === c ? 'scale-125 border-neutral-900 shadow-md' : 'border-transparent hover:scale-110'
+                          }`}
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </div>
+                </div>
 
-              <Button type="submit" disabled={isCreating || !newLabelName.trim()} size="sm" className="gap-x-1.5">
-                {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
-                Thêm nhãn
-              </Button>
+                <Button type="submit" disabled={isCreating || !newLabelName.trim()} size="sm" className="gap-x-1.5 shrink-0 self-end sm:self-auto">
+                  {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
+                  Thêm nhãn
+                </Button>
+              </div>
             </div>
           </form>
 
@@ -162,46 +168,47 @@ export const WorkspaceLabelManagement = ({ workspaceId }: WorkspaceLabelManageme
                     className="flex items-center justify-between p-3 rounded-md border bg-card hover:bg-muted/10 transition"
                   >
                     {editingLabel?.id === label.id ? (
-                      <form onSubmit={handleSaveEdit} className="flex-1 flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <Input
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                            size={1}
-                            className="h-8 text-sm"
-                            autoFocus
-                          />
-                          <Button type="submit" size="xs" disabled={isUpdating || !editingName.trim()}>
-                            Lưu
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="xs"
-                            onClick={() => setEditingLabel(null)}
-                          >
-                            <X className="size-3" />
-                          </Button>
-                        </div>
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          {PRESET_COLORS.map((c) => (
-                            <button
-                              key={c}
+                      <form onSubmit={handleSaveEdit} className="w-full flex flex-col gap-2.5">
+                        <Input
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          className="h-9 text-sm w-full bg-white"
+                          placeholder="Tên nhãn..."
+                          autoFocus
+                        />
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {PRESET_COLORS.map((c) => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={() => setEditingColor(c)}
+                                className={`size-5 rounded-full border-2 cursor-pointer ${editingColor === c ? 'scale-125 border-neutral-900 shadow-sm' : 'border-transparent'
+                                  }`}
+                                style={{ backgroundColor: c }}
+                              />
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Button type="submit" size="xs" disabled={isUpdating || !editingName.trim()}>
+                              Lưu
+                            </Button>
+                            <Button
                               type="button"
-                              onClick={() => setEditingColor(c)}
-                              className={`size-4 rounded-full border ${
-                                editingColor === c ? 'scale-125 border-primary shadow' : 'border-transparent'
-                              }`}
-                              style={{ backgroundColor: c }}
-                            />
-                          ))}
+                              variant="secondary"
+                              size="xs"
+                              onClick={() => setEditingLabel(null)}
+                            >
+                              <X className="size-3" />
+                            </Button>
+                          </div>
                         </div>
                       </form>
                     ) : (
                       <>
                         <div className="flex items-center gap-2">
                           <span
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold text-white shadow-sm"
+                            className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold text-white shadow-sm"
                             style={{ backgroundColor: label.color }}
                           >
                             {label.name}

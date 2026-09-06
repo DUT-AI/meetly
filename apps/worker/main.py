@@ -1,32 +1,70 @@
-import asyncio
+from typing import Any, ClassVar
 
+from arq import run_worker
+from arq.connections import RedisSettings as ArqRedisSettings
 from loguru import logger
 
+from apps.api.di import create_container
 from core.config import redis_settings
+from modules.notifications.domain.entities import NotificationMessage
+from modules.notifications.queue import (
+    NOTIFICATION_QUEUE_KEY,
+)
+from modules.notifications.use_cases.notification_use_cases import (
+    SendNotificationUseCase,
+)
 
 
-async def worker_loop():
-    """Background Task Worker entrypoint."""
-    logger.info("Initializing Meetly Worker...")
-    logger.info(f"Connecting to Redis at {redis_settings.redis_url}...")
+async def send_notification_job(ctx: dict[str, Any], payload: dict[str, Any]) -> None:
+    """Worker Job Handler: Calls SendNotificationUseCase from notifications module."""
+    message = NotificationMessage.from_dict(payload)
+    logger.info(
+        f"ARQ Worker executing notification job: event={message.event_type} recipient={message.recipient_user_id}"
+    )
 
-    while True:
-        try:
-            logger.info("Worker is running and waiting for background tasks...")
-            await asyncio.sleep(60)
-        except asyncio.CancelledError:
-            logger.info("Worker stopping...")
-            break
-        except Exception as e:
-            logger.error(f"Worker exception: {e}")
-            await asyncio.sleep(5)
+    # Resolve Use Case from DI container with fresh request scope
+    container = ctx["container"]
+    async with container() as request_container:
+        use_case = await request_container.get(SendNotificationUseCase)
+        await use_case.execute(message)
+
+    logger.info(
+        f"Notification job completed for recipient={message.recipient_user_id}"
+    )
 
 
-def main():
-    try:
-        asyncio.run(worker_loop())
-    except KeyboardInterrupt:
-        logger.info("Worker stopped by user.")
+async def startup(ctx: dict[str, Any]) -> None:
+    """Initialize DI container on worker startup."""
+    logger.info("Meetly ARQ Worker starting up...")
+    ctx["container"] = create_container()
+
+
+async def shutdown(ctx: dict[str, Any]) -> None:
+    """Close DI container on worker shutdown."""
+    logger.info("Meetly ARQ Worker shutting down...")
+    container = ctx.get("container")
+    if container:
+        await container.close()
+
+
+class WorkerSettings:
+    """ARQ Worker configuration class."""
+
+    functions: ClassVar[list[Any]] = [send_notification_job]
+    queue_name: str = NOTIFICATION_QUEUE_KEY
+    on_startup = startup
+    on_shutdown = shutdown
+    redis_settings = ArqRedisSettings.from_dsn(redis_settings.redis_url)
+    max_jobs: int = 10
+    poll_delay: float = 0.5
+
+
+def main() -> None:
+    """Worker entrypoint executing ARQ worker loop."""
+    logger.info(
+        f"Starting ARQ Worker listening on queue '{NOTIFICATION_QUEUE_KEY}'..."
+    )
+    run_worker(WorkerSettings)
 
 
 if __name__ == "__main__":

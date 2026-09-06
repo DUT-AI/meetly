@@ -5,6 +5,10 @@ from fastapi import APIRouter, Query, status
 
 from apps.api.deps.auth import CurrentUser
 from modules.tasks.domain.enums import TaskStatus
+from modules.tasks.dtos.comment_dtos import (
+    TaskCommentCreateDTO,
+    TaskCommentUpdateDTO,
+)
 from modules.tasks.dtos.task_dtos import (
     TaskBulkUpdateDTO,
     TaskCreateDTO,
@@ -12,11 +16,15 @@ from modules.tasks.dtos.task_dtos import (
 )
 from modules.tasks.use_cases import (
     BulkUpdateTasksUseCase,
+    CreateTaskCommentUseCase,
     CreateTaskUseCase,
+    DeleteTaskCommentUseCase,
     DeleteTaskUseCase,
     GetTaskUseCase,
     ListMyGlobalTasksUseCase,
+    ListTaskCommentsUseCase,
     ListTasksUseCase,
+    UpdateTaskCommentUseCase,
     UpdateTaskUseCase,
 )
 
@@ -219,3 +227,86 @@ async def delete_task(
         user_id=str(current_user.id),
     )
     return {"data": {"id": task_id}}
+
+
+# --- Task Comments Endpoints ---
+
+
+@router.get(
+    "/{task_id}/comments",
+    summary="List comments for a task",
+)
+@inject
+async def list_task_comments(
+    task_id: str,
+    current_user: CurrentUser,
+    use_case: FromDishka[ListTaskCommentsUseCase],
+) -> dict:
+    result = await use_case.execute(
+        task_id=task_id,
+        user_id=str(current_user.id),
+    )
+    return {"data": result}
+
+
+@router.post(
+    "/{task_id}/comments",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new task comment",
+)
+@inject
+async def create_task_comment(
+    task_id: str,
+    payload: TaskCommentCreateDTO,
+    current_user: CurrentUser,
+    use_case: FromDishka[CreateTaskCommentUseCase],
+) -> dict:
+    result = await use_case.execute(
+        task_id=task_id,
+        user_id=str(current_user.id),
+        content=payload.content,
+        mentions=payload.mentions,
+    )
+    return {"data": result}
+
+
+@router.patch(
+    "/{task_id}/comments/{comment_id}",
+    summary="Update a task comment",
+)
+@inject
+async def update_task_comment(
+    task_id: str,
+    comment_id: str,
+    payload: TaskCommentUpdateDTO,
+    current_user: CurrentUser,
+    use_case: FromDishka[UpdateTaskCommentUseCase],
+) -> dict:
+    result = await use_case.execute(
+        task_id=task_id,
+        comment_id=comment_id,
+        user_id=str(current_user.id),
+        content=payload.content,
+        mentions=payload.mentions,
+    )
+    return {"data": result}
+
+
+@router.delete(
+    "/{task_id}/comments/{comment_id}",
+    summary="Delete a task comment",
+)
+@inject
+async def delete_task_comment(
+    task_id: str,
+    comment_id: str,
+    current_user: CurrentUser,
+    use_case: FromDishka[DeleteTaskCommentUseCase],
+) -> dict:
+    await use_case.execute(
+        task_id=task_id,
+        comment_id=comment_id,
+        user_id=str(current_user.id),
+    )
+    return {"data": {"id": comment_id}}
+

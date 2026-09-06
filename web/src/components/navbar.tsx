@@ -4,6 +4,8 @@ import { usePathname } from 'next/navigation';
 
 import { UserButton } from '@/features/auth/components/user-button';
 
+import { NotificationPopover } from '@/features/notifications/components/notification-popover';
+
 import { MobileSidebar } from './mobile-sidebar';
 import { SourceCode } from './source-code';
 
@@ -40,7 +42,9 @@ export const Navbar = () => {
 
       <MobileSidebar />
 
-      <div className="flex items-center gap-x-2.5">
+      <div className="flex items-center gap-x-3">
+        <NotificationPopover />
+
         <UserButton />
 
         <SourceCode />

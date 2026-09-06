@@ -29,6 +29,8 @@ class ManageClient:
             avatar_url=item.get("avatar_url"),
             role_names=item.get("role_names")
             or ([item["role"]] if "role" in item else []),
+            discord_id=item.get("discord_id"),
+            zalo_bot_id=item.get("zalo_bot_id"),
         )
 
     async def list_users(
@@ -116,3 +118,38 @@ class ManageClient:
                 status_code=exc.response.status_code,
                 detail=f"Lỗi Manage Server: {exc.response.text}",
             ) from exc
+
+    async def get_user(self, user_id: str | int) -> ManageUserDTO | None:
+        """Fetch a single user by ID from Manage Service GET /api/v1/users/{id}."""
+        headers = {}
+        if manage_settings.token:
+            headers["Authorization"] = f"Bearer {manage_settings.token}"
+
+        url = f"{manage_settings.users_url.rstrip('/')}/{user_id}"
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout) as client:
+                response = await client.get(url, headers=headers)
+                if response.status_code == 404:
+                    return None
+                if response.status_code == 401:
+                    raise HTTPException(
+                        status_code=status.HTTP_401_UNAUTHORIZED,
+                        detail="Phiên đăng nhập hết hạn hoặc không có quyền truy cập Manage API.",
+                    )
+                response.raise_for_status()
+
+                payload: dict[str, Any] = response.json()
+                data = payload.get("data") if "data" in payload else payload
+                if isinstance(data, dict):
+                    return self._parse_user(data)
+                return None
+        except Exception:
+            # Fallback: find user from list_users
+            try:
+                users_resp = await self.list_users(page=1, page_size=200)
+                for u in users_resp.items:
+                    if str(u.id) == str(user_id):
+                        return u
+            except Exception:
+                pass
+            return None

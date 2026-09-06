@@ -5,6 +5,7 @@ import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
 import { useGetTask } from '@/features/tasks/api/use-get-task';
 import { TaskBreadcrumbs } from '@/features/tasks/components/task-breadcrumbs';
+import { TaskComments } from '@/features/tasks/components/task-comments';
 import { TaskDescription } from '@/features/tasks/components/task-description';
 import { TaskOverview } from '@/features/tasks/components/task-overview';
 import { useTaskId } from '@/features/tasks/hooks/use-task-id';
@@ -19,15 +20,17 @@ export const TaskIdClient = () => {
   if (!task) return <PageError message="Task not found." />;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col gap-y-6">
       <TaskBreadcrumbs project={task.project} task={task} />
 
-      <DottedSeparator className="my-6" />
+      <DottedSeparator />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <TaskOverview task={task} />
         <TaskDescription task={task} />
       </div>
+
+      <TaskComments taskId={task.id || task.$id} workspaceId={task.workspaceId} />
     </div>
   );
 };

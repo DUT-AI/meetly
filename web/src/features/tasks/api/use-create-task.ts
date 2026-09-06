@@ -38,6 +38,9 @@ export const useCreateTask = () => {
         queryKey: ['tasks', workspaceId],
         exact: false,
       });
+      queryClient.invalidateQueries({
+        queryKey: ['notifications'],
+      });
     },
     onError: (error) => {
       console.error('[CREATE_TASK]: ', error);

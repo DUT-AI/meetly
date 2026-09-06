@@ -1,5 +1,11 @@
 import { api } from '@/lib/api';
-import { type PopulatedTask, TaskStatus, normalizeTask } from '../types';
+import {
+  type PopulatedTask,
+  type TaskComment,
+  TaskStatus,
+  normalizeTask,
+  normalizeTaskComment,
+} from '../types';
 
 export interface GetTasksParams {
   workspaceId: string;
@@ -137,6 +143,41 @@ export const taskApi = {
 
   deleteTask: async (taskId: string): Promise<{ id: string }> => {
     const response = await api.delete<{ data: { id: string } }>(`/tasks/${taskId}`);
+    return response.data?.data ?? response.data;
+  },
+
+  getTaskComments: async (taskId: string): Promise<TaskComment[]> => {
+    const response = await api.get<{ data: any[] }>(`/tasks/${taskId}/comments`);
+    const result = response.data?.data ?? response.data;
+    return (result || []).map(normalizeTaskComment);
+  },
+
+  createTaskComment: async (
+    taskId: string,
+    data: { content: string; mentions?: string[] },
+  ): Promise<TaskComment> => {
+    const response = await api.post<{ data: any }>(`/tasks/${taskId}/comments`, data);
+    const result = response.data?.data ?? response.data;
+    return normalizeTaskComment(result);
+  },
+
+  updateTaskComment: async (
+    taskId: string,
+    commentId: string,
+    data: { content: string; mentions?: string[] },
+  ): Promise<TaskComment> => {
+    const response = await api.patch<{ data: any }>(
+      `/tasks/${taskId}/comments/${commentId}`,
+      data,
+    );
+    const result = response.data?.data ?? response.data;
+    return normalizeTaskComment(result);
+  },
+
+  deleteTaskComment: async (taskId: string, commentId: string): Promise<{ id: string }> => {
+    const response = await api.delete<{ data: { id: string } }>(
+      `/tasks/${taskId}/comments/${commentId}`,
+    );
     return response.data?.data ?? response.data;
   },
 };

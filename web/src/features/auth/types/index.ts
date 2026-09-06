@@ -19,6 +19,8 @@ export type User = {
   status?: string;
   avatar_url?: string | null;
   role_names?: string[];
+  discord_id?: string | null;
+  zalo_bot_id?: string | null;
   created_at?: string;
   updated_at?: string;
 };
