@@ -35,6 +35,9 @@ docker-down:
 migrate:
 	uv run alembic upgrade head
 
+docker-migrate:
+	docker compose exec api alembic upgrade head
+
 create-migration:
 	@if [ -z "$(DESC)" ]; then echo "Error: Please specify DESC, e.g., make create-migration DESC=\"add new table\""; exit 1; fi
 	uv run alembic revision --autogenerate -m "$(DESC)"

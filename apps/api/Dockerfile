@@ -16,10 +16,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
 # Copy dependencies manifest
-COPY pyproject.toml uv.lock* ./
+COPY pyproject.toml uv.lock* README.md* ./
 
 # Install dependencies using uv
-RUN uv sync --frozen --no-dev || uv sync --no-dev
+RUN uv sync --frozen --no-dev --no-install-project || uv sync --no-dev --no-install-project
 
 # --- Stage 2: Final Minimal Runtime Image ---
 FROM python:3.12-slim AS runner
@@ -41,6 +41,8 @@ COPY --from=builder /app/.venv /app/.venv
 COPY core ./core
 COPY modules ./modules
 COPY apps ./apps
+COPY alembic.ini ./alembic.ini
+COPY migrations ./migrations
 
 EXPOSE 8000
 

@@ -9,8 +9,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-COPY pyproject.toml uv.lock* ./
-RUN uv sync --frozen --no-dev --extra worker || uv sync --no-dev --extra worker
+COPY pyproject.toml uv.lock* README.md* ./
+RUN uv sync --frozen --no-dev --extra worker --no-install-project || uv sync --no-dev --extra worker --no-install-project
 
 FROM python:3.12-slim AS runner
 
