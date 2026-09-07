@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apps.api.di import setup_di
 from apps.api.health import check_database, check_minio, check_redis
 from apps.api.routers import (
+    assets_router,
     identity_router,
     members_router,
     notifications_router,
@@ -63,6 +64,7 @@ app.include_router(members_router)
 app.include_router(projects_router)
 app.include_router(tasks_router)
 app.include_router(notifications_router)
+app.include_router(assets_router)
 
 
 # 6. Health & Readiness Probes

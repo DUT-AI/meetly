@@ -1,11 +1,12 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
+// import Link from 'next/link';
 import { useForm } from 'react-hook-form';
-import { FaGithub } from 'react-icons/fa';
-import { FcGoogle } from 'react-icons/fc';
-import { toast } from 'sonner';
+// import { FaGithub } from 'react-icons/fa';
+// import { FcGoogle } from 'react-icons/fc';
+import { Info } from 'lucide-react';
+// import { toast } from 'sonner';
 import { z } from 'zod';
 
 import { DottedSeparator } from '@/components/dotted-separator';
@@ -43,9 +44,9 @@ export const SignInCard = () => {
     );
   };
 
-  const handleOAuth = (provider: 'Google' | 'GitHub') => {
-    toast.info(`${provider} login is managed via organization SSO.`);
-  };
+  // const handleOAuth = (provider: 'Google' | 'GitHub') => {
+  //   toast.info(`${provider} login is managed via organization SSO.`);
+  // };
 
   const isPending = isLoggingIn;
 
@@ -60,6 +61,12 @@ export const SignInCard = () => {
       </div>
 
       <CardContent className="p-7">
+        {/* Note hướng dẫn đăng nhập tài khoản DUT AI Manage */}
+        <div className="mb-4 flex items-center gap-2.5 rounded-lg border border-blue-200 bg-blue-50/80 p-3 text-sm text-blue-800">
+          <Info className="size-4 shrink-0 text-blue-600" />
+          <span className="font-medium">Đăng nhập bằng tài khoản DUT AI Manage</span>
+        </div>
+
         <Form {...signInForm}>
           <form onSubmit={signInForm.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
@@ -99,6 +106,7 @@ export const SignInCard = () => {
         </Form>
       </CardContent>
 
+      {/* Social Logins - commented out
       <div className="px-7">
         <DottedSeparator />
       </div>
@@ -112,7 +120,9 @@ export const SignInCard = () => {
           <FaGithub className="mr-2 size-5" /> Continue with GitHub
         </Button>
       </CardContent>
+      */}
 
+      {/* Registration link - commented out
       <div className="px-7">
         <DottedSeparator />
       </div>
@@ -125,6 +135,7 @@ export const SignInCard = () => {
           </Link>
         </p>
       </CardContent>
+      */}
     </Card>
   );
 };

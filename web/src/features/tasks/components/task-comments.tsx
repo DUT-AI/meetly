@@ -8,6 +8,7 @@ import {
   Loader2,
   MessageSquare,
   MoreVertical,
+  Paperclip,
   Send,
   Trash2,
   X,
@@ -35,6 +36,10 @@ import { useUpdateTaskComment } from '@/features/tasks/api/use-update-task-comme
 import type { TaskComment } from '@/features/tasks/types';
 import { useConfirm } from '@/hooks/use-confirm';
 import { cn } from '@/lib/utils';
+import { CommentAttachments } from '@/features/assets';
+import { useUploadAsset } from '@/features/assets/api/use-upload-asset';
+import { DocumentBadgeIcon } from '@/features/assets/components/document-badge-icon';
+import { formatFileSize } from '@/features/assets/components/asset-icon';
 
 interface TaskCommentsProps {
   taskId: string;
@@ -47,7 +52,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
   const members = membersData?.documents || [];
 
   const { data: comments, isLoading } = useGetTaskComments({ taskId });
-  const { mutate: createComment, isPending: isCreating } = useCreateTaskComment({ taskId });
+  const { mutateAsync: createCommentAsync, isPending: isCreating } = useCreateTaskComment({ taskId });
   const { mutate: updateComment, isPending: isUpdating } = useUpdateTaskComment({ taskId });
   const { mutate: deleteComment, isPending: isDeleting } = useDeleteTaskComment({ taskId });
 
@@ -60,6 +65,12 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
   const [content, setContent] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState('');
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
+  const [isDragOverComment, setIsDragOverComment] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { mutateAsync: uploadAsset } = useUploadAsset();
 
   // Mention system state for create comment
   const [showMentionMenu, setShowMentionMenu] = useState(false);
@@ -75,6 +86,53 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
         m.email.toLowerCase().includes(mentionFilter.toLowerCase()),
     );
   }, [members, mentionFilter]);
+
+  const addFiles = (files: FileList | File[] | null) => {
+    if (!files || files.length === 0) return;
+    const newFiles = Array.from(files).map((file) => {
+      // If it's a generic screenshot from clipboard (e.g. image.png, blob), assign a descriptive timestamped name
+      if (file.name === 'image.png' || file.name === 'blob' || !file.name) {
+        const now = new Date();
+        const pad = (n: number) => n.toString().padStart(2, '0');
+        const timestamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+        const ext = file.type.split('/')[1]?.replace('jpeg', 'jpg') || 'png';
+        return new File([file], `screenshot_${timestamp}.${ext}`, {
+          type: file.type || 'image/png',
+        });
+      }
+      return file;
+    });
+
+    setPendingFiles((prev) => [...prev, ...newFiles]);
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // Support Ctrl + V / Cmd + V pasting of images or files directly into comment
+  const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const clipboardFiles: File[] = [];
+
+    if (e.clipboardData?.items) {
+      for (let i = 0; i < e.clipboardData.items.length; i++) {
+        const item = e.clipboardData.items[i];
+        if (item.kind === 'file') {
+          const file = item.getAsFile();
+          if (file) clipboardFiles.push(file);
+        }
+      }
+    } else if (e.clipboardData?.files) {
+      for (let i = 0; i < e.clipboardData.files.length; i++) {
+        clipboardFiles.push(e.clipboardData.files[i]);
+      }
+    }
+
+    if (clipboardFiles.length > 0) {
+      e.preventDefault();
+      addFiles(clipboardFiles);
+    }
+  };
 
   // Handle textarea text change & detecting @
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -159,22 +217,41 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
     return mentionedIds;
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    const clean = content.trim();
-    if (!clean) return;
+    const clean = content.trim() || (pendingFiles.length > 0 ? 'Đã đính kèm tệp' : '');
+    if (!clean && pendingFiles.length === 0) return;
 
     const mentions = extractMentionedUserIds(clean);
+    const filesToUpload = [...pendingFiles];
 
-    createComment(
-      { content: clean, mentions },
-      {
-        onSuccess: () => {
-          setContent('');
-          setShowMentionMenu(false);
-        },
-      },
-    );
+    try {
+      setIsUploadingAttachments(true);
+      const newComment = await createCommentAsync({ content: clean, mentions });
+
+      if (newComment && newComment.id && filesToUpload.length > 0) {
+        for (const file of filesToUpload) {
+          try {
+            await uploadAsset({
+              workspaceId,
+              entityType: 'TASK_COMMENT',
+              entityId: newComment.id,
+              file,
+            });
+          } catch (uploadErr) {
+            console.error('Failed to upload comment attachment:', uploadErr);
+          }
+        }
+      }
+
+      setContent('');
+      setPendingFiles([]);
+      setShowMentionMenu(false);
+    } catch (err) {
+      console.error('Failed to create comment:', err);
+    } finally {
+      setIsUploadingAttachments(false);
+    }
   };
 
   const handleStartEdit = (comment: TaskComment) => {
@@ -248,16 +325,76 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
         <DottedSeparator />
 
         {/* Input box */}
-        <div className="relative flex flex-col gap-2">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragOverComment(true);
+          }}
+          onDragLeave={() => setIsDragOverComment(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setIsDragOverComment(false);
+            addFiles(e.dataTransfer.files);
+          }}
+          className={cn(
+            'relative flex flex-col gap-2 rounded-lg transition-colors',
+            isDragOverComment && 'bg-primary/5 p-1 rounded-lg border border-dashed border-primary',
+          )}
+        >
           <Textarea
             ref={textareaRef}
             value={content}
             onChange={handleContentChange}
             onKeyDown={handleKeyDown}
-            placeholder="Viết bình luận... Gõ @ để nhắc tên đồng nghiệp (Ctrl+Enter để gửi)"
+            onPaste={handlePaste}
+            placeholder="Viết bình luận... Gõ @ để nhắc tên, dán ảnh (Ctrl+V) hoặc đính kèm tệp"
             className="min-h-[85px] resize-none bg-neutral-50/50 text-sm focus-visible:bg-white"
-            disabled={isCreating}
+            disabled={isCreating || isUploadingAttachments}
           />
+
+          {/* Pending files preview bar */}
+          {pendingFiles.length > 0 && (
+            <div className="flex flex-wrap gap-2 rounded-lg border border-neutral-200/80 bg-neutral-50/70 p-2">
+              {pendingFiles.map((file, idx) => {
+                const isImage = file.type.startsWith('image/');
+                return (
+                  <div
+                    key={`${file.name}-${idx}`}
+                    className="group relative flex items-center gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs shadow-2xs"
+                  >
+                    {isImage ? (
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="size-7 rounded object-cover"
+                      />
+                    ) : (
+                      <DocumentBadgeIcon
+                        extension={file.name.split('.').pop() || ''}
+                        className="scale-60 -mx-2"
+                      />
+                    )}
+                    <div className="flex flex-col min-w-0 max-w-[140px]">
+                      <span className="truncate text-[11px] font-medium text-neutral-800" title={file.name}>
+                        {file.name}
+                      </span>
+                      <span className="text-[9px] text-neutral-400">
+                        {formatFileSize(file.size)}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => removePendingFile(idx)}
+                      className="ml-1 rounded-full p-0.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700 cursor-pointer"
+                      title="Bỏ tệp"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           {/* Autocomplete mention popover */}
           {showMentionMenu && filteredMembers.length > 0 && (
@@ -286,19 +423,56 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
           )}
 
           <div className="flex items-center justify-between">
-            <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-              <AtSign className="size-3 text-muted-foreground" /> Gõ <kbd className="px-1 py-0.5 bg-neutral-100 rounded border">@</kbd> để mention
-            </p>
+            <div className="flex items-center gap-2">
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  addFiles(e.target.files);
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+              />
+
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isCreating || isUploadingAttachments}
+                className="h-7 gap-1 px-2 text-xs text-neutral-600 hover:text-neutral-900 border border-neutral-200/60 hover:bg-neutral-100"
+              >
+                <Paperclip className="size-3.5" />
+                <span>Đính kèm tệp</span>
+              </Button>
+
+              <span className="text-neutral-300 text-xs hidden sm:inline">|</span>
+
+              <p className="text-[11px] text-muted-foreground hidden sm:flex items-center gap-1">
+                <AtSign className="size-3 text-muted-foreground" /> Gõ <kbd className="px-1 py-0.5 bg-neutral-100 rounded border">@</kbd> để mention
+              </p>
+            </div>
 
             <Button
               type="button"
               onClick={() => handleSubmit()}
-              disabled={isCreating || !content.trim()}
+              disabled={isCreating || isUploadingAttachments || (!content.trim() && pendingFiles.length === 0)}
               size="sm"
               className="gap-x-1.5"
             >
-              {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-3.5" />}
-              Bình luận
+              {isCreating || isUploadingAttachments ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>{isUploadingAttachments ? 'Đang tải tệp...' : 'Đang gửi...'}</span>
+                </>
+              ) : (
+                <>
+                  <Send className="size-3.5" />
+                  <span>Bình luận</span>
+                </>
+              )}
             </Button>
           </div>
         </div>
@@ -319,10 +493,11 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
             </div>
           ) : (
             comments.map((comment) => {
-              const isAuthor =
+              const isAuthor = Boolean(
                 currentUser?.id &&
-                (String(currentUser.id) === String(comment.user?.id) ||
-                  String(currentUser.id) === String(comment.userId));
+                  (String(currentUser.id) === String(comment.user?.id) ||
+                    String(currentUser.id) === String(comment.userId)),
+              );
               const isEditing = editingCommentId === comment.id;
               const authorName = comment.user?.name || comment.userName || 'User';
               const authorAvatar =
@@ -408,8 +583,17 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
                         </div>
                       </div>
                     ) : (
-                      <div className="rounded-lg bg-neutral-50 p-2.5 text-xs text-neutral-800 whitespace-pre-wrap leading-relaxed border border-neutral-100">
-                        {renderFormattedContent(comment.content)}
+                      <div className="flex flex-col gap-1">
+                        <div className="rounded-lg bg-neutral-50 p-2.5 text-xs text-neutral-800 whitespace-pre-wrap leading-relaxed border border-neutral-100">
+                          {renderFormattedContent(comment.content)}
+                        </div>
+
+                        {/* Attached files and images for this comment */}
+                        <CommentAttachments
+                          workspaceId={workspaceId}
+                          commentId={comment.id}
+                          canDelete={isAuthor}
+                        />
                       </div>
                     )}
                   </div>

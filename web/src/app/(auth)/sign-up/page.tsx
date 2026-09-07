@@ -1,14 +1,15 @@
 import { redirect } from 'next/navigation';
 
-import { SignUpCard } from '@/features/auth/components/sign-up-card';
-import { getCurrent } from '@/features/auth/queries';
+// import { SignUpCard } from '@/features/auth/components/sign-up-card';
+// import { getCurrent } from '@/features/auth/queries';
 
 const SignUpPage = async () => {
-  const user = await getCurrent();
+  // Bỏ tính năng đăng ký: tự động chuyển hướng về trang đăng nhập
+  redirect('/sign-in');
 
-  if (user) redirect('/');
-
-  return <SignUpCard />;
+  // const user = await getCurrent();
+  // if (user) redirect('/');
+  // return <SignUpCard />;
 };
 
 export default SignUpPage;

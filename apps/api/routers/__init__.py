@@ -1,3 +1,4 @@
+from apps.api.routers.assets import router as assets_router
 from apps.api.routers.identity import router as identity_router
 from apps.api.routers.members import router as members_router
 from apps.api.routers.notifications import router as notifications_router
@@ -7,6 +8,7 @@ from apps.api.routers.users import router as users_router
 from apps.api.routers.workspaces import router as workspaces_router
 
 __all__ = [
+    "assets_router",
     "identity_router",
     "members_router",
     "notifications_router",

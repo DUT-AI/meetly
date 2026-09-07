@@ -4,6 +4,7 @@ from fastapi import FastAPI
 
 from core.database.session import DatabaseProvider
 from core.storage.di import StorageProvider
+from modules.assets.di import AssetProvider
 from modules.identity.di import IdentityProvider
 from modules.members.di import MemberProvider
 from modules.notifications.di import NotificationProvider
@@ -23,6 +24,7 @@ def create_container() -> AsyncContainer:
         ProjectProvider(),
         TaskProvider(),
         NotificationProvider(),
+        AssetProvider(),
     )
 
 

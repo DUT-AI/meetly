@@ -10,7 +10,9 @@ const HomePage = async () => {
 
   const workspaces = await getWorkspaces();
 
-  if (workspaces.total === 0) redirect('/workspaces/create');
+  // Bỏ nghiệp vụ bắt buộc người dùng tạo workspace khi đăng nhập
+  // if (workspaces.total === 0) redirect('/workspaces/create');
+  if (workspaces.total === 0) redirect('/tasks');
 
   redirect(`/workspaces/${workspaces.documents[0].$id}`);
 };

@@ -3,6 +3,7 @@
 import { DottedSeparator } from '@/components/dotted-separator';
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
+import { AssetAttachmentSection } from '@/features/assets';
 import { useGetTask } from '@/features/tasks/api/use-get-task';
 import { TaskBreadcrumbs } from '@/features/tasks/components/task-breadcrumbs';
 import { TaskComments } from '@/features/tasks/components/task-comments';
@@ -25,6 +26,13 @@ export const TaskIdClient = () => {
       <DottedSeparator />
 
       <TaskOverview task={task} />
+
+      <AssetAttachmentSection
+        workspaceId={task.workspaceId}
+        entityType="TASK"
+        entityId={task.id || task.$id}
+        title="Tài liệu & Tệp đính kèm"
+      />
 
       <TaskComments taskId={task.id || task.$id} workspaceId={task.workspaceId} />
     </div>

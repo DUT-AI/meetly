@@ -7,6 +7,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import create_async_engine
 
 # Import all module models so Alembic registers them onto Base.metadata
+import modules.assets.models
 import modules.identity.models
 import modules.members.models
 import modules.notifications.models

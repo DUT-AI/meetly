@@ -9,8 +9,8 @@ import { SourceCode } from '@/components/source-code';
 import { Button } from '@/components/ui/button';
 
 const AuthLayout = ({ children }: PropsWithChildren) => {
-  const pathname = usePathname();
-  const isSignIn = pathname === '/sign-in';
+  // const pathname = usePathname();
+  // const isSignIn = pathname === '/sign-in';
 
   return (
     <main className="min-h-screen bg-neutral-100">
@@ -19,11 +19,13 @@ const AuthLayout = ({ children }: PropsWithChildren) => {
           <Logo />
 
           <div className="flex items-center gap-x-2.5">
+            {/* 
             <Button variant="secondary" asChild>
               <Link href={isSignIn ? '/sign-up' : 'sign-in'}>{isSignIn ? 'Register' : 'Login'}</Link>
             </Button>
+            */}
 
-            <SourceCode />
+            {/* <SourceCode /> */}
           </div>
         </nav>
 
