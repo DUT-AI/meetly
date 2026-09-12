@@ -25,6 +25,9 @@ dev-worker:
 dev-web:
 	cd ./web && pnpm dev
 
+dev-mobile:
+	cd ./mobile && flutter run -d web-server --web-port 8085 --web-hostname 0.0.0.0 --dart-define=API_BASE_URL=http://127.0.0.1:8888
+
 docker-up:
 	docker compose up -d
 
