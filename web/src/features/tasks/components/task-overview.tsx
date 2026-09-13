@@ -71,11 +71,6 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
                 {task.assignees.map((m) => m.name).join(', ')}
               </p>
             </div>
-          ) : task.assignee ? (
-            <div className="flex items-center gap-x-2">
-              <MemberAvatar name={task.assignee.name} image={task.assignee.avatar_url} className="size-6" />
-              <p className="text-sm font-medium">{task.assignee.name}</p>
-            </div>
           ) : (
             <p className="text-sm font-medium text-neutral-400 italic">Chưa giao</p>
           )}

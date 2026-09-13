@@ -19,55 +19,50 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    # 1. Create junction table for tasks <-> members
-    op.create_table(
-        "task_assignees",
-        sa.Column("task_id", sa.String(length=26), nullable=False),
-        sa.Column("member_id", sa.String(length=26), nullable=False),
-        sa.Column(
-            "created_at",
-            sa.DateTime(timezone=True),
-            server_default=sa.text("now()"),
-            nullable=False,
-        ),
-        sa.ForeignKeyConstraint(
-            ["task_id"],
-            ["tasks.id"],
-            ondelete="CASCADE",
-        ),
-        sa.ForeignKeyConstraint(
-            ["member_id"],
-            ["members.id"],
-            ondelete="CASCADE",
-        ),
-        sa.PrimaryKeyConstraint("task_id", "member_id"),
-    )
-    op.create_index(
-        op.f("ix_task_assignees_task_id"),
-        "task_assignees",
-        ["task_id"],
-        unique=False,
-    )
-    op.create_index(
-        op.f("ix_task_assignees_member_id"),
-        "task_assignees",
-        ["member_id"],
-        unique=False,
+    # 1. Add assignee_ids JSON column with default '[]'
+    op.add_column(
+        "tasks",
+        sa.Column("assignee_ids", sa.JSON(), nullable=False, server_default="[]"),
     )
 
     # 2. Backfill existing task assignees from tasks.assignee_id
     op.execute(
         """
-        INSERT INTO task_assignees (task_id, member_id, created_at)
-        SELECT id, assignee_id, COALESCE(created_at, now())
-        FROM tasks
-        WHERE assignee_id IS NOT NULL
-        ON CONFLICT DO NOTHING
+        UPDATE tasks
+        SET assignee_ids = json_build_array(assignee_id)
+        WHERE assignee_id IS NOT NULL;
         """
     )
 
+    # 3. Drop index and drop assignee_id column from tasks
+    op.drop_index(op.f("ix_tasks_assignee_id"), table_name="tasks")
+    op.drop_column("tasks", "assignee_id")
+
 
 def downgrade() -> None:
-    op.drop_index(op.f("ix_task_assignees_member_id"), table_name="task_assignees")
-    op.drop_index(op.f("ix_task_assignees_task_id"), table_name="task_assignees")
-    op.drop_table("task_assignees")
+    op.add_column(
+        "tasks",
+        sa.Column("assignee_id", sa.String(length=26), nullable=True),
+    )
+    op.create_foreign_key(
+        "tasks_assignee_id_fkey",
+        "tasks",
+        "members",
+        ["assignee_id"],
+        ["id"],
+        ondelete="SET NULL",
+    )
+    op.create_index(
+        op.f("ix_tasks_assignee_id"),
+        "tasks",
+        ["assignee_id"],
+        unique=False,
+    )
+    op.execute(
+        """
+        UPDATE tasks
+        SET assignee_id = assignee_ids->>0
+        WHERE json_array_length(assignee_ids) > 0;
+        """
+    )
+    op.drop_column("tasks", "assignee_ids")

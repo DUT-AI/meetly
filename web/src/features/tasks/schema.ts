@@ -12,7 +12,6 @@ export const createTaskSchema = z.object({
   workspaceId: z.string().trim().min(1, 'Workspace id is required.'),
   projectId: z.string().trim().min(1, 'Project id is required.'),
   dueDate: z.coerce.date(),
-  assigneeId: z.string().trim().optional(),
   assigneeIds: z.array(z.string()).default([]),
   description: z.string().optional(),
 });

@@ -59,7 +59,6 @@ export const DataCalendar = ({ data }: DataCalendarProps) => {
     end: new Date(task.dueDate),
     title: task.name,
     project: task.project,
-    assignee: task.assignee,
     assignees: task.assignees,
     status: task.status,
     id: task.$id,
@@ -87,7 +86,7 @@ export const DataCalendar = ({ data }: DataCalendarProps) => {
       }}
       components={{
         eventWrapper: ({ event }) => (
-          <EventCard id={event.id} title={event.title} assignee={event.assignee} assignees={event.assignees} project={event.project} status={event.status} />
+          <EventCard id={event.id} title={event.title} assignees={event.assignees} project={event.project} status={event.status} />
         ),
         toolbar: () => <CustomToolbar date={value} onNavigate={handleNavigate} />,
       }}

@@ -115,15 +115,6 @@ export const KanbanCard = ({ task }: KanbanCardProps) => {
               </div>
             )}
           </div>
-        ) : task.assignee ? (
-          <div title={task.assignee.name} className="shrink-0">
-            <MemberAvatar
-              name={task.assignee.name}
-              image={task.assignee.avatar_url}
-              className="size-6 border border-white shadow-xs"
-              fallbackClassName="text-[10px] font-semibold"
-            />
-          </div>
         ) : (
           <div
             title="Chưa giao"

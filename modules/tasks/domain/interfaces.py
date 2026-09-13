@@ -20,7 +20,6 @@ class ITaskRepository(ABC):
         priority: TaskPriority = TaskPriority.MEDIUM,
         labels: list[str] | None = None,
         due_date: datetime | None = None,
-        assignee_id: str | None = None,
         assignee_ids: list[str] | None = None,
         description: str | None = None,
     ) -> TaskEntity:
@@ -68,7 +67,6 @@ class ITaskRepository(ABC):
         priority: TaskPriority | None = None,
         labels: list[str] | None = None,
         project_id: str | None = None,
-        assignee_id: str | None = None,
         assignee_ids: list[str] | None = None,
         due_date: datetime | None = None,
         description: str | None = None,

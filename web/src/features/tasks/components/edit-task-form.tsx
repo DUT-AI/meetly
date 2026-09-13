@@ -44,10 +44,9 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
       priority: initialValues.priority || TaskPriority.MEDIUM,
       labels: initialValues.labels || [],
       projectId: initialValues.projectId,
-      assigneeId: initialValues.assigneeId,
       assigneeIds: initialValues.assigneeIds?.length
         ? initialValues.assigneeIds
-        : (initialValues.assignees?.map((m) => m.id) ?? (initialValues.assigneeId ? [initialValues.assigneeId] : [])),
+        : (initialValues.assignees?.map((m) => m.id) ?? []),
       dueDate: initialValues.dueDate ? new Date(initialValues.dueDate) : undefined,
     },
   });
@@ -55,10 +54,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
   const onSubmit = (values: EditTaskValues) => {
     updateTask(
       {
-        json: {
-          ...values,
-          assigneeId: values.assigneeIds?.[0] || values.assigneeId || undefined,
-        },
+        json: values,
         param: { taskId: initialValues.id || initialValues.$id },
       },
       {
@@ -130,7 +126,6 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                       ? selectedIds.filter((id) => id !== memberId)
                       : [...selectedIds, memberId];
                     field.onChange(next);
-                    editTaskForm.setValue('assigneeId', next[0] || undefined);
                   };
 
                   return (

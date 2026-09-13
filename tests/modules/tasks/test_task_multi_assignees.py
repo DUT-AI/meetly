@@ -14,7 +14,7 @@ from modules.tasks.dtos.task_dtos import (
     TaskCreateDTO,
     TaskUpdateDTO,
 )
-from modules.tasks.models.task import TaskAssigneeModel, TaskModel  # noqa: F401
+from modules.tasks.models.task import TaskModel  # noqa: F401
 from modules.tasks.repository.task_repository import SqlTaskRepository
 from modules.tasks.use_cases.task_use_cases import (
     CreateTaskUseCase,
@@ -35,7 +35,6 @@ class TestTaskEntitiesAndDTOs:
             labels=["bug"],
             workspace_id="ws_1",
             project_id="prj_1",
-            assignee_id="mem_1",
             assignee_ids=["mem_1", "mem_2"],
             position=1000,
             due_date=now,
@@ -43,7 +42,6 @@ class TestTaskEntitiesAndDTOs:
             created_at=now,
             updated_at=now,
         )
-        assert entity.assignee_id == "mem_1"
         assert entity.assignee_ids == ["mem_1", "mem_2"]
 
     def test_populated_task_entity_assignees(self) -> None:
@@ -56,7 +54,6 @@ class TestTaskEntitiesAndDTOs:
             labels=[],
             workspace_id="ws_1",
             project_id="prj_1",
-            assignee_id="mem_1",
             assignee_ids=["mem_1", "mem_2"],
             position=1000,
             due_date=None,
@@ -122,7 +119,6 @@ class TestSqlTaskRepositoryMultiAssignees:
 
         assert created.id is not None
         assert set(created.assignee_ids) == {"mem_1", "mem_2"}
-        assert created.assignee_id == "mem_1"
 
         fetched = await repo.get_by_id(created.id)
         assert fetched is not None
@@ -193,7 +189,6 @@ class TestSqlTaskRepositoryMultiAssignees:
         await async_session.commit()
 
         assert set(updated.assignee_ids) == {"mem_2", "mem_3"}
-        assert updated.assignee_id == "mem_2"
 
         fetched = await repo.get_by_id(task.id)
         assert fetched is not None
@@ -242,7 +237,6 @@ class TestCreateTaskUseCase:
             labels=[],
             workspace_id="ws_1",
             project_id="prj_1",
-            assignee_id="mem_1",
             assignee_ids=["mem_1", "mem_2"],
             position=2000,
             due_date=None,
@@ -348,7 +342,6 @@ class TestUpdateTaskUseCase:
             labels=[],
             workspace_id="ws_1",
             project_id="prj_1",
-            assignee_id="mem_1",
             assignee_ids=["mem_1", "mem_2"],
             position=1000,
             due_date=None,
@@ -384,7 +377,6 @@ class TestUpdateTaskUseCase:
             labels=[],
             workspace_id="ws_1",
             project_id="prj_1",
-            assignee_id="mem_2",
             assignee_ids=["mem_2", "mem_3"],
             position=1000,
             due_date=None,
@@ -449,7 +441,6 @@ class TestGetAndListTasksUseCase:
             labels=["dev"],
             workspace_id="ws_1",
             project_id="prj_1",
-            assignee_id="mem_1",
             assignee_ids=["mem_1", "mem_2"],
             position=1000,
             due_date=None,
@@ -507,8 +498,6 @@ class TestGetAndListTasksUseCase:
         assert res.id == "task_get_1"
         assert res.assignee_ids == ["mem_1", "mem_2"]
         assert len(res.assignees) == 2
-        assert res.assignee is not None
-        assert res.assignee.id == "mem_1"
 
 
 class TestTaskReminderUseCases:
@@ -539,7 +528,6 @@ class TestTaskReminderUseCases:
                 labels=[],
                 workspace_id="ws_1",
                 project_id="prj_1",
-                assignee_id="mem_1",
                 assignee_ids=["mem_1", "mem_2"],
                 position=1000,
                 due_date=due,

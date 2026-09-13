@@ -128,7 +128,6 @@ async def create_task(
         priority=payload.priority,
         labels=payload.labels,
         due_date=parsed_due_date,
-        assignee_id=payload.assignee_id,
         assignee_ids=payload.assignee_ids,
         description=payload.description,
     )
@@ -182,7 +181,6 @@ async def update_task(
         priority=payload.priority,
         labels=payload.labels,
         project_id=payload.project_id,
-        assignee_id=payload.assignee_id,
         assignee_ids=payload.assignee_ids,
         due_date=parsed_due_date,
         description=payload.description,

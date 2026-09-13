@@ -10,7 +10,6 @@ import { cn } from '@/lib/utils';
 
 interface EventCardProps {
   title: string;
-  assignee?: Member | null;
   assignees?: Member[];
   project: Project;
   status: TaskStatus;
@@ -25,7 +24,7 @@ const statusColorMap: Record<TaskStatus, string> = {
   [TaskStatus.DONE]: 'border-l-emerald-500',
 };
 
-export const EventCard = ({ title, assignee, assignees, project, status, id }: EventCardProps) => {
+export const EventCard = ({ title, assignees, project, status, id }: EventCardProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
 
@@ -35,7 +34,7 @@ export const EventCard = ({ title, assignee, assignees, project, status, id }: E
     router.push(`/workspaces/${workspaceId}/tasks/${id}`);
   };
 
-  const memberList = assignees && assignees.length > 0 ? assignees : assignee ? [assignee] : [];
+  const memberList = assignees || [];
 
   return (
     <div className="px-2">

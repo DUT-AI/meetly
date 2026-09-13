@@ -56,7 +56,7 @@ export const columns = columnHelper.columns([
       );
     },
   }),
-  columnHelper.accessor('assignee', {
+  columnHelper.accessor('assignees', {
     header: ({ column }) => {
       return (
         <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}>
@@ -66,11 +66,7 @@ export const columns = columnHelper.columns([
       );
     },
     cell: ({ row }) => {
-      const assignees = row.original.assignees && row.original.assignees.length > 0
-        ? row.original.assignees
-        : row.original.assignee
-          ? [row.original.assignee]
-          : [];
+      const assignees = row.original.assignees || [];
 
       if (assignees.length === 0) {
         return <span className="text-xs text-muted-foreground italic">Chưa giao</span>;

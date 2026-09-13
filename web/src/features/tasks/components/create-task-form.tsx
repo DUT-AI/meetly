@@ -43,7 +43,6 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
     defaultValues: {
       name: '',
       dueDate: undefined,
-      assigneeId: undefined,
       assigneeIds: [],
       description: '',
       projectId: undefined,
@@ -57,10 +56,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
   const onSubmit = (values: z.infer<typeof createTaskSchema>) => {
     createTask(
       {
-        json: {
-          ...values,
-          assigneeId: values.assigneeIds?.[0] || values.assigneeId || undefined,
-        },
+        json: values,
       },
       {
         onSuccess: () => {
@@ -211,7 +207,6 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                           ? selectedIds.filter((id) => id !== memberId)
                           : [...selectedIds, memberId];
                         field.onChange(next);
-                        createTaskForm.setValue('assigneeId', next[0] || undefined);
                       };
 
                       return (

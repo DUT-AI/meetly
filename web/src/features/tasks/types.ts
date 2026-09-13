@@ -23,9 +23,7 @@ export type Task = {
   status: TaskStatus;
   priority: TaskPriority;
   labels: string[];
-  assigneeId?: string;
-  assignee_id?: string;
-  assigneeIds?: string[];
+  assigneeIds: string[];
   assignee_ids?: string[];
   projectId: string;
   project_id?: string;
@@ -45,8 +43,7 @@ import type { WorkspaceInfo } from '@/features/workspaces/types';
 
 export type PopulatedTask = Task & {
   project: Project;
-  assignee?: Member | null;
-  assignees?: Member[];
+  assignees: Member[];
   workspace?: WorkspaceInfo;
 };
 
@@ -128,13 +125,10 @@ export function normalizeTask(t: any): PopulatedTask {
   const id = t.id ?? t.$id;
   const rawAssignees: Member[] = Array.isArray(t.assignees)
     ? t.assignees.map(normalizeMember)
-    : t.assignee
-      ? [normalizeMember(t.assignee)]
-      : [];
-  const primaryAssignee = rawAssignees[0] ?? (t.assignee ? normalizeMember(t.assignee) : undefined);
+    : [];
   const rawAssigneeIds: string[] = Array.isArray(t.assigneeIds ?? t.assignee_ids)
     ? (t.assigneeIds ?? t.assignee_ids)
-    : (t.assigneeId ?? t.assignee_id ? [t.assigneeId ?? t.assignee_id] : (primaryAssignee ? [primaryAssignee.id] : []));
+    : (rawAssignees.length > 0 ? rawAssignees.map((m) => m.id) : []);
 
   return {
     ...t,
@@ -142,11 +136,8 @@ export function normalizeTask(t: any): PopulatedTask {
     $id: id,
     priority: t.priority || TaskPriority.MEDIUM,
     labels: Array.isArray(t.labels) ? t.labels : [],
-    assigneeId: t.assigneeId ?? t.assignee_id ?? primaryAssignee?.id,
-    assignee_id: t.assignee_id ?? t.assigneeId ?? primaryAssignee?.id,
     assigneeIds: rawAssigneeIds,
     assignee_ids: rawAssigneeIds,
-    assignee: primaryAssignee,
     assignees: rawAssignees,
     projectId: t.projectId ?? t.project_id,
     project_id: t.project_id ?? t.projectId,

@@ -44,9 +44,7 @@ class CheckTaskDeadlinesUseCase:
         overdue_count = 0
 
         for task in tasks:
-            target_ids = task.assignee_ids or (
-                [task.assignee_id] if task.assignee_id else []
-            )
+            target_ids = task.assignee_ids or []
             if not task.due_date or not target_ids:
                 continue
 

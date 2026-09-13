@@ -38,7 +38,6 @@ async def _send_task_status_discord_notification(
     old_status: TaskStatus,
     new_status: TaskStatus,
     actor_name: str,
-    assignee_id: str | None = None,
     assignee_ids: list[str] | None = None,
 ) -> None:
     """Send a rich Discord embed to workspace's discord_room_id channel on status change."""
@@ -69,7 +68,7 @@ async def _send_task_status_discord_notification(
         project_name = project.name if project else "Không xác định"
 
         assignee_name = "Chưa giao"
-        target_ids = assignee_ids or ([assignee_id] if assignee_id else [])
+        target_ids = assignee_ids or []
         names = []
         for a_id in target_ids:
             assignee_m = await member_repo.get_by_id(a_id)
@@ -133,7 +132,6 @@ class CreateTaskUseCase:
         priority: TaskPriority = TaskPriority.MEDIUM,
         labels: list[str] | None = None,
         due_date: datetime | None = None,
-        assignee_id: str | None = None,
         assignee_ids: list[str] | None = None,
         description: str | None = None,
     ) -> TaskResponseDTO:
@@ -144,8 +142,6 @@ class CreateTaskUseCase:
         resolved_assignee_ids = (
             list(dict.fromkeys(assignee_ids)) if assignee_ids else []
         )
-        if not resolved_assignee_ids and assignee_id:
-            resolved_assignee_ids = [assignee_id]
 
         for a_id in resolved_assignee_ids:
             a_member = await self.member_repo.get_by_id(a_id)
@@ -164,14 +160,13 @@ class CreateTaskUseCase:
             priority=priority,
             labels=labels or [],
             due_date=due_date,
-            assignee_id=assignee_id,
             assignee_ids=resolved_assignee_ids,
             description=description,
         )
 
         # Notify assignees
         logger.info(f"Task created: id={task.id}, assignee_ids={task.assignee_ids}")
-        target_ids = task.assignee_ids or ([task.assignee_id] if task.assignee_id else [])
+        target_ids = task.assignee_ids or []
         if target_ids:
             creator_user = await self.manage_client.get_user(user_id)
             creator_name = creator_user.name if creator_user else "Đồng nghiệp"
@@ -203,7 +198,6 @@ class CreateTaskUseCase:
             labels=task.labels,
             workspace_id=task.workspace_id,
             project_id=task.project_id,
-            assignee_id=task.assignee_id,
             assignee_ids=task.assignee_ids,
             position=task.position,
             due_date=task.due_date,
@@ -293,7 +287,7 @@ class ListTasksUseCase:
                 continue
 
             assignees_dtos: list[MemberResponseDTO] = []
-            target_ids = t.assignee_ids or ([t.assignee_id] if t.assignee_id else [])
+            target_ids = t.assignee_ids or []
             for a_id in target_ids:
                 if a_id in member_map:
                     m = member_map[a_id]
@@ -312,8 +306,6 @@ class ListTasksUseCase:
                         )
                     )
 
-            primary_dto = assignees_dtos[0] if assignees_dtos else None
-
             populated.append(
                 PopulatedTaskResponseDTO(
                     id=t.id,
@@ -323,7 +315,6 @@ class ListTasksUseCase:
                     labels=t.labels,
                     workspace_id=t.workspace_id,
                     project_id=t.project_id,
-                    assignee_id=t.assignee_id,
                     assignee_ids=t.assignee_ids,
                     position=t.position,
                     due_date=t.due_date,
@@ -331,7 +322,6 @@ class ListTasksUseCase:
                     created_at=t.created_at,
                     updated_at=t.updated_at,
                     project=proj,
-                    assignee=primary_dto,
                     assignees=assignees_dtos,
                 )
             )
@@ -368,7 +358,7 @@ class GetTaskUseCase:
             raise NotFoundException("Project not found.")
 
         assignees_dtos: list[MemberResponseDTO] = []
-        target_ids = task.assignee_ids or ([task.assignee_id] if task.assignee_id else [])
+        target_ids = task.assignee_ids or []
         for a_id in target_ids:
             m = await self.member_repo.get_by_id(a_id)
             if m:
@@ -398,8 +388,6 @@ class GetTaskUseCase:
                     )
                 )
 
-        primary_dto = assignees_dtos[0] if assignees_dtos else None
-
         return PopulatedTaskResponseDTO(
             id=task.id,
             name=task.name,
@@ -408,7 +396,6 @@ class GetTaskUseCase:
             labels=task.labels,
             workspace_id=task.workspace_id,
             project_id=task.project_id,
-            assignee_id=task.assignee_id,
             assignee_ids=task.assignee_ids,
             position=task.position,
             due_date=task.due_date,
@@ -423,7 +410,6 @@ class GetTaskUseCase:
                 created_at=proj.created_at,
                 updated_at=proj.updated_at,
             ),
-            assignee=primary_dto,
             assignees=assignees_dtos,
         )
 
@@ -458,7 +444,6 @@ class UpdateTaskUseCase:
         priority: TaskPriority | None = None,
         labels: list[str] | None = None,
         project_id: str | None = None,
-        assignee_id: str | None = None,
         assignee_ids: list[str] | None = None,
         due_date: datetime | None = None,
         description: str | None = None,
@@ -472,13 +457,11 @@ class UpdateTaskUseCase:
             raise ForbiddenException("Unauthorized.")
 
         old_status = task.status
-        old_assignee_ids = set(task.assignee_ids or ([task.assignee_id] if task.assignee_id else []))
+        old_assignee_ids = set(task.assignee_ids or [])
 
         new_assignee_ids_list: list[str] | None = None
         if assignee_ids is not None:
             new_assignee_ids_list = list(dict.fromkeys(assignee_ids))
-        elif assignee_id is not None:
-            new_assignee_ids_list = [assignee_id] if assignee_id else []
 
         if new_assignee_ids_list is not None:
             for a_id in new_assignee_ids_list:
@@ -493,7 +476,6 @@ class UpdateTaskUseCase:
             priority=priority,
             labels=labels,
             project_id=project_id,
-            assignee_id=assignee_id,
             assignee_ids=new_assignee_ids_list,
             due_date=due_date,
             description=description,
@@ -561,7 +543,7 @@ class UpdateTaskUseCase:
                 }.get(status, status.value)
 
                 # Notify current assignees
-                current_assignees = updated.assignee_ids or ([updated.assignee_id] if updated.assignee_id else [])
+                current_assignees = updated.assignee_ids or []
                 for a_id in current_assignees:
                     current_assignee = await self.member_repo.get_by_id(a_id)
                     if current_assignee and str(current_assignee.user_id) != user_id:
@@ -595,7 +577,6 @@ class UpdateTaskUseCase:
                     old_status=old_status,
                     new_status=status,
                     actor_name=actor_name,
-                    assignee_id=updated.assignee_id,
                     assignee_ids=updated.assignee_ids,
                 )
         except Exception as e:
@@ -609,7 +590,6 @@ class UpdateTaskUseCase:
             labels=updated.labels,
             workspace_id=updated.workspace_id,
             project_id=updated.project_id,
-            assignee_id=updated.assignee_id,
             assignee_ids=updated.assignee_ids,
             position=updated.position,
             due_date=updated.due_date,
@@ -682,7 +662,7 @@ class BulkUpdateTasksUseCase:
                         TaskStatus.DONE: "Đã hoàn thành (Done)",
                     }.get(new_st, new_st.value)
 
-                    target_ids = orig_task.assignee_ids or ([orig_task.assignee_id] if orig_task.assignee_id else [])
+                    target_ids = orig_task.assignee_ids or []
                     for a_id in target_ids:
                         assignee_member = await self.member_repo.get_by_id(a_id)
                         if assignee_member and str(assignee_member.user_id) != user_id:
@@ -716,7 +696,6 @@ class BulkUpdateTasksUseCase:
                         old_status=orig_task.status,
                         new_status=new_st,
                         actor_name=actor_name,
-                        assignee_id=orig_task.assignee_id,
                         assignee_ids=orig_task.assignee_ids,
                     )
             except Exception as e:
@@ -733,7 +712,6 @@ class BulkUpdateTasksUseCase:
                 labels=t.labels,
                 workspace_id=t.workspace_id,
                 project_id=t.project_id,
-                assignee_id=t.assignee_id,
                 assignee_ids=t.assignee_ids,
                 position=t.position,
                 due_date=t.due_date,
@@ -842,7 +820,7 @@ class ListMyGlobalTasksUseCase:
         all_assignee_ids = {
             a_id
             for t in tasks
-            for a_id in (t.assignee_ids or ([t.assignee_id] if t.assignee_id else []))
+            for a_id in (t.assignee_ids or [])
         }
         missing_ids = all_assignee_ids - set(member_map.keys())
         for m_id in missing_ids:
@@ -877,7 +855,7 @@ class ListMyGlobalTasksUseCase:
             )
 
             assignees_dtos: list[MemberResponseDTO] = []
-            target_ids = t.assignee_ids or ([t.assignee_id] if t.assignee_id else [])
+            target_ids = t.assignee_ids or []
             for a_id in target_ids:
                 if a_id in member_map:
                     m = member_map[a_id]
@@ -896,7 +874,6 @@ class ListMyGlobalTasksUseCase:
                         )
                     )
 
-            primary_dto = assignees_dtos[0] if assignees_dtos else None
             ws_dto = workspace_map.get(t.workspace_id)
 
             populated.append(
@@ -908,7 +885,6 @@ class ListMyGlobalTasksUseCase:
                     labels=t.labels,
                     workspace_id=t.workspace_id,
                     project_id=t.project_id,
-                    assignee_id=t.assignee_id,
                     assignee_ids=t.assignee_ids,
                     position=t.position,
                     due_date=t.due_date,
@@ -916,7 +892,6 @@ class ListMyGlobalTasksUseCase:
                     created_at=t.created_at,
                     updated_at=t.updated_at,
                     project=proj_dto,
-                    assignee=primary_dto,
                     assignees=assignees_dtos,
                     workspace=ws_dto,
                 )
