@@ -4,7 +4,11 @@ from typing import Any
 from loguru import logger
 
 from core.config.notification import notification_settings
-from core.exceptions import ForbiddenException, NotFoundException
+from core.exceptions import (
+    BadRequestException,
+    ForbiddenException,
+    NotFoundException,
+)
 from modules.identity.client.manage_client import ManageClient
 from modules.members.domain.enums import MemberRole
 from modules.members.domain.interfaces import IMemberRepository
@@ -794,6 +798,8 @@ class BulkUpdateTasksUseCase:
                 member = await self.member_repo.get_member(workspace_id, user_id)
                 if not member:
                     raise ForbiddenException("Unauthorized.")
+            elif t.workspace_id != workspace_id:
+                raise BadRequestException("All tasks must belong to the same workspace.")
             if t.status != item.status:
                 status_changed_tasks.append((t, item.status))
             updates.append((item.id, item.status, item.position))

@@ -263,3 +263,111 @@ async def test_dispatch_when_only_discord_enabled() -> None:
 
     # 3. Zalo room NOT called
     zalo_client.send_message.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_bulk_update_tasks_mixed_workspaces_rejected() -> None:
+    from core.exceptions import BadRequestException
+    from modules.tasks.domain.entities import TaskEntity
+    from modules.tasks.domain.enums import TaskPriority
+    from modules.tasks.dtos.task_dtos import TaskBulkItemDTO
+    from modules.tasks.use_cases.task_use_cases import BulkUpdateTasksUseCase
+
+    task_repo = AsyncMock()
+    member_repo = AsyncMock()
+    workspace_repo = AsyncMock()
+    project_repo = AsyncMock()
+    manage_client = AsyncMock()
+    notification_dispatcher = AsyncMock()
+    discord_service = AsyncMock()
+    zalo_client = AsyncMock()
+
+    use_case = BulkUpdateTasksUseCase(
+        task_repo=task_repo,
+        member_repo=member_repo,
+        workspace_repo=workspace_repo,
+        project_repo=project_repo,
+        manage_client=manage_client,
+        notification_dispatcher=notification_dispatcher,
+        discord_service=discord_service,
+        zalo_client=zalo_client,
+    )
+
+    now = datetime.now(UTC)
+    # Task 1 in ws_1
+    t1 = TaskEntity(
+        id="t1",
+        name="Task 1",
+        status=TaskStatus.TODO,
+        priority=TaskPriority.MEDIUM,
+        labels=[],
+        workspace_id="ws_1",
+        project_id="p1",
+        assignee_id=None,
+        position=1000,
+        due_date=None,
+        description=None,
+        created_at=now,
+        updated_at=now,
+    )
+    # Task 2 in ws_2 (different workspace)
+    t2 = TaskEntity(
+        id="t2",
+        name="Task 2",
+        status=TaskStatus.TODO,
+        priority=TaskPriority.MEDIUM,
+        labels=[],
+        workspace_id="ws_2",
+        project_id="p2",
+        assignee_id=None,
+        position=2000,
+        due_date=None,
+        description=None,
+        created_at=now,
+        updated_at=now,
+    )
+
+    task_repo.get_by_id.side_effect = lambda tid: t1 if tid == "t1" else t2
+    member_repo.get_member.return_value = MemberEntity(
+        id="m1",
+        workspace_id="ws_1",
+        user_id="user_1",
+        role=MemberRole.MEMBER,
+        created_at=now,
+        updated_at=now,
+    )
+
+    items = [
+        TaskBulkItemDTO(id="t1", status=TaskStatus.IN_PROGRESS, position=1000),
+        TaskBulkItemDTO(id="t2", status=TaskStatus.IN_PROGRESS, position=2000),
+    ]
+
+    with pytest.raises(BadRequestException, match="All tasks must belong to the same workspace"):
+        await use_case.execute(items=items, user_id="user_1")
+
+
+def test_workspace_response_dto_from_entity_preserves_settings() -> None:
+    from modules.workspaces.dtos.workspace_dtos import WorkspaceResponseDTO
+
+    now = datetime.now(UTC)
+    entity = WorkspaceEntity(
+        id="ws_test",
+        name="Test WS",
+        owner_id="owner_1",
+        invite_code="CODE12",
+        image_url=None,
+        created_at=now,
+        updated_at=now,
+        discord_room_id="room_disc",
+        zalo_room_id="room_zalo",
+        notify_on_task_status_change=False,
+        notify_task_status_discord=False,
+        notify_task_status_zalo=False,
+    )
+
+    dto = WorkspaceResponseDTO.from_entity(entity)
+    assert dto.id == "ws_test"
+    assert dto.notify_on_task_status_change is False
+    assert dto.notify_task_status_discord is False
+    assert dto.notify_task_status_zalo is False
+    assert dto.zalo_room_id == "room_zalo"
