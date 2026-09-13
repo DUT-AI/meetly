@@ -9,8 +9,8 @@ const MyTasksPage = async () => {
   if (!user) redirect('/sign-in');
 
   return (
-    <div className="flex h-full flex-col">
-      <GlobalTaskView />
+    <div className="flex flex-col h-full bg-neutral-50/50">
+      <GlobalTaskView userId={user.$id || ""} />
     </div>
   );
 };
