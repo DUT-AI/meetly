@@ -48,9 +48,9 @@ def compute_task_analytics(tasks: list["TaskEntity"], dto_cls: type) -> Any:
     task_count = len(tasks)
     task_difference = len(this_month_tasks) - len(last_month_tasks)
 
-    assigned_task_count = len([t for t in tasks if t.assignee_id])
-    assigned_this_month = len([t for t in this_month_tasks if t.assignee_id])
-    assigned_last_month = len([t for t in last_month_tasks if t.assignee_id])
+    assigned_task_count = len([t for t in tasks if t.assignee_ids])
+    assigned_this_month = len([t for t in this_month_tasks if t.assignee_ids])
+    assigned_last_month = len([t for t in last_month_tasks if t.assignee_ids])
     assigned_task_difference = assigned_this_month - assigned_last_month
 
     completed_task_count = len([t for t in tasks if t.status == TaskStatus.DONE])
