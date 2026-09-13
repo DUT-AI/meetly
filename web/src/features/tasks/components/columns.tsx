@@ -66,16 +66,47 @@ export const columns = columnHelper.columns([
       );
     },
     cell: ({ row }) => {
-      const assignee = row.original.assignee;
-      if (!assignee) {
+      const assignees = row.original.assignees && row.original.assignees.length > 0
+        ? row.original.assignees
+        : row.original.assignee
+          ? [row.original.assignee]
+          : [];
+
+      if (assignees.length === 0) {
         return <span className="text-xs text-muted-foreground italic">Chưa giao</span>;
       }
 
-      return (
-        <div className="flex items-center gap-x-2 text-sm font-medium">
-          <MemberAvatar fallbackClassName="text-xs" className="size-6" name={assignee.name} image={assignee.avatar_url} />
+      if (assignees.length === 1) {
+        const assignee = assignees[0];
+        return (
+          <div className="flex items-center gap-x-2 text-sm font-medium">
+            <MemberAvatar fallbackClassName="text-xs" className="size-6" name={assignee.name} image={assignee.avatar_url} />
+            <p className="line-clamp-1">{assignee.name}</p>
+          </div>
+        );
+      }
 
-          <p className="line-clamp-1">{assignee.name}</p>
+      return (
+        <div className="flex items-center gap-x-2 text-sm font-medium" title={assignees.map((m) => m.name).join(', ')}>
+          <div className="flex items-center -space-x-1.5">
+            {assignees.slice(0, 3).map((m) => (
+              <MemberAvatar
+                key={m.id}
+                fallbackClassName="text-[10px]"
+                className="size-6 border border-white"
+                name={m.name}
+                image={m.avatar_url}
+              />
+            ))}
+            {assignees.length > 3 && (
+              <div className="size-6 rounded-full bg-neutral-100 border border-white flex items-center justify-center text-[10px] font-medium text-neutral-600">
+                +{assignees.length - 3}
+              </div>
+            )}
+          </div>
+          <p className="line-clamp-1 text-xs text-neutral-600">
+            {assignees.map((m) => m.name).join(', ')}
+          </p>
         </div>
       );
     },

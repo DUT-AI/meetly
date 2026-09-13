@@ -12,6 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
+import { Check } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useUpdateTask } from '@/features/tasks/api/use-update-task';
 import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
@@ -43,6 +45,9 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
       labels: initialValues.labels || [],
       projectId: initialValues.projectId,
       assigneeId: initialValues.assigneeId,
+      assigneeIds: initialValues.assigneeIds?.length
+        ? initialValues.assigneeIds
+        : (initialValues.assignees?.map((m) => m.id) ?? (initialValues.assigneeId ? [initialValues.assigneeId] : [])),
       dueDate: initialValues.dueDate ? new Date(initialValues.dueDate) : undefined,
     },
   });
@@ -50,7 +55,10 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
   const onSubmit = (values: EditTaskValues) => {
     updateTask(
       {
-        json: values,
+        json: {
+          ...values,
+          assigneeId: values.assigneeIds?.[0] || values.assigneeId || undefined,
+        },
         param: { taskId: initialValues.id || initialValues.$id },
       },
       {
@@ -112,48 +120,80 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
               <FormField
                 disabled={isPending}
                 control={editTaskForm.control}
-                name="assigneeId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Assignee</FormLabel>
+                name="assigneeIds"
+                render={({ field }) => {
+                  const selectedIds = field.value || [];
+                  const selectedMembers = memberOptions.filter((m) => selectedIds.includes(m.id));
 
-                    <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
-                      <FormControl>
-                        <SelectTrigger>
-                          {field.value ? (
-                            (() => {
-                              const selectedMember = memberOptions.find((m) => m.id === field.value);
-                              if (selectedMember) {
-                                return (
-                                  <div className="flex items-center gap-x-2 truncate">
-                                    <MemberAvatar className="size-5" name={selectedMember.name} image={selectedMember.imageUrl} />
-                                    <span className="truncate">{selectedMember.name}</span>
+                  const toggleMember = (memberId: string) => {
+                    const next = selectedIds.includes(memberId)
+                      ? selectedIds.filter((id) => id !== memberId)
+                      : [...selectedIds, memberId];
+                    field.onChange(next);
+                    editTaskForm.setValue('assigneeId', next[0] || undefined);
+                  };
+
+                  return (
+                    <FormItem>
+                      <FormLabel>Assignees (Người thực hiện)</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant="outline"
+                              role="combobox"
+                              disabled={isPending}
+                              className="w-full justify-between font-normal h-10 px-3"
+                            >
+                              {selectedMembers.length === 0 && (
+                                <span className="text-muted-foreground">Select assignees</span>
+                              )}
+                              {selectedMembers.length > 0 && (
+                                <div className="flex items-center gap-1.5 overflow-hidden">
+                                  <div className="flex -space-x-1.5 overflow-hidden">
+                                    {selectedMembers.slice(0, 3).map((m) => (
+                                      <MemberAvatar key={m.id} className="size-5 border border-background" name={m.name} image={m.imageUrl} />
+                                    ))}
                                   </div>
-                                );
-                              }
-                              return <SelectValue placeholder="Select assignee" />;
-                            })()
-                          ) : (
-                            'Select assignee'
-                          )}
-                        </SelectTrigger>
-                      </FormControl>
-
+                                  <span className="truncate text-xs">
+                                    {selectedMembers.map((m) => m.name).join(', ')}
+                                  </span>
+                                </div>
+                              )}
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-64 p-2" align="start">
+                          <div className="space-y-1 max-h-56 overflow-y-auto">
+                            {memberOptions.map((member) => {
+                              const isSelected = selectedIds.includes(member.id);
+                              return (
+                                <div
+                                  key={member.id}
+                                  onClick={() => toggleMember(member.id)}
+                                  className={cn(
+                                    'flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-accent text-sm',
+                                    isSelected && 'bg-accent/50 font-medium'
+                                  )}
+                                >
+                                  <div className="flex items-center gap-x-2 truncate">
+                                    <MemberAvatar className="size-5" name={member.name} image={member.imageUrl} />
+                                    <span className="truncate">{member.name}</span>
+                                  </div>
+                                  {isSelected && <Check className="size-4 text-primary shrink-0" />}
+                                </div>
+                              );
+                            })}
+                            {memberOptions.length === 0 && (
+                              <p className="text-xs text-muted-foreground p-2">No members found</p>
+                            )}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
-
-                      <SelectContent>
-                        {memberOptions.map((member) => (
-                          <SelectItem key={member.id} value={member.id}>
-                            <div className="flex items-center gap-x-2">
-                              <MemberAvatar className="size-5" name={member.name} image={member.imageUrl} />
-                              <span className="truncate">{member.name}</span>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FormItem>
-                )}
+                    </FormItem>
+                  );
+                }}
               />
 
               <FormField

@@ -129,6 +129,7 @@ async def create_task(
         labels=payload.labels,
         due_date=parsed_due_date,
         assignee_id=payload.assignee_id,
+        assignee_ids=payload.assignee_ids,
         description=payload.description,
     )
     return {"data": result}
@@ -182,6 +183,7 @@ async def update_task(
         labels=payload.labels,
         project_id=payload.project_id,
         assignee_id=payload.assignee_id,
+        assignee_ids=payload.assignee_ids,
         due_date=parsed_due_date,
         description=payload.description,
     )

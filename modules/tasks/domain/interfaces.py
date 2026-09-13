@@ -21,6 +21,7 @@ class ITaskRepository(ABC):
         labels: list[str] | None = None,
         due_date: datetime | None = None,
         assignee_id: str | None = None,
+        assignee_ids: list[str] | None = None,
         description: str | None = None,
     ) -> TaskEntity:
         """Create a new task."""
@@ -68,6 +69,7 @@ class ITaskRepository(ABC):
         labels: list[str] | None = None,
         project_id: str | None = None,
         assignee_id: str | None = None,
+        assignee_ids: list[str] | None = None,
         due_date: datetime | None = None,
         description: str | None = None,
         position: int | None = None,
