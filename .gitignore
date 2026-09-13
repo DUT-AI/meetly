@@ -44,3 +44,6 @@ test_zalo_sticker.py
 web/AGENTS.md
 web/CLAUDE.md
 apps/api/assets/
+
+.agents/
+.claude/
