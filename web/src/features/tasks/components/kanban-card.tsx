@@ -98,14 +98,22 @@ export const KanbanCard = ({ task }: KanbanCardProps) => {
           )}
         </div>
 
-        {task.assignee ? (
-          <div title={task.assignee.name} className="shrink-0">
-            <MemberAvatar
-              name={task.assignee.name}
-              image={task.assignee.avatar_url}
-              className="size-6 border border-white shadow-xs"
-              fallbackClassName="text-[10px] font-semibold"
-            />
+        {task.assignees && task.assignees.length > 0 ? (
+          <div className="flex items-center -space-x-1.5 shrink-0" title={task.assignees.map((m) => m.name).join(', ')}>
+            {task.assignees.slice(0, 3).map((m) => (
+              <MemberAvatar
+                key={m.id}
+                name={m.name}
+                image={m.avatar_url}
+                className="size-6 border border-white shadow-xs"
+                fallbackClassName="text-[10px] font-semibold"
+              />
+            ))}
+            {task.assignees.length > 3 && (
+              <div className="size-6 rounded-full bg-neutral-100 border border-white flex items-center justify-center text-[10px] font-medium text-neutral-600">
+                +{task.assignees.length - 3}
+              </div>
+            )}
           </div>
         ) : (
           <div

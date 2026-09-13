@@ -24,7 +24,7 @@ export interface CreateTaskPayload {
   labels?: string[];
   workspaceId: string;
   projectId: string;
-  assigneeId: string;
+  assigneeIds?: string[];
   dueDate: Date | string;
   description?: string;
 }
@@ -35,7 +35,7 @@ export interface UpdateTaskPayload {
   priority?: TaskPriority;
   labels?: string[];
   projectId?: string;
-  assigneeId?: string;
+  assigneeIds?: string[];
   dueDate?: Date | string;
   description?: string;
 }
@@ -97,14 +97,14 @@ export const taskApi = {
   createTask: async (payload: CreateTaskPayload): Promise<PopulatedTask> => {
     const formattedDueDate =
       payload.dueDate instanceof Date ? payload.dueDate.toISOString() : payload.dueDate;
-    const body = {
+    const body: Record<string, any> = {
       name: payload.name,
       status: payload.status,
       priority: payload.priority,
       labels: payload.labels,
       workspace_id: payload.workspaceId,
       project_id: payload.projectId,
-      assignee_id: payload.assigneeId,
+      assignee_ids: payload.assigneeIds || [],
       due_date: formattedDueDate,
       description: payload.description,
     };
@@ -120,9 +120,10 @@ export const taskApi = {
     if (payload.priority !== undefined) body.priority = payload.priority;
     if (payload.labels !== undefined) body.labels = payload.labels;
     if (payload.projectId !== undefined) body.project_id = payload.projectId;
-    if (payload.assigneeId !== undefined) body.assignee_id = payload.assigneeId;
+    if (payload.assigneeIds !== undefined) body.assignee_ids = payload.assigneeIds;
     if (payload.dueDate !== undefined) {
-      body.due_date = payload.dueDate instanceof Date ? payload.dueDate.toISOString() : payload.dueDate;
+      body.due_date =
+        payload.dueDate instanceof Date ? payload.dueDate.toISOString() : payload.dueDate;
     }
     if (payload.description !== undefined) body.description = payload.description;
 

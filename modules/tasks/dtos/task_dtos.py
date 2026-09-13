@@ -16,7 +16,7 @@ class TaskCreateDTO(BaseModel):
     workspace_id: str
     project_id: str
     due_date: datetime | str | None = None
-    assignee_id: str | None = None
+    assignee_ids: list[str] = Field(default_factory=list)
     description: str | None = None
 
 
@@ -27,7 +27,7 @@ class TaskUpdateDTO(BaseModel):
     labels: list[str] | None = None
     project_id: str | None = None
     due_date: datetime | str | None = None
-    assignee_id: str | None = None
+    assignee_ids: list[str] | None = None
     description: str | None = None
 
 
@@ -53,7 +53,7 @@ class TaskResponseDTO(BaseModel):
     labels: list[str] = Field(default_factory=list)
     workspace_id: str
     project_id: str
-    assignee_id: str | None = None
+    assignee_ids: list[str] = Field(default_factory=list)
     position: int
     due_date: datetime | None = None
     description: str | None = None
@@ -63,7 +63,7 @@ class TaskResponseDTO(BaseModel):
 
 class PopulatedTaskResponseDTO(TaskResponseDTO):
     project: ProjectResponseDTO
-    assignee: MemberResponseDTO | None = None
+    assignees: list[MemberResponseDTO] = Field(default_factory=list)
     workspace: WorkspaceInfoResponseDTO | None = None
 
 

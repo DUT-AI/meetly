@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 
 interface EventCardProps {
   title: string;
-  assignee: Member;
+  assignees?: Member[];
   project: Project;
   status: TaskStatus;
   id: string;
@@ -24,7 +24,7 @@ const statusColorMap: Record<TaskStatus, string> = {
   [TaskStatus.DONE]: 'border-l-emerald-500',
 };
 
-export const EventCard = ({ title, assignee, project, status, id }: EventCardProps) => {
+export const EventCard = ({ title, assignees, project, status, id }: EventCardProps) => {
   const router = useRouter();
   const workspaceId = useWorkspaceId();
 
@@ -33,6 +33,8 @@ export const EventCard = ({ title, assignee, project, status, id }: EventCardPro
 
     router.push(`/workspaces/${workspaceId}/tasks/${id}`);
   };
+
+  const memberList = assignees || [];
 
   return (
     <div className="px-2">
@@ -46,7 +48,26 @@ export const EventCard = ({ title, assignee, project, status, id }: EventCardPro
         <p>{title}</p>
 
         <div className="flex items-center gap-x-1">
-          <MemberAvatar name={assignee?.name} image={assignee?.avatar_url || (assignee as any)?.avatarUrl} />
+          {memberList.length > 0 ? (
+            <div className="flex items-center -space-x-1.5">
+              {memberList.slice(0, 3).map((m) => (
+                <MemberAvatar
+                  key={m.id}
+                  className="size-4 border border-white"
+                  fallbackClassName="text-[8px]"
+                  name={m.name || 'Member'}
+                  image={m.avatar_url || (m as any)?.avatarUrl}
+                />
+              ))}
+              {memberList.length > 3 && (
+                <span className="text-[9px] font-semibold text-neutral-500 pl-1">
+                  +{memberList.length - 3}
+                </span>
+              )}
+            </div>
+          ) : (
+            <span className="text-[10px] text-neutral-400 italic">Chưa giao</span>
+          )}
 
           <div aria-hidden className="size-1 rounded-full bg-neutral-300" />
           <ProjectAvatar name={project?.name} image={project?.imageUrl} />

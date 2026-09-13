@@ -55,8 +55,25 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
       {/* Properties Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <OverviewProperty label="Assignee">
-          <MemberAvatar name={task.assignee?.name} image={task.assignee?.avatar_url} className="size-6" />
-          <p className="text-sm font-medium">{task.assignee?.name || 'Chưa giao'}</p>
+          {task.assignees && task.assignees.length > 0 ? (
+            <div className="flex flex-col gap-y-1.5">
+              <div className="flex items-center -space-x-1.5">
+                {task.assignees.map((m) => (
+                  <MemberAvatar
+                    key={m.id}
+                    name={m.name || 'Member'}
+                    image={m.avatar_url || (m as any)?.avatarUrl}
+                    className="size-6 border-2 border-white shadow-xs"
+                  />
+                ))}
+              </div>
+              <p className="text-sm font-medium text-neutral-800 line-clamp-2">
+                {task.assignees.map((m) => m.name).join(', ')}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm font-medium text-neutral-400 italic">Chưa giao</p>
+          )}
         </OverviewProperty>
 
         <OverviewProperty label="Due Date">
