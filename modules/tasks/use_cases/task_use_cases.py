@@ -125,7 +125,7 @@ async def _send_task_status_zalo_notification(
     old_status: TaskStatus,
     new_status: TaskStatus,
     actor_name: str,
-    assignee_id: str | None = None,
+    assignee_ids: list[str] | None = None,
 ) -> None:
     """Send status change text to workspace's zalo_room_id group."""
     try:
@@ -147,12 +147,16 @@ async def _send_task_status_zalo_notification(
         project_name = project.name if project else "Không xác định"
 
         assignee_name = "Chưa giao"
-        if assignee_id:
-            assignee_m = await member_repo.get_by_id(assignee_id)
+        target_ids = assignee_ids or []
+        names = []
+        for a_id in target_ids:
+            assignee_m = await member_repo.get_by_id(a_id)
             if assignee_m:
                 assignee_u = await manage_client.get_user(assignee_m.user_id)
                 if assignee_u and assignee_u.name:
-                    assignee_name = assignee_u.name
+                    names.append(assignee_u.name)
+        if names:
+            assignee_name = ", ".join(names)
 
         base_url = notification_settings.app_url.rstrip("/")
         action_url = f"{base_url}/workspaces/{workspace_id}/tasks/{task_id}"
@@ -248,7 +252,7 @@ async def _dispatch_task_status_notifications(
             members = await member_repo.list_by_workspace(workspace_id)
             for m in members:
                 if m.role == MemberRole.ADMIN and str(m.user_id) != actor_id:
-                    if assignee_id and m.id == assignee_id:
+                    if m.id in target_ids:
                         continue
                     await notification_dispatcher.dispatch(
                         NotificationMessage(
@@ -282,7 +286,7 @@ async def _dispatch_task_status_notifications(
                 old_status=old_status,
                 new_status=new_status,
                 actor_name=actor_name,
-                assignee_id=assignee_id,
+                assignee_ids=assignee_ids,
             )
 
         # 4. Notify Zalo Room of workspace if configured & enabled
@@ -304,7 +308,7 @@ async def _dispatch_task_status_notifications(
                 old_status=old_status,
                 new_status=new_status,
                 actor_name=actor_name,
-                assignee_id=assignee_id,
+                assignee_ids=assignee_ids,
             )
     except Exception as e:
         logger.warning(

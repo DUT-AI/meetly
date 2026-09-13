@@ -331,6 +331,7 @@ class TestUpdateTaskUseCase:
         manage_client = AsyncMock()
         notification_dispatcher = AsyncMock()
         discord_service = AsyncMock()
+        zalo_client = AsyncMock()
 
         now = datetime.now(UTC)
         # Initial task had mem_1 and mem_2
@@ -398,6 +399,7 @@ class TestUpdateTaskUseCase:
             manage_client=manage_client,
             notification_dispatcher=notification_dispatcher,
             discord_service=discord_service,
+            zalo_client=zalo_client,
         )
 
         res = await use_case.execute(

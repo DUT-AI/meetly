@@ -6,7 +6,9 @@ from modules.identity.dtos.manage_dtos import ManageUserDTO
 @dataclass
 class TestZaloUseCase:
     """Use case to test Zalo integration by dispatching a test notification directly through ZaloBotChannel."""
-    
+
+    __test__ = False
+
     zalo_channel: ZaloBotChannel
 
     async def execute(self, user_id: str, zalo_bot_id: str, payload_type: str, payload_value: str) -> bool:
