@@ -80,7 +80,7 @@ export const WorkspaceNote = ({ note, workspaceId }: WorkspaceNoteProps) => {
         <DottedSeparator className="my-3" />
 
         {note ? (
-          <p className="text-sm leading-relaxed text-neutral-700 whitespace-pre-wrap">
+          <p className="text-sm leading-relaxed text-neutral-700 whitespace-pre-wrap break-all">
             {note}
           </p>
         ) : (

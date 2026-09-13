@@ -108,7 +108,16 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
               placeholder="Add a description..."
               value={descValue || ''}
               rows={10}
-              onChange={(e) => setDescValue(e.target.value)}
+              onChange={(e) => {
+                setDescValue(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+              onFocus={(e) => {
+                e.target.style.height = 'auto';
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+              className="resize-none overflow-hidden"
               disabled={isPending}
             />
             <div className="flex justify-end gap-2">
@@ -121,7 +130,7 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
             </div>
           </div>
         ) : (
-          <div className="rounded-md bg-muted/40 p-4 text-sm leading-relaxed text-neutral-800 whitespace-pre-wrap">
+          <div className="rounded-md bg-muted/40 p-4 text-sm leading-relaxed text-neutral-800 whitespace-pre-wrap break-all">
             {task.description || <span className="italic text-muted-foreground">No description set...</span>}
           </div>
         )}
