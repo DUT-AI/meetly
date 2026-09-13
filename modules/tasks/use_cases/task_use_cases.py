@@ -610,7 +610,7 @@ class UpdateTaskUseCase:
         manage_client: ManageClient,
         notification_dispatcher: NotificationDispatcher,
         discord_service: DiscordService,
-        zalo_client: ZaloBotClient | None = None,
+        zalo_client: ZaloBotClient,
     ) -> None:
         self.task_repo = task_repo
         self.member_repo = member_repo
@@ -762,7 +762,7 @@ class BulkUpdateTasksUseCase:
         manage_client: ManageClient,
         notification_dispatcher: NotificationDispatcher,
         discord_service: DiscordService,
-        zalo_client: ZaloBotClient | None = None,
+        zalo_client: ZaloBotClient,
     ) -> None:
         self.task_repo = task_repo
         self.member_repo = member_repo
