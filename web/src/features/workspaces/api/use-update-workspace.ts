@@ -8,7 +8,16 @@ import { workspaceApi } from './workspace-api';
 
 type UpdateWorkspacePayload =
   | FormData
-  | { name?: string; note?: string; discord_room_id?: string; image?: File | string };
+  | {
+      name?: string;
+      note?: string;
+      discord_room_id?: string;
+      notify_on_task_status_change?: boolean;
+      notify_task_status_discord?: boolean;
+      notify_task_status_zalo?: boolean;
+      zalo_room_id?: string;
+      image?: File | string;
+    };
 type RequestType = {
   form: UpdateWorkspacePayload;
   param: { workspaceId: string };

@@ -6,11 +6,13 @@ from loguru import logger
 from core.config.notification import notification_settings
 from core.exceptions import ForbiddenException, NotFoundException
 from modules.identity.client.manage_client import ManageClient
+from modules.members.domain.enums import MemberRole
 from modules.members.domain.interfaces import IMemberRepository
 from modules.members.dtos.member_dtos import MemberResponseDTO
 from modules.notifications.dispatcher import NotificationDispatcher
 from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.services.discord_service import DiscordService
+from modules.notifications.services.zalo_bot_client import ZaloBotClient
 from modules.projects.domain.interfaces import IProjectRepository
 from modules.projects.dtos.project_dtos import ProjectResponseDTO
 from modules.tasks.domain.enums import TaskPriority, TaskStatus
@@ -43,7 +45,7 @@ async def _send_task_status_discord_notification(
     """Send a rich Discord embed to workspace's discord_room_id channel on status change."""
     try:
         workspace = await workspace_repo.get_by_id(workspace_id)
-        if not workspace or not workspace.discord_room_id:
+        if not workspace or not workspace.notify_task_status_discord or not workspace.discord_room_id:
             return
 
         status_names = {
@@ -100,6 +102,200 @@ async def _send_task_status_discord_notification(
         )
     except Exception as e:
         logger.warning(f"Failed to send Discord room notification: {e}")
+
+
+async def _send_task_status_zalo_notification(
+    zalo_client: ZaloBotClient,
+    workspace_repo: IWorkspaceRepository,
+    project_repo: IProjectRepository,
+    member_repo: IMemberRepository,
+    manage_client: ManageClient,
+    workspace_id: str,
+    project_id: str,
+    task_id: str,
+    task_name: str,
+    old_status: TaskStatus,
+    new_status: TaskStatus,
+    actor_name: str,
+    assignee_id: str | None = None,
+) -> None:
+    """Send status change text to workspace's zalo_room_id group."""
+    try:
+        workspace = await workspace_repo.get_by_id(workspace_id)
+        if not workspace or not workspace.notify_task_status_zalo or not workspace.zalo_room_id:
+            return
+
+        status_names = {
+            TaskStatus.BACKLOG: "Tồn đọng (Backlog)",
+            TaskStatus.TODO: "Cần làm (Todo)",
+            TaskStatus.IN_PROGRESS: "Đang làm (In Progress)",
+            TaskStatus.IN_REVIEW: "Đang duyệt (In Review)",
+            TaskStatus.DONE: "Đã hoàn thành (Done)",
+        }
+        old_st_label = status_names.get(old_status, old_status.value)
+        new_st_label = status_names.get(new_status, new_status.value)
+
+        project = await project_repo.get_by_id(project_id)
+        project_name = project.name if project else "Không xác định"
+
+        assignee_name = "Chưa giao"
+        if assignee_id:
+            assignee_m = await member_repo.get_by_id(assignee_id)
+            if assignee_m:
+                assignee_u = await manage_client.get_user(assignee_m.user_id)
+                if assignee_u and assignee_u.name:
+                    assignee_name = assignee_u.name
+
+        base_url = notification_settings.app_url.rstrip("/")
+        action_url = f"{base_url}/workspaces/{workspace_id}/tasks/{task_id}"
+
+        text = (
+            f"🔔 [Meetly • {workspace.name}]\n"
+            f"Công việc: {task_name}\n"
+            f"Trạng thái: {old_st_label} ➔ {new_st_label}\n"
+            f"Dự án: {project_name}\n"
+            f"Người thực hiện: {assignee_name}\n"
+            f"Người cập nhật: {actor_name}\n"
+            f"👉 Chi tiết: {action_url}"
+        )
+        await zalo_client.send_message(chat_id=workspace.zalo_room_id, text=text)
+    except Exception as e:
+        logger.warning(f"Failed to send Zalo room notification: {e}")
+
+
+async def _dispatch_task_status_notifications(
+    workspace_repo: IWorkspaceRepository,
+    project_repo: IProjectRepository,
+    member_repo: IMemberRepository,
+    manage_client: ManageClient,
+    notification_dispatcher: NotificationDispatcher,
+    discord_service: DiscordService,
+    zalo_client: ZaloBotClient | None,
+    workspace_id: str,
+    project_id: str,
+    task_id: str,
+    task_name: str,
+    old_status: TaskStatus,
+    new_status: TaskStatus,
+    actor_id: str,
+    actor_name: str,
+    actor_avatar: str | None,
+    action_url: str,
+    assignee_id: str | None,
+) -> None:
+    """Unified dispatcher for status change notifications respecting workspace toggles."""
+    try:
+        workspace = await workspace_repo.get_by_id(workspace_id)
+        if not workspace:
+            return
+
+        status_names = {
+            TaskStatus.BACKLOG: "Tồn đọng (Backlog)",
+            TaskStatus.TODO: "Cần làm (Todo)",
+            TaskStatus.IN_PROGRESS: "Đang làm (In Progress)",
+            TaskStatus.IN_REVIEW: "Đang duyệt (In Review)",
+            TaskStatus.DONE: "Đã hoàn thành (Done)",
+        }
+        st_label = status_names.get(new_status, new_status.value)
+
+        # 1. Determine active notification channels from workspace settings
+        active_channels: list[str] = []
+        if workspace.notify_on_task_status_change:
+            active_channels.append("website")
+        if workspace.notify_task_status_discord:
+            active_channels.append("discord")
+        if workspace.notify_task_status_zalo:
+            active_channels.append("zalo")
+
+        # 2. Dispatch personal notifications if any channels active
+        if active_channels:
+            # Notify assignee if any and not the actor
+            if assignee_id:
+                assignee_member = await member_repo.get_by_id(assignee_id)
+                if assignee_member and str(assignee_member.user_id) != actor_id:
+                    await notification_dispatcher.dispatch(
+                        NotificationMessage(
+                            recipient_user_id=str(assignee_member.user_id),
+                            event_type="task_status_changed",
+                            title=f"Trạng thái công việc đã đổi sang '{st_label}'",
+                            content=f"Công việc: {task_name} (cập nhật bởi {actor_name})",
+                            action_url=action_url,
+                            actor_id=actor_id,
+                            actor_name=actor_name,
+                            actor_avatar_url=actor_avatar,
+                            workspace_id=workspace_id,
+                            entity_type="task",
+                            entity_id=task_id,
+                            channels=active_channels,
+                        )
+                    )
+
+            # Notify department admins if not actor and not duplicate of assignee
+            members = await member_repo.list_by_workspace(workspace_id)
+            for m in members:
+                if m.role == MemberRole.ADMIN and str(m.user_id) != actor_id:
+                    if assignee_id and m.id == assignee_id:
+                        continue
+                    await notification_dispatcher.dispatch(
+                        NotificationMessage(
+                            recipient_user_id=str(m.user_id),
+                            event_type="task_status_changed",
+                            title=f"Trạng thái công việc đã đổi sang '{st_label}'",
+                            content=f"Công việc: {task_name} (cập nhật bởi {actor_name})",
+                            action_url=action_url,
+                            actor_id=actor_id,
+                            actor_name=actor_name,
+                            actor_avatar_url=actor_avatar,
+                            workspace_id=workspace_id,
+                            entity_type="task",
+                            entity_id=task_id,
+                            channels=active_channels,
+                        )
+                    )
+
+        # 3. Notify Discord Room of workspace if configured & enabled
+        if workspace.notify_task_status_discord and workspace.discord_room_id:
+            await _send_task_status_discord_notification(
+                discord_service=discord_service,
+                workspace_repo=workspace_repo,
+                project_repo=project_repo,
+                member_repo=member_repo,
+                manage_client=manage_client,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                task_id=task_id,
+                task_name=task_name,
+                old_status=old_status,
+                new_status=new_status,
+                actor_name=actor_name,
+                assignee_id=assignee_id,
+            )
+
+        # 4. Notify Zalo Room of workspace if configured & enabled
+        if (
+            zalo_client
+            and workspace.notify_task_status_zalo
+            and workspace.zalo_room_id
+        ):
+            await _send_task_status_zalo_notification(
+                zalo_client=zalo_client,
+                workspace_repo=workspace_repo,
+                project_repo=project_repo,
+                member_repo=member_repo,
+                manage_client=manage_client,
+                workspace_id=workspace_id,
+                project_id=project_id,
+                task_id=task_id,
+                task_name=task_name,
+                old_status=old_status,
+                new_status=new_status,
+                actor_name=actor_name,
+                assignee_id=assignee_id,
+            )
+    except Exception as e:
+        logger.warning(
+            f"Failed to dispatch status change notification for task {task_id}: {e}"
+        )
 
 
 
@@ -414,6 +610,7 @@ class UpdateTaskUseCase:
         manage_client: ManageClient,
         notification_dispatcher: NotificationDispatcher,
         discord_service: DiscordService,
+        zalo_client: ZaloBotClient | None = None,
     ) -> None:
         self.task_repo = task_repo
         self.member_repo = member_repo
@@ -422,6 +619,7 @@ class UpdateTaskUseCase:
         self.manage_client = manage_client
         self.notification_dispatcher = notification_dispatcher
         self.discord_service = discord_service
+        self.zalo_client = zalo_client
 
     async def execute(
         self,
@@ -512,50 +710,24 @@ class UpdateTaskUseCase:
 
             # 2. Check status change
             if status is not None and status != old_status:
-                status_label = {
-                    TaskStatus.BACKLOG: "Tồn đọng (Backlog)",
-                    TaskStatus.TODO: "Cần làm (Todo)",
-                    TaskStatus.IN_PROGRESS: "Đang làm (In Progress)",
-                    TaskStatus.IN_REVIEW: "Đang duyệt (In Review)",
-                    TaskStatus.DONE: "Đã hoàn thành (Done)",
-                }.get(status, status.value)
-
-                # Notify current assignee if any
-                if updated.assignee_id:
-                    current_assignee = await self.member_repo.get_by_id(
-                        updated.assignee_id
-                    )
-                    if current_assignee:
-                        await self.notification_dispatcher.dispatch(
-                            NotificationMessage(
-                                recipient_user_id=str(current_assignee.user_id),
-                                event_type="task_status_changed",
-                                title=f"Trạng thái công việc đã đổi sang '{status_label}'",
-                                content=f"Công việc: {updated.name} (cập nhật bởi {actor_name})",
-                                action_url=action_url,
-                                actor_id=user_id,
-                                actor_name=actor_name,
-                                actor_avatar_url=actor_avatar,
-                                workspace_id=task.workspace_id,
-                                entity_type="task",
-                                entity_id=task.id,
-                            )
-                        )
-
-                # Notify Discord Room of workspace if configured
-                await _send_task_status_discord_notification(
-                    discord_service=self.discord_service,
+                await _dispatch_task_status_notifications(
                     workspace_repo=self.workspace_repo,
                     project_repo=self.project_repo,
                     member_repo=self.member_repo,
                     manage_client=self.manage_client,
+                    notification_dispatcher=self.notification_dispatcher,
+                    discord_service=self.discord_service,
+                    zalo_client=self.zalo_client,
                     workspace_id=task.workspace_id,
                     project_id=updated.project_id,
                     task_id=task.id,
                     task_name=updated.name,
                     old_status=old_status,
                     new_status=status,
+                    actor_id=user_id,
                     actor_name=actor_name,
+                    actor_avatar=actor_avatar,
+                    action_url=action_url,
                     assignee_id=updated.assignee_id,
                 )
         except Exception as e:
@@ -590,6 +762,7 @@ class BulkUpdateTasksUseCase:
         manage_client: ManageClient,
         notification_dispatcher: NotificationDispatcher,
         discord_service: DiscordService,
+        zalo_client: ZaloBotClient | None = None,
     ) -> None:
         self.task_repo = task_repo
         self.member_repo = member_repo
@@ -598,6 +771,7 @@ class BulkUpdateTasksUseCase:
         self.manage_client = manage_client
         self.notification_dispatcher = notification_dispatcher
         self.discord_service = discord_service
+        self.zalo_client = zalo_client
 
     async def execute(
         self,
@@ -627,55 +801,30 @@ class BulkUpdateTasksUseCase:
         updated_tasks = await self.task_repo.bulk_update_positions(updates)
 
         # Notify status changes for dragged tasks
-        if status_changed_tasks:
+        if status_changed_tasks and workspace_id:
             try:
                 actor = await self.manage_client.get_user(user_id)
                 actor_name = actor.name if actor else "Đồng nghiệp"
                 actor_avatar = actor.avatar_url if actor else None
                 for orig_task, new_st in status_changed_tasks:
-                    st_label = {
-                        TaskStatus.BACKLOG: "Tồn đọng (Backlog)",
-                        TaskStatus.TODO: "Cần làm (Todo)",
-                        TaskStatus.IN_PROGRESS: "Đang làm (In Progress)",
-                        TaskStatus.IN_REVIEW: "Đang duyệt (In Review)",
-                        TaskStatus.DONE: "Đã hoàn thành (Done)",
-                    }.get(new_st, new_st.value)
-
-                    if orig_task.assignee_id:
-                        assignee_member = await self.member_repo.get_by_id(
-                            orig_task.assignee_id
-                        )
-                        if assignee_member:
-                            await self.notification_dispatcher.dispatch(
-                                NotificationMessage(
-                                    recipient_user_id=str(assignee_member.user_id),
-                                    event_type="task_status_changed",
-                                    title=f"Trạng thái công việc đã đổi sang '{st_label}'",
-                                    content=f"Công việc: {orig_task.name} (cập nhật bởi {actor_name})",
-                                    action_url=f"/workspaces/{orig_task.workspace_id}/tasks/{orig_task.id}",
-                                    actor_id=user_id,
-                                    actor_name=actor_name,
-                                    actor_avatar_url=actor_avatar,
-                                    workspace_id=orig_task.workspace_id,
-                                    entity_type="task",
-                                    entity_id=orig_task.id,
-                                )
-                            )
-
-                    # Notify Discord room of workspace
-                    await _send_task_status_discord_notification(
-                        discord_service=self.discord_service,
+                    await _dispatch_task_status_notifications(
                         workspace_repo=self.workspace_repo,
                         project_repo=self.project_repo,
                         member_repo=self.member_repo,
                         manage_client=self.manage_client,
+                        notification_dispatcher=self.notification_dispatcher,
+                        discord_service=self.discord_service,
+                        zalo_client=self.zalo_client,
                         workspace_id=orig_task.workspace_id,
                         project_id=orig_task.project_id,
                         task_id=orig_task.id,
                         task_name=orig_task.name,
                         old_status=orig_task.status,
                         new_status=new_st,
+                        actor_id=user_id,
                         actor_name=actor_name,
+                        actor_avatar=actor_avatar,
+                        action_url=f"/workspaces/{orig_task.workspace_id}/tasks/{orig_task.id}",
                         assignee_id=orig_task.assignee_id,
                     )
             except Exception as e:

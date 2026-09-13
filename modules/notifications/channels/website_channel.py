@@ -7,9 +7,10 @@ from modules.notifications.domain.interfaces import (
     INotificationRepository,
 )
 
-
 class WebsiteInAppChannel(INotificationChannel):
     """Channel for storing notification in DB and pushing to Web client."""
+
+    channel_name: str = "website"
 
     def __init__(self, notification_repo: INotificationRepository) -> None:
         self.notification_repo = notification_repo

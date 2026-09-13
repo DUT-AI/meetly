@@ -37,6 +37,7 @@ class NotificationMessage:
     workspace_id: str | None = None
     entity_type: str = "task"
     entity_id: str = ""
+    channels: list[str] | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -51,6 +52,7 @@ class NotificationMessage:
             "workspace_id": self.workspace_id,
             "entity_type": self.entity_type,
             "entity_id": self.entity_id,
+            "channels": self.channels,
         }
 
     @classmethod
@@ -67,4 +69,5 @@ class NotificationMessage:
             workspace_id=data.get("workspace_id"),
             entity_type=data.get("entity_type", "task"),
             entity_id=data.get("entity_id", ""),
+            channels=data.get("channels"),
         )

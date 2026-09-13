@@ -41,6 +41,10 @@ class IWorkspaceRepository(ABC):
         invite_code: str | None = None,
         note: str | None = None,
         discord_room_id: str | None = None,
+        notify_on_task_status_change: bool | None = None,
+        notify_task_status_discord: bool | None = None,
+        notify_task_status_zalo: bool | None = None,
+        zalo_room_id: str | None = None,
     ) -> WorkspaceEntity:
         """Update workspace details."""
 

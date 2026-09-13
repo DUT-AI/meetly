@@ -10,7 +10,7 @@ from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.queue import (
     NOTIFICATION_QUEUE_KEY,
 )
-from modules.notifications.use_cases.notification_use_cases import (
+from modules.notifications.use_cases import (
     SendNotificationUseCase,
 )
 from modules.tasks.use_cases.task_reminder_use_cases import (

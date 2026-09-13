@@ -1,19 +1,18 @@
-import random
-import string
-from datetime import UTC, datetime
-from typing import Any, BinaryIO
+from typing import BinaryIO
 
 from core.config import s3_settings
 from core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from core.storage.interface import IStorageProvider
 from core.storage.url_builder import parse_storage_uri
+from core.utils.task_analytics import (
+    compute_task_analytics,
+    generate_invite_code,
+)
 from modules.identity.client.manage_client import ManageClient
 from modules.members.domain.enums import MemberRole
 from modules.members.domain.interfaces import IMemberRepository
 from modules.notifications.dispatcher import NotificationDispatcher
 from modules.notifications.domain.entities import NotificationMessage
-from modules.tasks.domain.entities import TaskEntity
-from modules.tasks.domain.enums import TaskStatus
 from modules.tasks.domain.interfaces import ITaskRepository
 from modules.workspaces.domain.interfaces import IWorkspaceRepository
 from modules.workspaces.dtos.workspace_dtos import (
@@ -21,12 +20,6 @@ from modules.workspaces.dtos.workspace_dtos import (
     WorkspaceInfoResponseDTO,
     WorkspaceListResponseDTO,
     WorkspaceResponseDTO,
-)
-
-
-from core.utils.task_analytics import (
-    compute_task_analytics,
-    generate_invite_code,
 )
 
 
@@ -119,6 +112,10 @@ class ListUserWorkspacesUseCase:
                 image_url=ws.image_url,
                 note=ws.note,
                 discord_room_id=ws.discord_room_id,
+                notify_on_task_status_change=ws.notify_on_task_status_change,
+                notify_task_status_discord=ws.notify_task_status_discord,
+                notify_task_status_zalo=ws.notify_task_status_zalo,
+                zalo_room_id=ws.zalo_room_id,
                 created_at=ws.created_at,
                 updated_at=ws.updated_at,
             )
@@ -155,6 +152,10 @@ class GetWorkspaceUseCase:
             image_url=ws.image_url,
             note=ws.note,
             discord_room_id=ws.discord_room_id,
+            notify_on_task_status_change=ws.notify_on_task_status_change,
+            notify_task_status_discord=ws.notify_task_status_discord,
+            notify_task_status_zalo=ws.notify_task_status_zalo,
+            zalo_room_id=ws.zalo_room_id,
             created_at=ws.created_at,
             updated_at=ws.updated_at,
         )
@@ -193,6 +194,10 @@ class UpdateWorkspaceUseCase:
         name: str | None = None,
         note: str | None = None,
         discord_room_id: str | None = None,
+        notify_on_task_status_change: bool | None = None,
+        notify_task_status_discord: bool | None = None,
+        notify_task_status_zalo: bool | None = None,
+        zalo_room_id: str | None = None,
         image_data: BinaryIO | None = None,
         image_filename: str | None = None,
         content_type: str | None = None,
@@ -232,6 +237,10 @@ class UpdateWorkspaceUseCase:
             name=name,
             note=note,
             discord_room_id=discord_room_id,
+            notify_on_task_status_change=notify_on_task_status_change,
+            notify_task_status_discord=notify_task_status_discord,
+            notify_task_status_zalo=notify_task_status_zalo,
+            zalo_room_id=zalo_room_id,
             image_url=new_image_url,
         )
         return WorkspaceResponseDTO(
@@ -242,6 +251,10 @@ class UpdateWorkspaceUseCase:
             image_url=updated.image_url,
             note=updated.note,
             discord_room_id=updated.discord_room_id,
+            notify_on_task_status_change=updated.notify_on_task_status_change,
+            notify_task_status_discord=updated.notify_task_status_discord,
+            notify_task_status_zalo=updated.notify_task_status_zalo,
+            zalo_room_id=updated.zalo_room_id,
             created_at=updated.created_at,
             updated_at=updated.updated_at,
         )

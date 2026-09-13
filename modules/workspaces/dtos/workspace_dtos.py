@@ -15,6 +15,10 @@ class WorkspaceResponseDTO(BaseModel):
     image_url: str | None = None
     note: str | None = None
     discord_room_id: str | None = None
+    notify_on_task_status_change: bool = True
+    notify_task_status_discord: bool = True
+    notify_task_status_zalo: bool = True
+    zalo_room_id: str | None = None
     created_at: datetime
     updated_at: datetime
 

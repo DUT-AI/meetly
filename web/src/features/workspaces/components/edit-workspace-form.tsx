@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useDeleteWorkspace } from '@/features/workspaces/api/use-delete-workspace';
 import { useResetInviteCode } from '@/features/workspaces/api/use-reset-invite-code';
@@ -52,6 +53,13 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
       ...initialValues,
       note: initialValues.note || '',
       discord_room_id: initialValues.discord_room_id || initialValues.discordRoomId || '',
+      notify_on_task_status_change:
+        initialValues.notify_on_task_status_change ?? initialValues.notifyOnTaskStatusChange ?? true,
+      notify_task_status_discord:
+        initialValues.notify_task_status_discord ?? initialValues.notifyTaskStatusDiscord ?? true,
+      notify_task_status_zalo:
+        initialValues.notify_task_status_zalo ?? initialValues.notifyTaskStatusZalo ?? true,
+      zalo_room_id: initialValues.zalo_room_id || initialValues.zaloRoomId || '',
       image: initialValues.imageUrl ?? '',
     },
   });
@@ -152,29 +160,129 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                   )}
                 />
 
-                <FormField
-                  disabled={isPending}
-                  control={updateWorkspaceForm.control}
-                  name="discord_room_id"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Discord Room / Channel ID (Kênh thông báo Discord)</FormLabel>
+                {/* Cài đặt thông báo phòng ban */}
+                <div className="rounded-lg border bg-neutral-50/50 p-4 dark:bg-neutral-900/50 space-y-4">
+                  <div>
+                    <h4 className="text-sm font-semibold">Cài đặt thông báo thay đổi trạng thái công việc</h4>
+                    <p className="text-xs text-muted-foreground">
+                      Tùy chỉnh các kênh nhận thông báo tự động khi công việc trong phòng ban được đổi trạng thái.
+                    </p>
+                  </div>
 
-                      <FormControl>
-                        <Input
-                          {...field}
-                          type="text"
-                          placeholder="Ví dụ: 123456789012345678"
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        Nhập Channel ID của Discord để nhận thông báo tức thời khi bất kỳ công việc nào trong phòng ban được chuyển trạng thái.
-                      </p>
+                  {/* 1. Thông báo In-App */}
+                  <FormField
+                    disabled={isPending}
+                    control={updateWorkspaceForm.control}
+                    name="notify_on_task_status_change"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-md border bg-background p-3 shadow-sm">
+                        <div className="space-y-0.5 pr-4">
+                          <FormLabel className="text-sm font-medium">Thông báo trong hệ thống (In-App)</FormLabel>
+                          <p className="text-xs text-muted-foreground">
+                            Gửi thông báo tới người thực hiện và quản lý phòng ban trên website khi trạng thái công việc thay đổi.
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
 
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                  {/* 2. Kênh Discord */}
+                  <div className="rounded-md border bg-background p-3 shadow-sm space-y-3">
+                    <FormField
+                      disabled={isPending}
+                      control={updateWorkspaceForm.control}
+                      name="notify_task_status_discord"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between">
+                          <div className="space-y-0.5 pr-4">
+                            <FormLabel className="text-sm font-medium">Kênh thông báo Discord</FormLabel>
+                            <p className="text-xs text-muted-foreground">
+                              Bật/tắt gửi thông báo đổi trạng thái công việc tới phòng Discord của phòng ban.
+                            </p>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isPending}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      disabled={isPending}
+                      control={updateWorkspaceForm.control}
+                      name="discord_room_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium text-muted-foreground">Discord Channel ID</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="text"
+                              placeholder="Ví dụ: 123456789012345678"
+                              className="h-9 text-xs"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {/* 3. Kênh Zalo */}
+                  <div className="rounded-md border bg-background p-3 shadow-sm space-y-3">
+                    <FormField
+                      disabled={isPending}
+                      control={updateWorkspaceForm.control}
+                      name="notify_task_status_zalo"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between">
+                          <div className="space-y-0.5 pr-4">
+                            <FormLabel className="text-sm font-medium">Kênh thông báo Zalo</FormLabel>
+                            <p className="text-xs text-muted-foreground">
+                              Bật/tắt gửi thông báo đổi trạng thái công việc tới nhóm Zalo hoặc Zalo Bot của phòng ban.
+                            </p>
+                          </div>
+                          <FormControl>
+                            <Switch
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isPending}
+                            />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      disabled={isPending}
+                      control={updateWorkspaceForm.control}
+                      name="zalo_room_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-xs font-medium text-muted-foreground">Zalo Chat / Group ID</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="text"
+                              placeholder="Nhập ID nhóm hoặc Chat ID Zalo..."
+                              className="h-9 text-xs"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
 
                 <FormField
                   disabled={isPending}

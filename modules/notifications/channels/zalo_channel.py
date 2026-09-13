@@ -10,6 +10,8 @@ from modules.notifications.services.zalo_bot_client import ZaloBotClient
 class ZaloBotChannel(INotificationChannel):
     """Channel for sending notifications via Zalo Bot Platform."""
 
+    channel_name: str = "zalo"
+
     def __init__(self, zalo_client: ZaloBotClient) -> None:
         self.zalo_client = zalo_client
 

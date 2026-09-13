@@ -63,6 +63,10 @@ class SqlWorkspaceRepository(IWorkspaceRepository):
         invite_code: str | None = None,
         note: str | None = None,
         discord_room_id: str | None = None,
+        notify_on_task_status_change: bool | None = None,
+        notify_task_status_discord: bool | None = None,
+        notify_task_status_zalo: bool | None = None,
+        zalo_room_id: str | None = None,
     ) -> WorkspaceEntity:
         stmt = select(WorkspaceModel).where(WorkspaceModel.id == workspace_id)
         result = await self.session.execute(stmt)
@@ -77,6 +81,14 @@ class SqlWorkspaceRepository(IWorkspaceRepository):
             model.note = note
         if discord_room_id is not None:
             model.discord_room_id = discord_room_id if discord_room_id.strip() else None
+        if notify_on_task_status_change is not None:
+            model.notify_on_task_status_change = notify_on_task_status_change
+        if notify_task_status_discord is not None:
+            model.notify_task_status_discord = notify_task_status_discord
+        if notify_task_status_zalo is not None:
+            model.notify_task_status_zalo = notify_task_status_zalo
+        if zalo_room_id is not None:
+            model.zalo_room_id = zalo_room_id if zalo_room_id.strip() else None
         await self.session.flush()
         return model.to_entity()
 
