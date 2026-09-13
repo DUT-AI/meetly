@@ -58,13 +58,16 @@ class SqlProjectRepository(IProjectRepository):
         project_id: str,
         name: str | None = None,
         image_url: str | None = None,
+        clear_image: bool = False,
     ) -> ProjectEntity:
         stmt = select(ProjectModel).where(ProjectModel.id == project_id)
         result = await self.session.execute(stmt)
         model = result.scalar_one()
         if name is not None:
             model.name = name
-        if image_url is not None:
+        if clear_image:
+            model.image_url = None
+        elif image_url is not None:
             model.image_url = image_url
         await self.session.flush()
         return model.to_entity()

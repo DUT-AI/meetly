@@ -1,10 +1,6 @@
 from dataclasses import dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from modules.members.dtos.member_dtos import MemberResponseDTO
-    from modules.projects.dtos.project_dtos import ProjectResponseDTO
+from typing import Any
 
 from modules.tasks.domain.enums import TaskPriority, TaskStatus
 

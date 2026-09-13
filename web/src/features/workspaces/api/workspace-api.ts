@@ -59,7 +59,16 @@ export const workspaceApi = {
 
   updateWorkspace: async (
     workspaceId: string,
-    data: FormData | { name?: string; note?: string; discord_room_id?: string; image?: File | string },
+    data:
+      | FormData
+      | {
+          name?: string;
+          note?: string;
+          discord_room_id?: string;
+          image?: File | string;
+          remove_image?: boolean;
+          removeImage?: boolean;
+        },
   ): Promise<Workspace> => {
     let payload: FormData;
     if (data instanceof FormData) {
@@ -71,6 +80,9 @@ export const workspaceApi = {
       if (data.discord_room_id !== undefined) payload.append('discord_room_id', data.discord_room_id ?? '');
       if (data.image instanceof File) {
         payload.append('image', data.image);
+      }
+      if (data.remove_image || data.removeImage) {
+        payload.append('remove_image', 'true');
       }
     }
 

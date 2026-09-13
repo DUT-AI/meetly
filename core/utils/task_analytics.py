@@ -1,10 +1,10 @@
-from datetime import UTC, datetime
 import random
 import string
-from typing import Any
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Any
 
-from modules.tasks.domain.entities import TaskEntity
-from modules.tasks.domain.enums import TaskStatus
+if TYPE_CHECKING:
+    from modules.tasks.domain.entities import TaskEntity
 
 
 def generate_invite_code(length: int = 6) -> str:
@@ -12,8 +12,10 @@ def generate_invite_code(length: int = 6) -> str:
     return "".join(random.choices(chars, k=length))
 
 
-def compute_task_analytics(tasks: list[TaskEntity], dto_cls: type) -> Any:
+def compute_task_analytics(tasks: list["TaskEntity"], dto_cls: type) -> Any:
     """Compute task counts and month-over-month differences."""
+    from modules.tasks.domain.enums import TaskStatus
+
     now = datetime.now(UTC)
     this_month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     last_month_end = this_month_start
