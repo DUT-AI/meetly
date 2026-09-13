@@ -4,10 +4,10 @@ from modules.assets.domain.enums import AssetCategory, EntityType, detect_catego
 from modules.assets.models.asset import AssetModel
 
 __all__ = [
+    "AssetCategory",
     "AssetEntity",
     "AssetModel",
-    "AssetCategory",
+    "AssetProvider",
     "EntityType",
     "detect_category",
-    "AssetProvider",
 ]

@@ -6,7 +6,14 @@ import { toast } from 'sonner';
 import { type Project } from '../types';
 import { projectApi } from './project-api';
 
-type UpdateProjectPayload = FormData | { name?: string; image?: File | string };
+type UpdateProjectPayload =
+  | FormData
+  | {
+      name?: string;
+      image?: File | string;
+      remove_image?: boolean;
+      removeImage?: boolean;
+    };
 type RequestType = {
   form: UpdateProjectPayload;
   param: { projectId: string };

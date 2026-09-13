@@ -34,6 +34,7 @@ class IProjectRepository(ABC):
         project_id: str,
         name: str | None = None,
         image_url: str | None = None,
+        clear_image: bool = False,
     ) -> ProjectEntity:
         """Update project details."""
 

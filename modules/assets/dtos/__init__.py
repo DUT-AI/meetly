@@ -5,7 +5,7 @@ from modules.assets.dtos.asset_dtos import (
 )
 
 __all__ = [
-    "AssetResponseDTO",
-    "AssetListResponseDTO",
     "AssetDownloadResponseDTO",
+    "AssetListResponseDTO",
+    "AssetResponseDTO",
 ]

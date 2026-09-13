@@ -48,7 +48,14 @@ export const projectApi = {
 
   updateProject: async (
     projectId: string,
-    data: FormData | { name?: string; image?: File | string },
+    data:
+      | FormData
+      | {
+          name?: string;
+          image?: File | string;
+          remove_image?: boolean;
+          removeImage?: boolean;
+        },
   ): Promise<Project> => {
     let payload: FormData;
     if (data instanceof FormData) {
@@ -58,6 +65,9 @@ export const projectApi = {
       if (data.name) payload.append('name', data.name);
       if (data.image instanceof File) {
         payload.append('image', data.image);
+      }
+      if (data.remove_image || data.removeImage) {
+        payload.append('remove_image', 'true');
       }
     }
 

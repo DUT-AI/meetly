@@ -3,9 +3,9 @@ from modules.assets.domain.enums import AssetCategory, EntityType, detect_catego
 from modules.assets.domain.interfaces import IAssetRepository
 
 __all__ = [
-    "AssetEntity",
     "AssetCategory",
+    "AssetEntity",
     "EntityType",
-    "detect_category",
     "IAssetRepository",
+    "detect_category",
 ]

@@ -38,5 +38,7 @@ class IAssetRepository(ABC):
         """Delete an asset record by ULID."""
 
     @abstractmethod
-    async def delete_by_entity(self, entity_type: str, entity_id: str) -> list[AssetEntity]:
+    async def delete_by_entity(
+        self, entity_type: str, entity_id: str
+    ) -> list[AssetEntity]:
         """Delete all assets associated with an entity, returning the deleted entities (for storage cleanup)."""

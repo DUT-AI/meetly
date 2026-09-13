@@ -2,6 +2,7 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -15,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
+import { useCreateProjectModal } from '@/features/projects/hooks/use-create-project-modal';
 import { useCreateTask } from '@/features/tasks/api/use-create-task';
 import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
 import { createTaskSchema } from '@/features/tasks/schema';
@@ -33,6 +35,7 @@ interface CreateTaskFormProps {
 export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, projectOptions }: CreateTaskFormProps) => {
   const workspaceId = useWorkspaceId();
   const { data: workspaceLabels } = useGetLabels({ workspaceId });
+  const { open: openCreateProjectModal } = useCreateProjectModal();
 
   const { mutate: createTask, isPending } = useCreateTask();
 
@@ -50,6 +53,12 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
       workspaceId,
     },
   });
+
+  useEffect(() => {
+    if (projectOptions.length === 1 && !createTaskForm.getValues('projectId')) {
+      createTaskForm.setValue('projectId', projectOptions[0].id, { shouldValidate: true });
+    }
+  }, [projectOptions, createTaskForm]);
 
   const onSubmit = (values: z.infer<typeof createTaskSchema>) => {
     createTask(
@@ -151,9 +160,28 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                     name="projectId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Project</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Project (Dự án)</FormLabel>
+                          {projectOptions.length === 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onCancel?.();
+                                openCreateProjectModal();
+                              }}
+                              className="text-xs text-blue-600 hover:underline cursor-pointer font-medium"
+                            >
+                              + Tạo dự án mới
+                            </button>
+                          )}
+                        </div>
 
-                        <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
+                        <Select
+                          disabled={isPending || projectOptions.length === 0}
+                          defaultValue={field.value}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               {field.value ? (
@@ -170,7 +198,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                                   return <SelectValue placeholder="Select project" />;
                                 })()
                               ) : (
-                                'Select project'
+                                projectOptions.length === 0 ? 'Chưa có dự án nào' : 'Select project'
                               )}
                             </SelectTrigger>
                           </FormControl>
@@ -188,6 +216,23 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                             ))}
                           </SelectContent>
                         </Select>
+
+                        {projectOptions.length === 0 && (
+                          <p className="text-xs text-amber-600 mt-1.5">
+                            Phòng ban này chưa có dự án nào.{' '}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onCancel?.();
+                                openCreateProjectModal();
+                              }}
+                              className="underline font-semibold cursor-pointer text-blue-600 hover:text-blue-700"
+                            >
+                              Tạo dự án mới tại đây
+                            </button>{' '}
+                            trước khi tạo công việc.
+                          </p>
+                        )}
                       </FormItem>
                     )}
                   />

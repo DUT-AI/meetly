@@ -28,10 +28,14 @@ class AssetModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
     category: Mapped[str] = mapped_column(
         String(30), default=AssetCategory.OTHER.value, index=True, nullable=False
     )
-    metadata_: Mapped[dict] = mapped_column("metadata", JSON, default=dict, nullable=False)
+    metadata_: Mapped[dict] = mapped_column(
+        "metadata", JSON, default=dict, nullable=False
+    )
     uploaded_by: Mapped[str] = mapped_column(String(26), nullable=False, index=True)
 
-    def to_entity(self, download_url: str | None = None, preview_url: str | None = None) -> AssetEntity:
+    def to_entity(
+        self, download_url: str | None = None, preview_url: str | None = None
+    ) -> AssetEntity:
         return AssetEntity(
             id=self.id,
             workspace_id=self.workspace_id,
