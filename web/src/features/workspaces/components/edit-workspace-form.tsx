@@ -197,6 +197,16 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                       <FormControl>
                         <Textarea
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
+                          className="resize-none overflow-hidden"
                           rows={4}
                           placeholder="Nhập ghi chú, quy định hoặc thông báo chung của phòng ban..."
                         />
