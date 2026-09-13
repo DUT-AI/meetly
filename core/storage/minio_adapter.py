@@ -36,6 +36,23 @@ class MinIOStorageAdapter(IStorageProvider):
             uri_or_path, self.public_endpoint_url, bucket=bucket
         )
 
+    def _upload_sync(
+        self, bucket: str, key: str, data: BinaryIO, extra_args: dict
+    ) -> None:
+        try:
+            self.client.upload_fileobj(data, bucket, key, ExtraArgs=extra_args)
+        except Exception as e:
+            if "NoSuchBucket" in type(e).__name__ or "NoSuchBucket" in str(e):
+                try:
+                    self.client.create_bucket(Bucket=bucket)
+                except Exception:
+                    pass
+                if hasattr(data, "seek"):
+                    data.seek(0)
+                self.client.upload_fileobj(data, bucket, key, ExtraArgs=extra_args)
+            else:
+                raise
+
     async def upload(
         self,
         bucket: str,
@@ -50,7 +67,7 @@ class MinIOStorageAdapter(IStorageProvider):
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
-            lambda: self.client.upload_fileobj(data, bucket, key, ExtraArgs=extra_args),
+            lambda: self._upload_sync(bucket, key, data, extra_args),
         )
         clean_key = key.lstrip("/")
         return f"/{bucket}/{clean_key}"

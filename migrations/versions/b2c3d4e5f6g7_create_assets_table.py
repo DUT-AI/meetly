@@ -36,7 +36,9 @@ def upgrade() -> None:
         sa.Column("uploaded_by", sa.String(length=26), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(
@@ -45,15 +47,11 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_assets_entity_type"), "assets", ["entity_type"], unique=False
     )
-    op.create_index(
-        op.f("ix_assets_entity_id"), "assets", ["entity_id"], unique=False
-    )
+    op.create_index(op.f("ix_assets_entity_id"), "assets", ["entity_id"], unique=False)
     op.create_index(
         "ix_assets_entity", "assets", ["entity_type", "entity_id"], unique=False
     )
-    op.create_index(
-        op.f("ix_assets_category"), "assets", ["category"], unique=False
-    )
+    op.create_index(op.f("ix_assets_category"), "assets", ["category"], unique=False)
     op.create_index(
         op.f("ix_assets_uploaded_by"), "assets", ["uploaded_by"], unique=False
     )

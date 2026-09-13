@@ -11,7 +11,7 @@ export const OverviewProperty = ({ label, children }: PropsWithChildren<Overview
         <p className="text-sm text-muted-foreground">{label}</p>
       </div>
 
-      <div className="flex items-center gap-x-2">{children}</div>
+      <div className="flex items-center gap-x-2 min-w-0">{children}</div>
     </div>
   );
 };

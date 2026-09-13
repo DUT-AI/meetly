@@ -1,19 +1,18 @@
-import random
-import string
-from datetime import UTC, datetime
-from typing import Any, BinaryIO
+from typing import BinaryIO
 
 from core.config import s3_settings
 from core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from core.storage.interface import IStorageProvider
 from core.storage.url_builder import parse_storage_uri
+from core.utils.task_analytics import (
+    compute_task_analytics,
+    generate_invite_code,
+)
 from modules.identity.client.manage_client import ManageClient
 from modules.members.domain.enums import MemberRole
 from modules.members.domain.interfaces import IMemberRepository
 from modules.notifications.dispatcher import NotificationDispatcher
 from modules.notifications.domain.entities import NotificationMessage
-from modules.tasks.domain.entities import TaskEntity
-from modules.tasks.domain.enums import TaskStatus
 from modules.tasks.domain.interfaces import ITaskRepository
 from modules.workspaces.domain.interfaces import IWorkspaceRepository
 from modules.workspaces.dtos.workspace_dtos import (
@@ -21,12 +20,6 @@ from modules.workspaces.dtos.workspace_dtos import (
     WorkspaceInfoResponseDTO,
     WorkspaceListResponseDTO,
     WorkspaceResponseDTO,
-)
-
-
-from core.utils.task_analytics import (
-    compute_task_analytics,
-    generate_invite_code,
 )
 
 
@@ -196,6 +189,7 @@ class UpdateWorkspaceUseCase:
         image_data: BinaryIO | None = None,
         image_filename: str | None = None,
         content_type: str | None = None,
+        remove_image: bool = False,
     ) -> WorkspaceResponseDTO:
         member = await self.member_repo.get_member(workspace_id, user_id)
         if not member or member.role != MemberRole.ADMIN:
@@ -206,7 +200,19 @@ class UpdateWorkspaceUseCase:
             raise NotFoundException("Workspace not found.")
 
         new_image_url: str | None = None
-        if image_data and image_filename:
+        clear_image: bool = False
+
+        if remove_image:
+            clear_image = True
+            if ws.image_url:
+                try:
+                    bucket, old_key = parse_storage_uri(
+                        ws.image_url, s3_settings.default_bucket
+                    )
+                    await self.storage_provider.delete(bucket, old_key)
+                except Exception:
+                    pass
+        elif image_data and image_filename:
             file_ext = image_filename.split(".")[-1] if "." in image_filename else "png"
             key = f"workspaces/{generate_invite_code(12)}.{file_ext}"
             new_image_url = await self.storage_provider.upload(
@@ -233,6 +239,7 @@ class UpdateWorkspaceUseCase:
             note=note,
             discord_room_id=discord_room_id,
             image_url=new_image_url,
+            clear_image=clear_image,
         )
         return WorkspaceResponseDTO(
             id=updated.id,

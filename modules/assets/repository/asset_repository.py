@@ -65,7 +65,9 @@ class SqlAssetRepository(IAssetRepository):
         category: str | None = None,
     ) -> tuple[list[AssetEntity], int]:
         query = select(AssetModel).where(AssetModel.workspace_id == workspace_id)
-        count_query = select(func.count(AssetModel.id)).where(AssetModel.workspace_id == workspace_id)
+        count_query = select(func.count(AssetModel.id)).where(
+            AssetModel.workspace_id == workspace_id
+        )
 
         if category:
             query = query.where(AssetModel.category == category)
@@ -86,7 +88,9 @@ class SqlAssetRepository(IAssetRepository):
         await self.session.flush()
         return (res.rowcount or 0) > 0
 
-    async def delete_by_entity(self, entity_type: str, entity_id: str) -> list[AssetEntity]:
+    async def delete_by_entity(
+        self, entity_type: str, entity_id: str
+    ) -> list[AssetEntity]:
         select_stmt = select(AssetModel).where(
             AssetModel.entity_type == entity_type,
             AssetModel.entity_id == entity_id,

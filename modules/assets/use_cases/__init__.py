@@ -5,9 +5,9 @@ from modules.assets.use_cases.list_assets import ListEntityAssetsUseCase
 from modules.assets.use_cases.upload_asset import UploadAssetUseCase
 
 __all__ = [
-    "UploadAssetUseCase",
-    "ListEntityAssetsUseCase",
-    "GetAssetUseCase",
     "DeleteAssetUseCase",
     "GetAssetDownloadUrlUseCase",
+    "GetAssetUseCase",
+    "ListEntityAssetsUseCase",
+    "UploadAssetUseCase",
 ]

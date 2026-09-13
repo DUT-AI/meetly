@@ -53,7 +53,7 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
       <DottedSeparator className="my-4" />
 
       {/* Properties Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <OverviewProperty label="Assignee">
           <MemberAvatar name={task.assignee?.name} image={task.assignee?.avatar_url} className="size-6" />
           <p className="text-sm font-medium">{task.assignee?.name || 'Chưa giao'}</p>

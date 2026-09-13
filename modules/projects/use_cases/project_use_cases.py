@@ -156,6 +156,7 @@ class UpdateProjectUseCase:
         image_data: BinaryIO | None = None,
         image_filename: str | None = None,
         content_type: str | None = None,
+        remove_image: bool = False,
     ) -> ProjectResponseDTO:
         proj = await self.project_repo.get_by_id(project_id)
         if not proj:
@@ -166,7 +167,19 @@ class UpdateProjectUseCase:
             raise ForbiddenException("Unauthorized.")
 
         new_image_url: str | None = None
-        if image_data and image_filename:
+        clear_image: bool = False
+
+        if remove_image:
+            clear_image = True
+            if proj.image_url:
+                try:
+                    bucket, old_key = parse_storage_uri(
+                        proj.image_url, s3_settings.default_bucket
+                    )
+                    await self.storage_provider.delete(bucket, old_key)
+                except Exception:
+                    pass
+        elif image_data and image_filename:
             file_ext = image_filename.split(".")[-1] if "." in image_filename else "png"
             key = f"projects/{generate_random_id(12)}.{file_ext}"
             new_image_url = await self.storage_provider.upload(
@@ -191,6 +204,7 @@ class UpdateProjectUseCase:
             project_id=project_id,
             name=name,
             image_url=new_image_url,
+            clear_image=clear_image,
         )
         return ProjectResponseDTO(
             id=updated.id,
@@ -236,8 +250,8 @@ class DeleteProjectUseCase:
         await self.project_repo.delete(project_id)
 
 
-from modules.tasks.domain.interfaces import ITaskRepository
 from core.utils.task_analytics import compute_task_analytics
+from modules.tasks.domain.interfaces import ITaskRepository
 
 
 class GetProjectAnalyticsUseCase:
