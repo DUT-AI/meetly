@@ -154,9 +154,9 @@ class CreateTaskCommentUseCase:
             notified_user_ids.add(str(mentioned_id))
             await self.notification_dispatcher.dispatch(msg)
 
-        # Notify task assignee about new comment if not already notified
-        if task.assignee_id:
-            assignee_member = await self.member_repo.get_by_id(task.assignee_id)
+        # Notify task assignees about new comment if not already notified
+        for a_id in (task.assignee_ids or []):
+            assignee_member = await self.member_repo.get_by_id(a_id)
             if (
                 assignee_member
                 and str(assignee_member.user_id) not in notified_user_ids
@@ -175,6 +175,7 @@ class CreateTaskCommentUseCase:
                     entity_type="task",
                     entity_id=task.id,
                 )
+                notified_user_ids.add(str(assignee_member.user_id))
                 await self.notification_dispatcher.dispatch(msg)
 
         return TaskCommentResponseDTO(

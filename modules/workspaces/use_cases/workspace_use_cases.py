@@ -162,6 +162,7 @@ class UpdateWorkspaceUseCase:
         image_data: BinaryIO | None = None,
         image_filename: str | None = None,
         content_type: str | None = None,
+        remove_image: bool = False,
     ) -> WorkspaceResponseDTO:
         member = await self.member_repo.get_member(workspace_id, user_id)
         if not member or member.role != MemberRole.ADMIN:
@@ -172,7 +173,19 @@ class UpdateWorkspaceUseCase:
             raise NotFoundException("Workspace not found.")
 
         new_image_url: str | None = None
-        if image_data and image_filename:
+        clear_image: bool = False
+
+        if remove_image:
+            clear_image = True
+            if ws.image_url:
+                try:
+                    bucket, old_key = parse_storage_uri(
+                        ws.image_url, s3_settings.default_bucket
+                    )
+                    await self.storage_provider.delete(bucket, old_key)
+                except Exception:
+                    pass
+        elif image_data and image_filename:
             file_ext = image_filename.split(".")[-1] if "." in image_filename else "png"
             key = f"workspaces/{generate_invite_code(12)}.{file_ext}"
             new_image_url = await self.storage_provider.upload(
@@ -203,6 +216,7 @@ class UpdateWorkspaceUseCase:
             notify_task_status_zalo=notify_task_status_zalo,
             zalo_room_id=zalo_room_id,
             image_url=new_image_url,
+            clear_image=clear_image,
         )
         return WorkspaceResponseDTO.from_entity(updated)
 

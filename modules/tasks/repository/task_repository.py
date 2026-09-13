@@ -1,7 +1,8 @@
 from collections.abc import Sequence
 from datetime import datetime
 
-from sqlalchemy import delete, select
+from sqlalchemy import String, cast, delete, or_, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from modules.tasks.domain.entities import TaskEntity
@@ -16,6 +17,11 @@ class SqlTaskRepository(ITaskRepository):
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
 
+    def _assignee_contains(self, assignee_id: str):
+        if self.session.get_bind().dialect.name == "postgresql":
+            return cast(TaskModel.assignee_ids, JSONB).contains([assignee_id])
+        return cast(TaskModel.assignee_ids, String).contains(f'"{assignee_id}"')
+
     async def create(
         self,
         name: str,
@@ -26,9 +32,13 @@ class SqlTaskRepository(ITaskRepository):
         priority: TaskPriority = TaskPriority.MEDIUM,
         labels: list[str] | None = None,
         due_date: datetime | None = None,
-        assignee_id: str | None = None,
+        assignee_ids: list[str] | None = None,
         description: str | None = None,
     ) -> TaskEntity:
+        resolved_assignee_ids = (
+            list(dict.fromkeys(assignee_ids)) if assignee_ids else []
+        )
+
         model = TaskModel(
             name=name,
             status=status.value,
@@ -38,18 +48,21 @@ class SqlTaskRepository(ITaskRepository):
             project_id=project_id,
             position=position,
             due_date=due_date,
-            assignee_id=assignee_id,
+            assignee_ids=resolved_assignee_ids,
             description=description,
         )
         self.session.add(model)
         await self.session.flush()
+
         return model.to_entity()
 
     async def get_by_id(self, task_id: str) -> TaskEntity | None:
         stmt = select(TaskModel).where(TaskModel.id == task_id)
         result = await self.session.execute(stmt)
         model = result.scalar_one_or_none()
-        return model.to_entity() if model else None
+        if not model:
+            return None
+        return model.to_entity()
 
     async def get_highest_position(
         self, workspace_id: str, status: TaskStatus
@@ -84,7 +97,7 @@ class SqlTaskRepository(ITaskRepository):
         if project_id:
             stmt = stmt.where(TaskModel.project_id == project_id)
         if assignee_id:
-            stmt = stmt.where(TaskModel.assignee_id == assignee_id)
+            stmt = stmt.where(self._assignee_contains(assignee_id))
         if status:
             stmt = stmt.where(TaskModel.status == status.value)
         if due_date:
@@ -116,7 +129,13 @@ class SqlTaskRepository(ITaskRepository):
         )
 
         if assignee_ids is not None:
-            stmt = stmt.where(TaskModel.assignee_id.in_(assignee_ids))
+            assignee_filters = [
+                self._assignee_contains(a_id) for a_id in assignee_ids
+            ]
+            if assignee_filters:
+                stmt = stmt.where(or_(*assignee_filters))
+            else:
+                stmt = stmt.where(False)
         if status:
             stmt = stmt.where(TaskModel.status == status.value)
         if due_date:
@@ -136,7 +155,7 @@ class SqlTaskRepository(ITaskRepository):
         priority: TaskPriority | None = None,
         labels: list[str] | None = None,
         project_id: str | None = None,
-        assignee_id: str | None = None,
+        assignee_ids: list[str] | None = None,
         due_date: datetime | None = None,
         description: str | None = None,
         position: int | None = None,
@@ -155,14 +174,14 @@ class SqlTaskRepository(ITaskRepository):
             model.labels = labels
         if project_id is not None:
             model.project_id = project_id
-        if assignee_id is not None:
-            model.assignee_id = assignee_id
         if due_date is not None:
             model.due_date = due_date
         if description is not None:
             model.description = description
         if position is not None:
             model.position = position
+        if assignee_ids is not None:
+            model.assignee_ids = list(dict.fromkeys(assignee_ids))
 
         await self.session.flush()
         return model.to_entity()
@@ -192,10 +211,9 @@ class SqlTaskRepository(ITaskRepository):
             .where(
                 TaskModel.due_date.isnot(None),
                 TaskModel.status != TaskStatus.DONE.value,
-                TaskModel.assignee_id.isnot(None),
             )
             .order_by(TaskModel.due_date.asc())
         )
         result = await self.session.execute(stmt)
         models = result.scalars().all()
-        return [m.to_entity() for m in models]
+        return [m.to_entity() for m in models if m.assignee_ids]

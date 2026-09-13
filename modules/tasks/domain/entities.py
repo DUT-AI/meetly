@@ -1,10 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    from modules.members.dtos.member_dtos import MemberResponseDTO
-    from modules.projects.dtos.project_dtos import ProjectResponseDTO
+from typing import Any
 
 from modules.tasks.domain.enums import TaskPriority, TaskStatus
 
@@ -18,12 +14,12 @@ class TaskEntity:
     labels: list[str]
     workspace_id: str
     project_id: str
-    assignee_id: str | None
     position: int
     due_date: datetime | None
     description: str | None
     created_at: datetime
     updated_at: datetime
+    assignee_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -35,14 +31,14 @@ class PopulatedTaskEntity:
     labels: list[str]
     workspace_id: str
     project_id: str
-    assignee_id: str | None
     position: int
     due_date: datetime | None
     description: str | None
     created_at: datetime
     updated_at: datetime
     project: Any = None
-    assignee: Any | None = None
+    assignee_ids: list[str] = field(default_factory=list)
+    assignees: list[Any] = field(default_factory=list)
 
 
 @dataclass

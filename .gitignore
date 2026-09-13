@@ -32,3 +32,18 @@ htmlcov/
 # System & OS
 .DS_Store
 *.log
+
+# Antigravity agents configuration
+.agents/
+
+# Scratch scripts
+inspect_zalo.py
+seed.py
+test_zalo_photos.py
+test_zalo_sticker.py
+web/AGENTS.md
+web/CLAUDE.md
+apps/api/assets/
+
+.agents/
+.claude/

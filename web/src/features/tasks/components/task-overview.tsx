@@ -53,10 +53,27 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
       <DottedSeparator className="my-4" />
 
       {/* Properties Grid */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <OverviewProperty label="Assignee">
-          <MemberAvatar name={task.assignee?.name} image={task.assignee?.avatar_url} className="size-6" />
-          <p className="text-sm font-medium">{task.assignee?.name || 'Chưa giao'}</p>
+          {task.assignees && task.assignees.length > 0 ? (
+            <div className="flex flex-col gap-y-1.5">
+              <div className="flex items-center -space-x-1.5">
+                {task.assignees.map((m) => (
+                  <MemberAvatar
+                    key={m.id}
+                    name={m.name || 'Member'}
+                    image={m.avatar_url || (m as any)?.avatarUrl}
+                    className="size-6 border-2 border-white shadow-xs"
+                  />
+                ))}
+              </div>
+              <p className="text-sm font-medium text-neutral-800 line-clamp-2">
+                {task.assignees.map((m) => m.name).join(', ')}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm font-medium text-neutral-400 italic">Chưa giao</p>
+          )}
         </OverviewProperty>
 
         <OverviewProperty label="Due Date">
@@ -108,7 +125,16 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
               placeholder="Add a description..."
               value={descValue || ''}
               rows={10}
-              onChange={(e) => setDescValue(e.target.value)}
+              onChange={(e) => {
+                setDescValue(e.target.value);
+                e.target.style.height = 'auto';
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+              onFocus={(e) => {
+                e.target.style.height = 'auto';
+                e.target.style.height = `${e.target.scrollHeight}px`;
+              }}
+              className="resize-none overflow-hidden"
               disabled={isPending}
             />
             <div className="flex justify-end gap-2">
@@ -121,7 +147,7 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
             </div>
           </div>
         ) : (
-          <div className="rounded-md bg-muted/40 p-4 text-sm leading-relaxed text-neutral-800 whitespace-pre-wrap">
+          <div className="rounded-md bg-muted/40 p-4 text-sm leading-relaxed text-neutral-800 whitespace-pre-wrap break-all">
             {task.description || <span className="italic text-muted-foreground">No description set...</span>}
           </div>
         )}

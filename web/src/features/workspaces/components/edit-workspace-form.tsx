@@ -1,10 +1,10 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { ArrowLeft, CopyIcon, ImageIcon } from 'lucide-react';
+import { ArrowLeft, CameraIcon, CopyIcon, ImageIcon } from 'lucide-react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -65,9 +65,12 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
   });
 
   const onSubmit = (values: z.infer<typeof updateWorkspaceSchema>) => {
+    const wasImageRemoved = Boolean(initialValues.imageUrl) && !values.image;
+
     const finalValues = {
       ...values,
       image: values.image instanceof File ? values.image : '',
+      remove_image: wasImageRemoved,
     };
 
     updateWorkspace({
@@ -77,13 +80,20 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const MAX_FILE_SIZE = 1 * 1024 * 1024; // 1 MB in bytes;
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 MB in bytes;
     const file = e.target.files?.[0];
 
     if (file) {
-      if (file.size > MAX_FILE_SIZE) return toast.error('Image size cannot exceed 1 MB.');
+      const validImageTypes = ['image/png', 'image/jpg', 'image/jpeg', 'image/webp'];
 
-      updateWorkspaceForm.setValue('image', file);
+      if (!validImageTypes.includes(file.type) && !file.type.startsWith('image/')) {
+        return toast.error('Tệp tải lên phải là hình ảnh hợp lệ (PNG, JPG, JPEG, WEBP).');
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        return toast.error('Kích thước ảnh không được vượt quá 10MB.');
+      }
+
+      updateWorkspaceForm.setValue('image', file, { shouldValidate: true, shouldDirty: true });
     }
   };
 
@@ -295,6 +305,16 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                       <FormControl>
                         <Textarea
                           {...field}
+                          onChange={(e) => {
+                            field.onChange(e);
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
+                          className="resize-none overflow-hidden"
                           rows={4}
                           placeholder="Nhập ghi chú, quy định hoặc thông báo chung của phòng ban..."
                         />
@@ -312,72 +332,107 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                   disabled={isPending}
                   control={updateWorkspaceForm.control}
                   name="image"
-                  render={({ field }) => (
-                    <div className="flex flex-col gap-y-2">
-                      <div className="flex items-center gap-x-5">
-                        {field.value ? (
-                          <div className="relative size-[72px] overflow-hidden rounded-md">
-                            <Image
-                              src={field.value instanceof File ? URL.createObjectURL(field.value) : field.value}
-                              alt="Logo phòng ban"
-                              fill
-                              className="object-cover"
-                            />
+                  render={({ field }) => {
+                    const previewUrl = field.value instanceof File ? URL.createObjectURL(field.value) : field.value;
+
+                    return (
+                      <div className="flex flex-col gap-y-2">
+                        <div className="flex items-center gap-x-5">
+                          <div
+                            onClick={() => !isPending && inputRef.current?.click()}
+                            className="group relative cursor-pointer"
+                            title="Nhấn để tải hoặc đổi ảnh"
+                          >
+                            {previewUrl ? (
+                              <div className="relative size-[72px] overflow-hidden rounded-md border border-neutral-200">
+                                <Image
+                                  src={previewUrl}
+                                  alt="Logo phòng ban"
+                                  fill
+                                  className="object-cover transition group-hover:opacity-75"
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
+                                  <CameraIcon className="size-5 text-white" />
+                                </div>
+                              </div>
+                            ) : (
+                              <Avatar className="size-[72px] border border-dashed border-neutral-300 transition group-hover:border-neutral-400">
+                                <AvatarFallback className="bg-neutral-50 group-hover:bg-neutral-100">
+                                  <ImageIcon className="size-[36px] text-neutral-400 group-hover:text-neutral-600 transition" />
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
                           </div>
-                        ) : (
-                          <Avatar className="size-[72px]">
-                            <AvatarFallback>
-                              <ImageIcon className="size-[36px] text-neutral-400" />
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
 
-                        <div className="flex flex-col">
-                          <p className="text-sm font-medium">Biểu tượng phòng ban</p>
-                          <p className="text-xs text-muted-foreground">JPG, PNG, hoặc JPEG, tối đa 1MB</p>
+                          <div className="flex flex-col">
+                            <p className="text-sm font-medium">Biểu tượng phòng ban</p>
+                            <p className="text-xs text-muted-foreground">JPG, PNG, JPEG hoặc WEBP, tối đa 10MB</p>
 
-                          <input
-                            type="file"
-                            className="hidden"
-                            onChange={handleImageChange}
-                            accept=".jpg, .png, .jpeg"
-                            ref={inputRef}
-                            disabled={isPending}
-                          />
-
-                          {field.value ? (
-                            <Button
-                              type="button"
-                              disabled={isPending}
-                              variant="destructive"
-                              size="xs"
-                              className="mt-2 w-fit"
-                              onClick={() => {
-                                field.onChange('');
-
-                                if (inputRef.current) inputRef.current.value = '';
+                            <input
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => {
+                                handleImageChange(e);
+                                if (e.target.files?.[0]) {
+                                  field.onChange(e.target.files[0]);
+                                }
                               }}
-                            >
-                              Xóa ảnh
-                            </Button>
-                          ) : (
-                            <Button
-                              type="button"
+                              accept="image/png, image/jpeg, image/jpg, image/webp, .png, .jpg, .jpeg, .webp"
+                              ref={inputRef}
                               disabled={isPending}
-                              variant="tertiary"
-                              size="xs"
-                              className="mt-2 w-fit"
-                              onClick={() => inputRef.current?.click()}
-                            >
-                              Tải ảnh lên
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                            />
 
-                      <FormMessage />
-                    </div>
-                  )}
+                            <div className="mt-2 flex items-center gap-x-2">
+                              {field.value ? (
+                                <>
+                                  <Button
+                                    type="button"
+                                    disabled={isPending}
+                                    variant="tertiary"
+                                    size="xs"
+                                    className="w-fit"
+                                    onClick={() => inputRef.current?.click()}
+                                  >
+                                    Đổi ảnh
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    disabled={isPending}
+                                    variant="destructive"
+                                    size="xs"
+                                    className="w-fit"
+                                    onClick={() => {
+                                      field.onChange('');
+                                      updateWorkspaceForm.setValue('image', '', {
+                                        shouldValidate: true,
+                                        shouldDirty: true,
+                                      });
+                                      if (inputRef.current) inputRef.current.value = '';
+                                    }}
+                                  >
+                                    Xóa ảnh
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  disabled={isPending}
+                                  variant="tertiary"
+                                  size="xs"
+                                  className="w-fit"
+                                  onClick={() => inputRef.current?.click()}
+                                >
+                                  Tải ảnh lên
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <FormMessage />
+                      </div>
+                    );
+                  }}
                 />
               </div>
 

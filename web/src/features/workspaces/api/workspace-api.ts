@@ -70,6 +70,8 @@ export const workspaceApi = {
           notify_task_status_zalo?: boolean;
           zalo_room_id?: string;
           image?: File | string;
+          remove_image?: boolean;
+          removeImage?: boolean;
         },
   ): Promise<Workspace> => {
     let payload: FormData;
@@ -92,6 +94,9 @@ export const workspaceApi = {
       if (data.zalo_room_id !== undefined) payload.append('zalo_room_id', data.zalo_room_id ?? '');
       if (data.image instanceof File) {
         payload.append('image', data.image);
+      }
+      if (data.remove_image || data.removeImage) {
+        payload.append('remove_image', 'true');
       }
     }
 

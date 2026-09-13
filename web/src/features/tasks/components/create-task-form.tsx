@@ -2,10 +2,12 @@
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { DatePicker } from '@/components/date-picker';
+import { DateTimePicker } from '@/components/date-time-picker';
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,12 +17,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
+import { useCreateProjectModal } from '@/features/projects/hooks/use-create-project-modal';
 import { useCreateTask } from '@/features/tasks/api/use-create-task';
 import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
 import { createTaskSchema } from '@/features/tasks/schema';
 import { TaskPriority, TaskStatus } from '@/features/tasks/types';
 import { useGetLabels } from '@/features/workspaces/api/use-get-labels';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
+import { Check } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 interface CreateTaskFormProps {
@@ -33,6 +38,7 @@ interface CreateTaskFormProps {
 export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, projectOptions }: CreateTaskFormProps) => {
   const workspaceId = useWorkspaceId();
   const { data: workspaceLabels } = useGetLabels({ workspaceId });
+  const { open: openCreateProjectModal } = useCreateProjectModal();
 
   const { mutate: createTask, isPending } = useCreateTask();
 
@@ -41,7 +47,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
     defaultValues: {
       name: '',
       dueDate: undefined,
-      assigneeId: undefined,
+      assigneeIds: [],
       description: '',
       projectId: undefined,
       status: initialStatus ?? undefined,
@@ -50,6 +56,12 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
       workspaceId,
     },
   });
+
+  useEffect(() => {
+    if (projectOptions.length === 1 && !createTaskForm.getValues('projectId')) {
+      createTaskForm.setValue('projectId', projectOptions[0].id, { shouldValidate: true });
+    }
+  }, [projectOptions, createTaskForm]);
 
   const onSubmit = (values: z.infer<typeof createTaskSchema>) => {
     createTask(
@@ -108,7 +120,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                         <FormLabel>Due Date</FormLabel>
 
                         <FormControl>
-                          <DatePicker {...field} disabled={isPending} placeholder="Select due date" />
+                          <DateTimePicker {...field} disabled={isPending} placeholder="Select due date and time" />
                         </FormControl>
 
                         <FormMessage />
@@ -151,9 +163,28 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                     name="projectId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Project</FormLabel>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Project (Dự án)</FormLabel>
+                          {projectOptions.length === 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onCancel?.();
+                                openCreateProjectModal();
+                              }}
+                              className="text-xs text-blue-600 hover:underline cursor-pointer font-medium"
+                            >
+                              + Tạo dự án mới
+                            </button>
+                          )}
+                        </div>
 
-                        <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
+                        <Select
+                          disabled={isPending || projectOptions.length === 0}
+                          defaultValue={field.value}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
                           <FormControl>
                             <SelectTrigger>
                               {field.value ? (
@@ -170,7 +201,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                                   return <SelectValue placeholder="Select project" />;
                                 })()
                               ) : (
-                                'Select project'
+                                projectOptions.length === 0 ? 'Chưa có dự án nào' : 'Select project'
                               )}
                             </SelectTrigger>
                           </FormControl>
@@ -188,6 +219,23 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                             ))}
                           </SelectContent>
                         </Select>
+
+                        {projectOptions.length === 0 && (
+                          <p className="text-xs text-amber-600 mt-1.5">
+                            Phòng ban này chưa có dự án nào.{' '}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                onCancel?.();
+                                openCreateProjectModal();
+                              }}
+                              className="underline font-semibold cursor-pointer text-blue-600 hover:text-blue-700"
+                            >
+                              Tạo dự án mới tại đây
+                            </button>{' '}
+                            trước khi tạo công việc.
+                          </p>
+                        )}
                       </FormItem>
                     )}
                   />
@@ -195,48 +243,79 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                   <FormField
                     disabled={isPending}
                     control={createTaskForm.control}
-                    name="assigneeId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Assignee</FormLabel>
+                    name="assigneeIds"
+                    render={({ field }) => {
+                      const selectedIds = field.value || [];
+                      const selectedMembers = memberOptions.filter((m) => selectedIds.includes(m.id));
 
-                        <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
-                          <FormControl>
-                            <SelectTrigger>
-                              {field.value ? (
-                                (() => {
-                                  const selectedMember = memberOptions.find((m) => m.id === field.value);
-                                  if (selectedMember) {
-                                    return (
-                                      <div className="flex items-center gap-x-2 truncate">
-                                        <MemberAvatar className="size-5" name={selectedMember.name} image={selectedMember.imageUrl} />
-                                        <span className="truncate">{selectedMember.name}</span>
+                      const toggleMember = (memberId: string) => {
+                        const next = selectedIds.includes(memberId)
+                          ? selectedIds.filter((id) => id !== memberId)
+                          : [...selectedIds, memberId];
+                        field.onChange(next);
+                      };
+
+                      return (
+                        <FormItem>
+                          <FormLabel>Assignees (Người thực hiện)</FormLabel>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <FormControl>
+                                <Button
+                                  variant="outline"
+                                  role="combobox"
+                                  disabled={isPending}
+                                  className="w-full justify-between font-normal h-10 px-3"
+                                >
+                                  {selectedMembers.length === 0 && (
+                                    <span className="text-muted-foreground">Select assignees</span>
+                                  )}
+                                  {selectedMembers.length > 0 && (
+                                    <div className="flex items-center gap-1.5 overflow-hidden">
+                                      <div className="flex -space-x-1.5 overflow-hidden">
+                                        {selectedMembers.slice(0, 3).map((m) => (
+                                          <MemberAvatar key={m.id} className="size-5 border border-background" name={m.name} image={m.imageUrl} />
+                                        ))}
                                       </div>
-                                    );
-                                  }
-                                  return <SelectValue placeholder="Select assignee" />;
-                                })()
-                              ) : (
-                                'Select assignee'
-                              )}
-                            </SelectTrigger>
-                          </FormControl>
-
+                                      <span className="truncate text-xs">
+                                        {selectedMembers.map((m) => m.name).join(', ')}
+                                      </span>
+                                    </div>
+                                  )}
+                                </Button>
+                              </FormControl>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-64 p-2" align="start">
+                              <div className="space-y-1 max-h-56 overflow-y-auto">
+                                {memberOptions.map((member) => {
+                                  const isSelected = selectedIds.includes(member.id);
+                                  return (
+                                    <div
+                                      key={member.id}
+                                      onClick={() => toggleMember(member.id)}
+                                      className={cn(
+                                        'flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-accent text-sm',
+                                        isSelected && 'bg-accent/50 font-medium'
+                                      )}
+                                    >
+                                      <div className="flex items-center gap-x-2 truncate">
+                                        <MemberAvatar className="size-5" name={member.name} image={member.imageUrl} />
+                                        <span className="truncate">{member.name}</span>
+                                      </div>
+                                      {isSelected && <Check className="size-4 text-primary shrink-0" />}
+                                    </div>
+                                  );
+                                })}
+                                {memberOptions.length === 0 && (
+                                  <p className="text-xs text-muted-foreground p-2">No members found</p>
+                                )}
+                              </div>
+                            </PopoverContent>
+                          </Popover>
                           <FormMessage />
-
-                          <SelectContent>
-                            {memberOptions.map((member) => (
-                              <SelectItem key={member.id} value={member.id}>
-                                <div className="flex items-center gap-x-2">
-                                  <MemberAvatar className="size-5" name={member.name} image={member.imageUrl} />
-                                  <span className="truncate">{member.name}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </FormItem>
-                    )}
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
 

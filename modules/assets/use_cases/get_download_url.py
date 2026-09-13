@@ -16,7 +16,9 @@ class GetAssetDownloadUrlUseCase:
         self.asset_repo = asset_repo
         self.storage_provider = storage_provider
 
-    async def execute(self, asset_id: str, expires_in: int = 3600) -> AssetDownloadResponseDTO:
+    async def execute(
+        self, asset_id: str, expires_in: int = 3600
+    ) -> AssetDownloadResponseDTO:
         asset = await self.asset_repo.get_by_id(asset_id)
         if not asset:
             raise HTTPException(

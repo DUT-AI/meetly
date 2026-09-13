@@ -17,6 +17,8 @@ type UpdateWorkspacePayload =
       notify_task_status_zalo?: boolean;
       zalo_room_id?: string;
       image?: File | string;
+      remove_image?: boolean;
+      removeImage?: boolean;
     };
 type RequestType = {
   form: UpdateWorkspacePayload;

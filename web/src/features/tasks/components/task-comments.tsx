@@ -136,6 +136,9 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
 
   // Handle textarea text change & detecting @
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    e.target.style.height = 'auto';
+    e.target.style.height = `${e.target.scrollHeight}px`;
+
     const val = e.target.value;
     setContent(val);
 
@@ -245,6 +248,9 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
       }
 
       setContent('');
+      if (textareaRef.current) {
+        textareaRef.current.style.height = 'auto';
+      }
       setPendingFiles([]);
       setShowMentionMenu(false);
     } catch (err) {
@@ -348,7 +354,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
             onKeyDown={handleKeyDown}
             onPaste={handlePaste}
             placeholder="Viết bình luận... Gõ @ để nhắc tên, dán ảnh (Ctrl+V) hoặc đính kèm tệp"
-            className="min-h-[85px] resize-none bg-neutral-50/50 text-sm focus-visible:bg-white"
+            className="min-h-[85px] resize-none overflow-hidden bg-neutral-50/50 text-sm focus-visible:bg-white"
             disabled={isCreating || isUploadingAttachments}
           />
 
@@ -512,9 +518,9 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
                     </AvatarFallback>
                   </Avatar>
 
-                  <div className="flex-1 space-y-1">
+                  <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
                         <span className="font-semibold text-neutral-800 text-xs">
                           {authorName}
                         </span>
@@ -559,8 +565,16 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
                       <div className="space-y-2 pt-1">
                         <Textarea
                           value={editingContent}
-                          onChange={(e) => setEditingContent(e.target.value)}
-                          className="text-xs min-h-[60px]"
+                          onChange={(e) => {
+                            setEditingContent(e.target.value);
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.height = 'auto';
+                            e.target.style.height = `${e.target.scrollHeight}px`;
+                          }}
+                          className="text-xs min-h-[60px] resize-none overflow-hidden"
                           autoFocus
                         />
                         <div className="flex items-center gap-1 justify-end">
@@ -584,7 +598,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
                       </div>
                     ) : (
                       <div className="flex flex-col gap-1">
-                        <div className="rounded-lg bg-neutral-50 p-2.5 text-xs text-neutral-800 whitespace-pre-wrap leading-relaxed border border-neutral-100">
+                        <div className="rounded-lg bg-neutral-50 p-2.5 text-xs text-neutral-800 whitespace-pre-wrap break-all leading-relaxed border border-neutral-100">
                           {renderFormattedContent(comment.content)}
                         </div>
 

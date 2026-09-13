@@ -115,6 +115,7 @@ async def update_workspace(
     notify_task_status_zalo: bool | None = Form(None),
     zalo_room_id: str | None = Form(None),
     image: UploadFile | None = File(None),
+    remove_image: bool = Form(False),
 ) -> dict:
     image_data = image.file if image else None
     image_filename = image.filename if image else None
@@ -133,6 +134,7 @@ async def update_workspace(
         image_data=image_data,
         image_filename=image_filename,
         content_type=content_type,
+        remove_image=remove_image,
     )
     return {"data": result}
 

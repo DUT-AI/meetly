@@ -45,6 +45,7 @@ class IWorkspaceRepository(ABC):
         notify_task_status_discord: bool | None = None,
         notify_task_status_zalo: bool | None = None,
         zalo_room_id: str | None = None,
+        clear_image: bool = False,
     ) -> WorkspaceEntity:
         """Update workspace details."""
 

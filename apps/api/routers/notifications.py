@@ -68,3 +68,35 @@ async def mark_all_read(
 ) -> dict:
     count = await use_case.execute(user_id=str(current_user.id))
     return {"data": {"marked_count": count}}
+
+
+from modules.notifications.use_cases.test_zalo_use_case import TestZaloUseCase
+
+@router.post(
+    "/test-zalo",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Test Zalo Integration natively",
+)
+@inject
+async def test_zalo_integration(
+    current_user: CurrentUser,
+    use_case: FromDishka[TestZaloUseCase],
+    zalo_chat_id: str = Query(..., description="The recipient's Zalo Chat ID (User ID)"),
+    payload_type: str = Query("text", description="Payload type: text, photo, or sticker"),
+    payload_value: str = Query("Test Message", description="Text, Image URL, or Sticker ID"),
+) -> dict:
+    """
+    Test endpoint to test the integrated Zalo notification channel.
+    """
+    success = await use_case.execute(
+        user_id=str(current_user.id),
+        zalo_bot_id=zalo_chat_id,
+        payload_type=payload_type,
+        payload_value=payload_value
+    )
+    
+    if success:
+        return {"success": True, "message": "Triggered Zalo successfully!"}
+    
+    return {"success": False, "message": "Failed to trigger Zalo. Check logs."}

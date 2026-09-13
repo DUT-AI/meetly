@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from core.database.base import Base, TimestampMixin, ULIDPrimaryKeyMixin
@@ -33,11 +34,8 @@ class TaskModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
         index=True,
         nullable=False,
     )
-    assignee_id: Mapped[str | None] = mapped_column(
-        String(26),
-        ForeignKey("members.id", ondelete="SET NULL"),
-        nullable=True,
-        index=True,
+    assignee_ids: Mapped[list[str]] = mapped_column(
+        JSON().with_variant(JSONB, "postgresql"), default=list, nullable=False
     )
     due_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
@@ -54,10 +52,11 @@ class TaskModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
             labels=self.labels or [],
             workspace_id=self.workspace_id,
             project_id=self.project_id,
-            assignee_id=self.assignee_id,
+            assignee_ids=self.assignee_ids or [],
             position=self.position,
             due_date=self.due_date,
             description=self.description,
             created_at=self.created_at,
             updated_at=self.updated_at,
         )
+

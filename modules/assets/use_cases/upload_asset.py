@@ -12,7 +12,17 @@ from modules.assets.domain.enums import AssetCategory, detect_category
 from modules.assets.domain.interfaces import IAssetRepository
 
 DANGEROUS_EXTENSIONS = {
-    "exe", "bat", "cmd", "sh", "vbs", "msi", "com", "scr", "pif", "jar", "reg"
+    "exe",
+    "bat",
+    "cmd",
+    "sh",
+    "vbs",
+    "msi",
+    "com",
+    "scr",
+    "pif",
+    "jar",
+    "reg",
 }
 
 
@@ -70,8 +80,14 @@ class UploadAssetUseCase:
         )
 
         now = datetime.now(UTC)
-        download_url = await self.storage_provider.get_presigned_url(bucket, storage_key, expires=3600)
-        preview_url = self.storage_provider.build_public_url(f"/{bucket}/{storage_key}") if category == AssetCategory.IMAGE else None
+        download_url = await self.storage_provider.get_presigned_url(
+            bucket, storage_key, expires=3600
+        )
+        preview_url = (
+            self.storage_provider.build_public_url(f"/{bucket}/{storage_key}")
+            if category == AssetCategory.IMAGE
+            else None
+        )
 
         # 5. Save metadata into database
         asset = AssetEntity(

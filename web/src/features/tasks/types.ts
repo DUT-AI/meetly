@@ -23,8 +23,8 @@ export type Task = {
   status: TaskStatus;
   priority: TaskPriority;
   labels: string[];
-  assigneeId: string;
-  assignee_id?: string;
+  assigneeIds: string[];
+  assignee_ids?: string[];
   projectId: string;
   project_id?: string;
   workspaceId: string;
@@ -43,7 +43,7 @@ import type { WorkspaceInfo } from '@/features/workspaces/types';
 
 export type PopulatedTask = Task & {
   project: Project;
-  assignee: Member;
+  assignees: Member[];
   workspace?: WorkspaceInfo;
 };
 
@@ -123,14 +123,22 @@ export function normalizeTaskComment(c: any): TaskComment {
 export function normalizeTask(t: any): PopulatedTask {
   if (!t) return t;
   const id = t.id ?? t.$id;
+  const rawAssignees: Member[] = Array.isArray(t.assignees)
+    ? t.assignees.map(normalizeMember)
+    : [];
+  const rawAssigneeIds: string[] = Array.isArray(t.assigneeIds ?? t.assignee_ids)
+    ? (t.assigneeIds ?? t.assignee_ids)
+    : (rawAssignees.length > 0 ? rawAssignees.map((m) => m.id) : []);
+
   return {
     ...t,
     id,
     $id: id,
     priority: t.priority || TaskPriority.MEDIUM,
     labels: Array.isArray(t.labels) ? t.labels : [],
-    assigneeId: t.assigneeId ?? t.assignee_id,
-    assignee_id: t.assignee_id ?? t.assigneeId,
+    assigneeIds: rawAssigneeIds,
+    assignee_ids: rawAssigneeIds,
+    assignees: rawAssignees,
     projectId: t.projectId ?? t.project_id,
     project_id: t.project_id ?? t.projectId,
     workspaceId: t.workspaceId ?? t.workspace_id,
