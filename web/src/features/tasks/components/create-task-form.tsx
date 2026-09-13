@@ -7,6 +7,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
 import { DatePicker } from '@/components/date-picker';
+import { DateTimePicker } from '@/components/date-time-picker';
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -117,7 +118,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                         <FormLabel>Due Date</FormLabel>
 
                         <FormControl>
-                          <DatePicker {...field} disabled={isPending} placeholder="Select due date" />
+                          <DateTimePicker {...field} disabled={isPending} placeholder="Select due date and time" />
                         </FormControl>
 
                         <FormMessage />
