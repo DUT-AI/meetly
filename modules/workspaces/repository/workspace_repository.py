@@ -63,13 +63,16 @@ class SqlWorkspaceRepository(IWorkspaceRepository):
         invite_code: str | None = None,
         note: str | None = None,
         discord_room_id: str | None = None,
+        clear_image: bool = False,
     ) -> WorkspaceEntity:
         stmt = select(WorkspaceModel).where(WorkspaceModel.id == workspace_id)
         result = await self.session.execute(stmt)
         model = result.scalar_one()
         if name is not None:
             model.name = name
-        if image_url is not None:
+        if clear_image:
+            model.image_url = None
+        elif image_url is not None:
             model.image_url = image_url
         if invite_code is not None:
             model.invite_code = invite_code

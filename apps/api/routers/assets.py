@@ -30,7 +30,9 @@ async def upload_asset(
     current_user: CurrentUser,
     use_case: FromDishka[UploadAssetUseCase],
     file: UploadFile = File(...),
-    entity_type: str = Form(..., description="Entity type: TASK, TASK_COMMENT, PROJECT, WORKSPACE"),
+    entity_type: str = Form(
+        ..., description="Entity type: TASK, TASK_COMMENT, PROJECT, WORKSPACE"
+    ),
     entity_id: str = Form(..., description="ID of the entity to attach to"),
 ) -> AssetResponseDTO:
     if not file.filename:
@@ -45,6 +47,7 @@ async def upload_asset(
 
     # Reset cursor for upload
     import io
+
     file_stream = io.BytesIO(contents)
 
     asset = await use_case.execute(
@@ -88,7 +91,9 @@ async def list_entity_assets(
     workspace_id: str,
     current_user: CurrentUser,
     use_case: FromDishka[ListEntityAssetsUseCase],
-    entity_type: str = Query(..., description="Entity type: TASK, TASK_COMMENT, PROJECT, WORKSPACE"),
+    entity_type: str = Query(
+        ..., description="Entity type: TASK, TASK_COMMENT, PROJECT, WORKSPACE"
+    ),
     entity_id: str = Query(..., description="ID of the entity"),
 ) -> AssetListResponseDTO:
     assets = await use_case.execute(
@@ -184,5 +189,7 @@ async def delete_asset(
     current_user: CurrentUser,
     use_case: FromDishka[DeleteAssetUseCase],
 ) -> dict:
-    success = await use_case.execute(asset_id=asset_id, current_user_id=str(current_user.id))
+    success = await use_case.execute(
+        asset_id=asset_id, current_user_id=str(current_user.id)
+    )
     return {"success": success, "id": asset_id}

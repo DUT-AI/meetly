@@ -106,7 +106,6 @@ async def _send_task_status_discord_notification(
         logger.warning(f"Failed to send Discord room notification: {e}")
 
 
-
 class CreateTaskUseCase:
     """Create a new task with automatic position calculation and notification."""
 

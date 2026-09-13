@@ -150,4 +150,3 @@ class DiscordService:
                 f"Network error while sending Discord message to channel {channel_id}: {e}"
             )
             raise DiscordServiceError(f"Network error: {e}") from e
-
