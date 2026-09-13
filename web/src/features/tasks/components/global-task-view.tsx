@@ -14,12 +14,21 @@ import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { useGetMyGlobalTasks } from '@/features/tasks/api/use-get-my-global-tasks';
 import { useBulkUpdateTasks } from '@/features/tasks/api/use-bulk-update-tasks';
 import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
-import { TaskStatus } from '@/features/tasks/types';
+import type { Member } from '@/features/members/types';
+import type { Project } from '@/features/projects/types';
+import type { WorkspaceInfo } from '@/features/workspaces/types';
+import { TaskStatus, type PopulatedTask } from '@/features/tasks/types';
 
 import { globalColumns } from './global-columns';
 import { DataCalendar } from './data-calendar';
 import { DataKanban } from './data-kanban';
 import { DataTable } from './data-table';
+
+export interface AssigneeOption {
+  id: string;
+  name: string;
+  avatarUrl?: string | null;
+}
 
 interface GlobalTaskViewProps {
   userId: string;
@@ -67,10 +76,10 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
   );
 
   // Extract unique workspaces, projects, assignees for dropdowns
-  const workspaces = useMemo(() => {
+  const workspaces = useMemo<WorkspaceInfo[]>(() => {
     if (!tasks?.documents) return [];
-    const map = new Map();
-    tasks.documents.forEach((t) => {
+    const map = new Map<string, WorkspaceInfo>();
+    tasks.documents.forEach((t: PopulatedTask) => {
       if (t.workspace) {
         map.set(t.workspaceId, t.workspace);
       }
@@ -78,10 +87,10 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
     return Array.from(map.values());
   }, [tasks]);
 
-  const projects = useMemo(() => {
+  const projects = useMemo<Project[]>(() => {
     if (!tasks?.documents) return [];
-    const map = new Map();
-    tasks.documents.forEach((t) => {
+    const map = new Map<string, Project>();
+    tasks.documents.forEach((t: PopulatedTask) => {
       if (t.project) {
         map.set(t.projectId, t.project);
       }
@@ -89,43 +98,47 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
     return Array.from(map.values());
   }, [tasks]);
 
-  const assignees = useMemo(() => {
+  const assignees = useMemo<AssigneeOption[]>(() => {
     if (!tasks?.documents) return [];
-    const map = new Map();
-    tasks.documents.forEach((t) => {
-      if (t.assignee) {
-        const id = t.assignee.userId || t.assignee.user_id || t.assignee.$id || t.assignee.id;
-        map.set(id, {
-          id,
-          name: t.assignee.name,
-          avatarUrl: t.assignee.avatarUrl || t.assignee.avatar_url,
-        });
-      }
+    const map = new Map<string, AssigneeOption>();
+    tasks.documents.forEach((t: PopulatedTask) => {
+      (t.assignees || []).forEach((assignee: Member) => {
+        const id = assignee.userId || assignee.user_id || assignee.$id || assignee.id;
+        if (id && !map.has(id)) {
+          map.set(id, {
+            id,
+            name: assignee.name,
+            avatarUrl: assignee.avatarUrl || assignee.avatar_url,
+          });
+        }
+      });
     });
     return Array.from(map.values());
   }, [tasks]);
 
   // Client-side filtering
-  const displayTasks = useMemo(() => {
-    let result = tasks?.documents || [];
+  const displayTasks = useMemo<PopulatedTask[]>(() => {
+    let result: PopulatedTask[] = tasks?.documents || [];
 
     if (workspaceFilter !== 'all') {
-      result = result.filter((t) => t.workspaceId === workspaceFilter);
+      result = result.filter((t: PopulatedTask) => t.workspaceId === workspaceFilter);
     }
     
     if (projectFilter !== 'all') {
-      result = result.filter((t) => t.projectId === projectFilter);
+      result = result.filter((t: PopulatedTask) => t.projectId === projectFilter);
     }
 
     if (assigneeFilter !== 'all') {
-      result = result.filter((t) => {
-        const uId = t.assignee?.userId || t.assignee?.user_id || t.assignee?.$id || t.assignee?.id;
-        return String(uId) === assigneeFilter;
+      result = result.filter((t: PopulatedTask) => {
+        return (t.assignees || []).some((assignee: Member) => {
+          const uId = assignee.userId || assignee.user_id || assignee.$id || assignee.id;
+          return String(uId) === assigneeFilter;
+        });
       });
     }
     
     if (dueDateFilter) {
-      result = result.filter((t) => {
+      result = result.filter((t: PopulatedTask) => {
         if (!t.dueDate) return false;
         return t.dueDate.startsWith(dueDateFilter.split('T')[0]);
       });
@@ -190,7 +203,7 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
               <SelectContent>
                 <SelectItem value="all">All assignees</SelectItem>
                 <SelectSeparator />
-                {assignees.map((assignee) => (
+                {assignees.map((assignee: AssigneeOption) => (
                   <SelectItem key={assignee.id} value={assignee.id}>
                     <div className="flex items-center gap-x-2">
                       <MemberAvatar className="size-5" name={assignee.name} image={assignee.avatarUrl} />
@@ -212,7 +225,7 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
               <SelectContent>
                 <SelectItem value="all">All projects</SelectItem>
                 <SelectSeparator />
-                {projects.map((project: any) => (
+                {projects.map((project: Project) => (
                   <SelectItem key={project.id || project.$id} value={project.id || project.$id}>
                     {project.name}
                   </SelectItem>
@@ -231,7 +244,7 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
               <SelectContent>
                 <SelectItem value="all">All workspaces</SelectItem>
                 <SelectSeparator />
-                {workspaces.map((ws: any) => (
+                {workspaces.map((ws: WorkspaceInfo) => (
                   <SelectItem key={ws.id || ws.$id} value={ws.id || ws.$id}>
                     {ws.name}
                   </SelectItem>
