@@ -27,12 +27,31 @@ class ZaloBotChannel(INotificationChannel):
                 action_link = f"\n👉 Xem chi tiết: {base_url}/{path}"
 
             text = (
-                f"🔔 [Meetly] {message.title}\nNội dung: {message.content}{action_link}"
+                f"🔔 [Meetly] **{message.title}**\nNội dung: {message.content}{action_link}"
             )
+            
+            # Nếu có cấu hình sticker, gửi sticker
+            if message.sticker_id:
+                res = await self.zalo_client.send_sticker(
+                    chat_id=recipient.zalo_bot_id,
+                    sticker=message.sticker_id,
+                )
+                return res is not None
 
+            # Nếu có ảnh đính kèm, gửi ảnh kèm text làm caption
+            if message.image_url:
+                res = await self.zalo_client.send_photo(
+                    chat_id=recipient.zalo_bot_id,
+                    caption=text,
+                    photo=message.image_url,
+                )
+                return res is not None
+
+            # Nếu không, gửi tin nhắn text thông thường (hỗ trợ markdown parse_mode)
             res = await self.zalo_client.send_message(
                 chat_id=recipient.zalo_bot_id,
                 text=text,
+                parse_mode="markdown"
             )
             return res is not None
         except Exception as e:

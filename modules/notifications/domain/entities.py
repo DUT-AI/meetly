@@ -37,6 +37,8 @@ class NotificationMessage:
     workspace_id: str | None = None
     entity_type: str = "task"
     entity_id: str = ""
+    image_url: str | None = None
+    sticker_id: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -51,6 +53,8 @@ class NotificationMessage:
             "workspace_id": self.workspace_id,
             "entity_type": self.entity_type,
             "entity_id": self.entity_id,
+            "image_url": self.image_url,
+            "sticker_id": self.sticker_id,
         }
 
     @classmethod
@@ -67,4 +71,6 @@ class NotificationMessage:
             workspace_id=data.get("workspace_id"),
             entity_type=data.get("entity_type", "task"),
             entity_id=data.get("entity_id", ""),
+            image_url=data.get("image_url"),
+            sticker_id=data.get("sticker_id"),
         )

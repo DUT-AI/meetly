@@ -759,7 +759,7 @@ class ListMyGlobalTasksUseCase:
 
         tasks = await self.task_repo.list_by_workspace_ids(
             workspace_ids=workspace_ids,
-            assignee_ids=user_member_ids,
+            assignee_ids=None,
             status=status,
             search=search,
             due_date=due_date,
