@@ -6,9 +6,10 @@ from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.domain.interfaces import INotificationChannel
 from modules.notifications.services.discord_service import DiscordService
 
-
 class DiscordChannel(INotificationChannel):
     """Channel for sending Discord DM notifications."""
+
+    channel_name: str = "discord"
 
     def __init__(self, discord_service: DiscordService) -> None:
         self.discord_service = discord_service

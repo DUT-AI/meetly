@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict
 
@@ -15,8 +16,32 @@ class WorkspaceResponseDTO(BaseModel):
     image_url: str | None = None
     note: str | None = None
     discord_room_id: str | None = None
+    notify_on_task_status_change: bool = True
+    notify_task_status_discord: bool = True
+    notify_task_status_zalo: bool = True
+    zalo_room_id: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    @classmethod
+    def from_entity(cls, ws: Any) -> "WorkspaceResponseDTO":
+        """Factory method to construct WorkspaceResponseDTO from a WorkspaceEntity or model instance."""
+        return cls(
+            id=ws.id,
+            name=ws.name,
+            owner_id=ws.owner_id,
+            invite_code=ws.invite_code,
+            image_url=ws.image_url,
+            note=ws.note,
+            discord_room_id=ws.discord_room_id,
+            notify_on_task_status_change=ws.notify_on_task_status_change,
+            notify_task_status_discord=ws.notify_task_status_discord,
+            notify_task_status_zalo=ws.notify_task_status_zalo,
+            zalo_room_id=ws.zalo_room_id,
+            created_at=ws.created_at,
+            updated_at=ws.updated_at,
+        )
+
 
 
 class WorkspaceInfoResponseDTO(BaseModel):

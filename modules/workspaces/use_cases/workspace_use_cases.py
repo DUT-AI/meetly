@@ -71,17 +71,8 @@ class CreateWorkspaceUseCase:
             role=MemberRole.ADMIN,
         )
 
-        return WorkspaceResponseDTO(
-            id=ws.id,
-            name=ws.name,
-            owner_id=ws.owner_id,
-            invite_code=ws.invite_code,
-            image_url=ws.image_url,
-            note=ws.note,
-            discord_room_id=ws.discord_room_id,
-            created_at=ws.created_at,
-            updated_at=ws.updated_at,
-        )
+        return WorkspaceResponseDTO.from_entity(ws)
+
 
 
 class ListUserWorkspacesUseCase:
@@ -103,20 +94,7 @@ class ListUserWorkspacesUseCase:
         workspace_ids = [m.workspace_id for m in memberships]
         workspaces = await self.workspace_repo.get_by_ids(workspace_ids)
 
-        documents = [
-            WorkspaceResponseDTO(
-                id=ws.id,
-                name=ws.name,
-                owner_id=ws.owner_id,
-                invite_code=ws.invite_code,
-                image_url=ws.image_url,
-                note=ws.note,
-                discord_room_id=ws.discord_room_id,
-                created_at=ws.created_at,
-                updated_at=ws.updated_at,
-            )
-            for ws in workspaces
-        ]
+        documents = [WorkspaceResponseDTO.from_entity(ws) for ws in workspaces]
         return WorkspaceListResponseDTO(documents=documents, total=len(documents))
 
 
@@ -140,17 +118,8 @@ class GetWorkspaceUseCase:
         if not ws:
             raise NotFoundException("Workspace not found.")
 
-        return WorkspaceResponseDTO(
-            id=ws.id,
-            name=ws.name,
-            owner_id=ws.owner_id,
-            invite_code=ws.invite_code,
-            image_url=ws.image_url,
-            note=ws.note,
-            discord_room_id=ws.discord_room_id,
-            created_at=ws.created_at,
-            updated_at=ws.updated_at,
-        )
+        return WorkspaceResponseDTO.from_entity(ws)
+
 
 
 class GetWorkspaceInfoUseCase:
@@ -186,6 +155,10 @@ class UpdateWorkspaceUseCase:
         name: str | None = None,
         note: str | None = None,
         discord_room_id: str | None = None,
+        notify_on_task_status_change: bool | None = None,
+        notify_task_status_discord: bool | None = None,
+        notify_task_status_zalo: bool | None = None,
+        zalo_room_id: str | None = None,
         image_data: BinaryIO | None = None,
         image_filename: str | None = None,
         content_type: str | None = None,
@@ -238,20 +211,15 @@ class UpdateWorkspaceUseCase:
             name=name,
             note=note,
             discord_room_id=discord_room_id,
+            notify_on_task_status_change=notify_on_task_status_change,
+            notify_task_status_discord=notify_task_status_discord,
+            notify_task_status_zalo=notify_task_status_zalo,
+            zalo_room_id=zalo_room_id,
             image_url=new_image_url,
             clear_image=clear_image,
         )
-        return WorkspaceResponseDTO(
-            id=updated.id,
-            name=updated.name,
-            owner_id=updated.owner_id,
-            invite_code=updated.invite_code,
-            image_url=updated.image_url,
-            note=updated.note,
-            discord_room_id=updated.discord_room_id,
-            created_at=updated.created_at,
-            updated_at=updated.updated_at,
-        )
+        return WorkspaceResponseDTO.from_entity(updated)
+
 
 
 class DeleteWorkspaceUseCase:
@@ -308,17 +276,8 @@ class ResetInviteCodeUseCase:
         updated = await self.workspace_repo.update(
             workspace_id=workspace_id, invite_code=new_code
         )
-        return WorkspaceResponseDTO(
-            id=updated.id,
-            name=updated.name,
-            owner_id=updated.owner_id,
-            invite_code=updated.invite_code,
-            image_url=updated.image_url,
-            note=updated.note,
-            discord_room_id=updated.discord_room_id,
-            created_at=updated.created_at,
-            updated_at=updated.updated_at,
-        )
+        return WorkspaceResponseDTO.from_entity(updated)
+
 
 
 class JoinWorkspaceUseCase:
@@ -390,17 +349,8 @@ class JoinWorkspaceUseCase:
         except Exception:
             pass
 
-        return WorkspaceResponseDTO(
-            id=ws.id,
-            name=ws.name,
-            owner_id=ws.owner_id,
-            invite_code=ws.invite_code,
-            image_url=ws.image_url,
-            note=ws.note,
-            discord_room_id=ws.discord_room_id,
-            created_at=ws.created_at,
-            updated_at=ws.updated_at,
-        )
+        return WorkspaceResponseDTO.from_entity(ws)
+
 
 
 class GetWorkspaceAnalyticsUseCase:

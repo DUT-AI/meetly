@@ -13,6 +13,10 @@ class WorkspaceEntity:
     updated_at: datetime
     note: str | None = None
     discord_room_id: str | None = None
+    notify_on_task_status_change: bool = True
+    notify_task_status_discord: bool = True
+    notify_task_status_zalo: bool = True
+    zalo_room_id: str | None = None
 
 
 @dataclass

@@ -65,6 +65,10 @@ export const workspaceApi = {
           name?: string;
           note?: string;
           discord_room_id?: string;
+          notify_on_task_status_change?: boolean;
+          notify_task_status_discord?: boolean;
+          notify_task_status_zalo?: boolean;
+          zalo_room_id?: string;
           image?: File | string;
           remove_image?: boolean;
           removeImage?: boolean;
@@ -78,6 +82,16 @@ export const workspaceApi = {
       if (data.name !== undefined) payload.append('name', data.name);
       if (data.note !== undefined) payload.append('note', data.note ?? '');
       if (data.discord_room_id !== undefined) payload.append('discord_room_id', data.discord_room_id ?? '');
+      if (data.notify_on_task_status_change !== undefined) {
+        payload.append('notify_on_task_status_change', String(data.notify_on_task_status_change));
+      }
+      if (data.notify_task_status_discord !== undefined) {
+        payload.append('notify_task_status_discord', String(data.notify_task_status_discord));
+      }
+      if (data.notify_task_status_zalo !== undefined) {
+        payload.append('notify_task_status_zalo', String(data.notify_task_status_zalo));
+      }
+      if (data.zalo_room_id !== undefined) payload.append('zalo_room_id', data.zalo_room_id ?? '');
       if (data.image instanceof File) {
         payload.append('image', data.image);
       }

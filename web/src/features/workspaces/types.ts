@@ -12,6 +12,14 @@ export type Workspace = {
   note?: string | null;
   discord_room_id?: string | null;
   discordRoomId?: string | null;
+  notify_on_task_status_change?: boolean;
+  notifyOnTaskStatusChange?: boolean;
+  notify_task_status_discord?: boolean;
+  notifyTaskStatusDiscord?: boolean;
+  notify_task_status_zalo?: boolean;
+  notifyTaskStatusZalo?: boolean;
+  zalo_room_id?: string | null;
+  zaloRoomId?: string | null;
   $createdAt?: string;
   $updatedAt?: string;
   created_at?: string;
@@ -93,6 +101,14 @@ export function normalizeWorkspace(w: any): Workspace {
     note: w.note ?? undefined,
     discord_room_id: w.discord_room_id ?? w.discordRoomId ?? undefined,
     discordRoomId: w.discord_room_id ?? w.discordRoomId ?? undefined,
+    notify_on_task_status_change: w.notify_on_task_status_change ?? w.notifyOnTaskStatusChange ?? true,
+    notifyOnTaskStatusChange: w.notify_on_task_status_change ?? w.notifyOnTaskStatusChange ?? true,
+    notify_task_status_discord: w.notify_task_status_discord ?? w.notifyTaskStatusDiscord ?? true,
+    notifyTaskStatusDiscord: w.notify_task_status_discord ?? w.notifyTaskStatusDiscord ?? true,
+    notify_task_status_zalo: w.notify_task_status_zalo ?? w.notifyTaskStatusZalo ?? true,
+    notifyTaskStatusZalo: w.notify_task_status_zalo ?? w.notifyTaskStatusZalo ?? true,
+    zalo_room_id: w.zalo_room_id ?? w.zaloRoomId ?? undefined,
+    zaloRoomId: w.zalo_room_id ?? w.zaloRoomId ?? undefined,
     userId: w.userId ?? w.owner_id,
     owner_id: w.owner_id ?? w.userId,
     inviteCode: w.inviteCode ?? w.invite_code,

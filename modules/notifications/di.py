@@ -15,6 +15,8 @@ from modules.notifications.repository.notification_repository import (
 )
 from modules.notifications.services.discord_service import DiscordService
 from modules.notifications.services.zalo_bot_client import ZaloBotClient
+
+from modules.notifications.services.zalo_bot_client import ZaloBotClient
 from modules.notifications.use_cases.test_zalo_use_case import TestZaloUseCase
 from modules.notifications.use_cases.notification_use_cases import (
     ListNotificationsUseCase,

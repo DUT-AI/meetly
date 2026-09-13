@@ -12,6 +12,10 @@ type UpdateWorkspacePayload =
       name?: string;
       note?: string;
       discord_room_id?: string;
+      notify_on_task_status_change?: boolean;
+      notify_task_status_discord?: boolean;
+      notify_task_status_zalo?: boolean;
+      zalo_room_id?: string;
       image?: File | string;
       remove_image?: boolean;
       removeImage?: boolean;

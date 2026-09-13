@@ -60,6 +60,8 @@ class INotificationRepository(ABC):
 class INotificationChannel(ABC):
     """Interface for a notification dispatch channel (Strategy Pattern)."""
 
+    channel_name: str = ""
+
     @abstractmethod
     async def send(
         self, recipient: ManageUserDTO, message: NotificationMessage

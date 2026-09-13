@@ -6,7 +6,7 @@ from modules.notifications.dtos.notification_dtos import (
     NotificationListResponseDTO,
     NotificationResponseDTO,
 )
-from modules.notifications.use_cases.notification_use_cases import (
+from modules.notifications.use_cases import (
     ListNotificationsUseCase,
     MarkAllNotificationsReadUseCase,
     MarkNotificationReadUseCase,
