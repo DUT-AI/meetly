@@ -2,6 +2,7 @@ from collections.abc import Sequence
 from datetime import datetime
 
 from sqlalchemy import String, cast, delete, or_, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from modules.tasks.domain.entities import TaskEntity
@@ -15,6 +16,11 @@ class SqlTaskRepository(ITaskRepository):
 
     def __init__(self, session: AsyncSession) -> None:
         self.session = session
+
+    def _assignee_contains(self, assignee_id: str):
+        if self.session.get_bind().dialect.name == "postgresql":
+            return cast(TaskModel.assignee_ids, JSONB).contains([assignee_id])
+        return cast(TaskModel.assignee_ids, String).contains(f'"{assignee_id}"')
 
     async def create(
         self,
@@ -91,9 +97,7 @@ class SqlTaskRepository(ITaskRepository):
         if project_id:
             stmt = stmt.where(TaskModel.project_id == project_id)
         if assignee_id:
-            stmt = stmt.where(
-                cast(TaskModel.assignee_ids, String).contains(f'"{assignee_id}"')
-            )
+            stmt = stmt.where(self._assignee_contains(assignee_id))
         if status:
             stmt = stmt.where(TaskModel.status == status.value)
         if due_date:
@@ -126,8 +130,7 @@ class SqlTaskRepository(ITaskRepository):
 
         if assignee_ids is not None:
             assignee_filters = [
-                cast(TaskModel.assignee_ids, String).contains(f'"{a_id}"')
-                for a_id in assignee_ids
+                self._assignee_contains(a_id) for a_id in assignee_ids
             ]
             if assignee_filters:
                 stmt = stmt.where(or_(*assignee_filters))
