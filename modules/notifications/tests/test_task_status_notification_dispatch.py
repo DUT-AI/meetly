@@ -106,7 +106,7 @@ async def test_dispatch_when_all_notifications_enabled() -> None:
         actor_name="Actor User",
         actor_avatar=None,
         action_url="/workspaces/ws_1/tasks/task_1",
-        assignee_id="mem_assignee",
+        assignee_ids=["mem_assignee"],
     )
 
     # Assert
@@ -176,7 +176,7 @@ async def test_dispatch_when_all_notifications_disabled() -> None:
         actor_name="Actor",
         actor_avatar=None,
         action_url="/task/1",
-        assignee_id="mem_1",
+        assignee_ids=["mem_1"],
     )
 
     # Assert
@@ -249,7 +249,7 @@ async def test_dispatch_when_only_discord_enabled() -> None:
         actor_name="Actor",
         actor_avatar=None,
         action_url="/tasks/1",
-        assignee_id="mem_assignee",
+        assignee_ids=["mem_assignee"],
     )
 
     # Assert:
@@ -303,7 +303,7 @@ async def test_bulk_update_tasks_mixed_workspaces_rejected() -> None:
         labels=[],
         workspace_id="ws_1",
         project_id="p1",
-        assignee_id=None,
+        assignee_ids=[],
         position=1000,
         due_date=None,
         description=None,
@@ -319,7 +319,7 @@ async def test_bulk_update_tasks_mixed_workspaces_rejected() -> None:
         labels=[],
         workspace_id="ws_2",
         project_id="p2",
-        assignee_id=None,
+        assignee_ids=[],
         position=2000,
         due_date=None,
         description=None,
