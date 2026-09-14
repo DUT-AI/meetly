@@ -19,8 +19,11 @@ export const metadata: Metadata = siteConfig;
 
 const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {
   return (
-    <html lang="en">
-      <body className={cn(inter.className, 'min-h-screen antialiased')}>
+    <html lang="en" suppressHydrationWarning>
+      <body
+        className={cn(inter.className, 'min-h-screen antialiased')}
+        suppressHydrationWarning
+      >
         <QueryProvider>
           <NuqsAdapter>
             <Toaster theme="light" richColors closeButton />
