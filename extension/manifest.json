@@ -1,0 +1,46 @@
+{
+  "manifest_version": 3,
+  "name": "Meetly - Google Meet Audio Recorder",
+  "version": "1.0.0",
+  "description": "Ghi âm cuộc họp Google Meet 2 chiều (âm thanh cuộc họp + micro) và tự động đồng bộ với Meetly.",
+  "permissions": [
+    "tabCapture",
+    "offscreen",
+    "storage",
+    "downloads",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "https://meet.google.com/*",
+    "http://localhost:*/*",
+    "http://127.0.0.1:*/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://meet.google.com/*"
+      ],
+      "js": [
+        "content/content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Meetly Recorder",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

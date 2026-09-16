@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meetly Audio Recorder</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="brand">
+        <div class="logo-box">
+          <div class="dot-red"></div>
+        </div>
+        <div class="brand-text">
+          <h1>Meetly</h1>
+          <span class="subtext">Google Meet Recorder</span>
+        </div>
+      </div>
+      <span class="version-badge">v1.0</span>
+    </header>
+
+    <!-- Meeting status card -->
+    <div class="meeting-status-card" id="meetingCard">
+      <div class="status-header">
+        <span class="status-label" id="statusLabel">Chưa phát hiện Meet</span>
+        <div class="status-dot" id="statusDot"></div>
+      </div>
+      <div class="meeting-code" id="meetingCode">Hãy mở một tab Google Meet</div>
+      <div class="timer" id="timerDisplay">00:00</div>
+    </div>
+
+    <!-- Quick controls -->
+    <div class="controls-section">
+      <button class="btn btn-record" id="btnStart">
+        <span class="btn-icon">🔴</span> Bắt đầu ghi âm
+      </button>
+
+      <div class="btn-group-active" id="activeGroup" style="display: none;">
+        <button class="btn btn-pause" id="btnPause">Tạm dừng</button>
+        <button class="btn btn-stop" id="btnStop">⏹ Dừng & Lưu file</button>
+      </div>
+    </div>
+
+    <!-- Settings accordion/card -->
+    <div class="settings-card">
+      <div class="settings-title">Cài đặt ghi âm</div>
+      
+      <label class="setting-item">
+        <span>Ghi âm Micro (giọng của bạn)</span>
+        <input type="checkbox" id="chkRecordMic" checked>
+      </label>
+
+      <label class="setting-item">
+        <span>Tự động tải file .webm về máy</span>
+        <input type="checkbox" id="chkAutoDownload" checked>
+      </label>
+
+      <div class="server-config">
+        <label for="txtServerUrl">Meetly Backend API:</label>
+        <input type="text" id="txtServerUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
+      </div>
+    </div>
+
+    <!-- Footer links -->
+    <footer class="footer">
+      <a href="https://meet.google.com" target="_blank" class="footer-link">Mở Google Meet</a>
+      <span class="sep">•</span>
+      <a href="http://localhost:3000" target="_blank" class="footer-link">Vào Meetly Web</a>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
