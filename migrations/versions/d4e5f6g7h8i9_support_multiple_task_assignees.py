@@ -23,8 +23,9 @@ def upgrade() -> None:
     bind = op.get_bind()
     is_postgres = bind.dialect.name == "postgresql"
 
-    # 1. Drop legacy junction table if it was created during early prototype testing
+    # 1. Drop legacy junction table and temporary table if created in earlier failed attempts
     op.execute("DROP TABLE IF EXISTS task_assignees CASCADE;")
+    op.execute("DROP TABLE IF EXISTS tasks_new CASCADE;")
 
     # 2. Define assignee_ids type with PostgreSQL JSONB variant for GIN indexing
     assignee_ids_type = sa.JSON().with_variant(postgresql.JSONB(), "postgresql")
@@ -51,9 +52,22 @@ def upgrade() -> None:
     )
 
     # 4. Copy existing data from tasks to tasks_new with assignee transformation
+    inspector = sa.inspect(bind)
+    existing_columns = {col["name"] for col in inspector.get_columns("tasks")}
+
     if is_postgres:
+        if "assignee_ids" in existing_columns:
+            assignee_expr = "COALESCE(assignee_ids, '[]'::jsonb)"
+        elif "assignee_id" in existing_columns:
+            assignee_expr = (
+                "CASE WHEN assignee_id IS NOT NULL THEN jsonb_build_array(assignee_id) "
+                "ELSE '[]'::jsonb END"
+            )
+        else:
+            assignee_expr = "'[]'::jsonb"
+
         op.execute(
-            """
+            f"""
             INSERT INTO tasks_new (
                 id, name, status, workspace_id, project_id,
                 assignee_ids, due_date, position, description,
@@ -61,18 +75,25 @@ def upgrade() -> None:
             )
             SELECT
                 id, name, status, workspace_id, project_id,
-                CASE
-                    WHEN assignee_id IS NOT NULL THEN jsonb_build_array(assignee_id)
-                    ELSE '[]'::jsonb
-                END,
+                {assignee_expr},
                 due_date, position, description,
                 priority, labels, created_at, updated_at
             FROM tasks;
             """
         )
     else:
+        if "assignee_ids" in existing_columns:
+            assignee_expr = "COALESCE(assignee_ids, '[]')"
+        elif "assignee_id" in existing_columns:
+            assignee_expr = (
+                "CASE WHEN assignee_id IS NOT NULL THEN json_array(assignee_id) "
+                "ELSE '[]' END"
+            )
+        else:
+            assignee_expr = "'[]'"
+
         op.execute(
-            """
+            f"""
             INSERT INTO tasks_new (
                 id, name, status, workspace_id, project_id,
                 assignee_ids, due_date, position, description,
@@ -80,10 +101,7 @@ def upgrade() -> None:
             )
             SELECT
                 id, name, status, workspace_id, project_id,
-                CASE
-                    WHEN assignee_id IS NOT NULL THEN json_array(assignee_id)
-                    ELSE '[]'
-                END,
+                {assignee_expr},
                 due_date, position, description,
                 priority, labels, created_at, updated_at
             FROM tasks;
