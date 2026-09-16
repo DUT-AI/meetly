@@ -14,6 +14,7 @@ import modules.notifications.models
 import modules.projects.models
 import modules.tasks.models
 import modules.workspaces.models  # noqa: F401
+import modules.meetings.models
 from core.config import db_settings
 from core.database.base import Base
 

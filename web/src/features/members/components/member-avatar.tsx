@@ -10,9 +10,9 @@ interface MemberAvatarProps {
 
 export const MemberAvatar = ({ name, image, className, fallbackClassName }: MemberAvatarProps) => {
   return (
-    <Avatar className={cn('size-5 rounded-full border border-neutral-300 transition', className)}>
-      {image ? <AvatarImage src={image} alt={name} className="object-cover" /> : null}
-      <AvatarFallback className={cn('flex items-center justify-center bg-neutral-200 font-medium text-neutral-500', fallbackClassName)}>
+    <Avatar className={cn('size-8 shrink-0 rounded-full border border-slate-200 overflow-hidden relative transition', className)}>
+      {image ? <AvatarImage src={image} alt={name} className="aspect-square h-full w-full object-cover rounded-full shrink-0" /> : null}
+      <AvatarFallback className={cn('flex items-center justify-center bg-slate-100 font-medium text-slate-600 select-none rounded-full w-full h-full', fallbackClassName)}>
         {name ? name.charAt(0).toUpperCase() : '?'}
       </AvatarFallback>
     </Avatar>
