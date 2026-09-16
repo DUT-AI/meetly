@@ -41,6 +41,37 @@ def test_sticker_service_categories():
     assert custom_stk == "custom_123"
 
 
+def test_loto_cluster_drawing():
+    from modules.notifications.services.zalo_sticker_service import (
+        get_normal_clusters,
+        get_angry_clusters,
+        _loto_picker,
+    )
+
+    n_clusters = get_normal_clusters()
+    a_clusters = get_angry_clusters()
+
+    assert len(n_clusters) >= 7
+    assert len(a_clusters) >= 5
+
+    # Test drawing multiple times: clusters should vary (loto across clusters)
+    drawn_normal_clusters = set()
+    for _ in range(15):
+        stk, cluster = _loto_picker.draw_normal()
+        assert stk in n_clusters[cluster]
+        drawn_normal_clusters.add(cluster)
+
+    assert len(drawn_normal_clusters) > 1
+
+    drawn_angry_clusters = set()
+    for _ in range(15):
+        stk, cluster = _loto_picker.draw_angry()
+        assert stk in a_clusters[cluster]
+        drawn_angry_clusters.add(cluster)
+
+    assert len(drawn_angry_clusters) > 1
+
+
 @pytest.fixture
 def mock_recipient():
     return ManageUserDTO(
