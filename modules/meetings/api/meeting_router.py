@@ -2,7 +2,7 @@ from dishka import FromDishka
 from dishka.integrations.fastapi import inject
 from fastapi import APIRouter, Depends
 
-from core.api.deps import get_current_user_id
+from apps.api.deps.auth import get_current_user_id
 from modules.meetings.dtos.meeting_dtos import (
     CreateMeetingDTO,
     MeetingListResponseDTO,
@@ -50,6 +50,19 @@ async def list_meetings(
     )
 
 
+@router.get("/{meeting_id}", response_model=MeetingResponseDTO)
+@inject
+async def get_meeting(
+    workspace_id: str,
+    meeting_id: str,
+    use_cases: FromDishka[MeetingUseCases],
+    user_id: str = Depends(get_current_user_id),
+):
+    """Lấy chi tiết 1 cuộc họp."""
+    return await use_cases.get_meeting(meeting_id=meeting_id, actor_id=user_id)
+
+
+@router.patch("/{meeting_id}", response_model=MeetingResponseDTO)
 @router.put("/{meeting_id}", response_model=MeetingResponseDTO)
 @inject
 async def update_meeting(

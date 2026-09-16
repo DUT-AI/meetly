@@ -25,6 +25,13 @@ export const meetingApi = {
     return response.data?.data ?? response.data;
   },
 
+  getMeeting: async (workspaceId: string, meetingId: string): Promise<Meeting> => {
+    const response = await api.get<{ data: Meeting }>(
+      `/workspaces/${workspaceId}/meetings/${meetingId}`,
+    );
+    return response.data?.data ?? response.data;
+  },
+
   createMeeting: async (workspaceId: string, payload: CreateMeetingPayload): Promise<Meeting> => {
     const body = {
       ...payload,

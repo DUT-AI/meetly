@@ -42,6 +42,18 @@ async def list_meetings(
     return {"data": {"documents": entities, "total": len(entities)}}
 
 
+@router.get("/{meeting_id}")
+@inject
+async def get_meeting(
+    workspace_id: str,
+    meeting_id: str,
+    current_user: CurrentUser,
+    use_cases: FromDishka[MeetingUseCases],
+) -> dict:
+    entity = await use_cases.get_meeting(meeting_id=meeting_id, actor_id=str(current_user.id))
+    return {"data": entity}
+
+
 @router.patch("/{meeting_id}")
 @inject
 async def update_meeting(

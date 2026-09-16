@@ -163,6 +163,15 @@ class MeetingUseCases:
             raise HTTPException(status_code=403, detail="Not a member of this workspace")
         return await self.meeting_repo.list_by_workspace(workspace_id)
 
+    async def get_meeting(self, meeting_id: str, actor_id: str) -> MeetingEntity:
+        meeting = await self.meeting_repo.get_by_id(meeting_id)
+        if not meeting:
+            raise HTTPException(status_code=404, detail="Meeting not found")
+        member = await self.member_repo.get_member(meeting.workspace_id, actor_id)
+        if not member:
+            raise HTTPException(status_code=403, detail="Not a member of this workspace")
+        return meeting
+
     async def update_meeting(
         self,
         meeting_id: str,
@@ -177,7 +186,13 @@ class MeetingUseCases:
         if not meeting:
             raise HTTPException(status_code=404, detail="Meeting not found")
 
-        await self._check_admin(meeting.workspace_id, actor_id)
+        member = await self.member_repo.get_member(meeting.workspace_id, actor_id)
+        if not member:
+            raise HTTPException(status_code=403, detail="Not a member of this workspace")
+
+        # Chỉ Admin mới có quyền đổi tên, thời gian hoặc danh sách người tham gia
+        if any(x is not None for x in (title, start_time, end_time, participants)):
+            await self._check_admin(meeting.workspace_id, actor_id)
 
         # Tìm những người mới được thêm vào so với danh sách cũ
         old_participant_ids = set(str(p) for p in (meeting.participants or []))
