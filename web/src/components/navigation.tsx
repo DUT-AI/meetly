@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings } from 'lucide-react';
+import { Settings, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GoCheckCircle, GoCheckCircleFill, GoHome, GoHomeFill } from 'react-icons/go';
@@ -52,6 +52,12 @@ export const Navigation = () => {
       href: `/workspaces/${workspaceId}/tasks`,
       icon: GoCheckCircle,
       activeIcon: GoCheckCircleFill,
+    },
+    {
+      label: 'Cuộc họp',
+      href: `/workspaces/${workspaceId}/meetings`,
+      icon: Calendar,
+      activeIcon: Calendar,
     },
     {
       label: 'Cài đặt phòng ban',

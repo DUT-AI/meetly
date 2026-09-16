@@ -15,6 +15,7 @@ from apps.api.routers import (
     tasks_router,
     users_router,
     workspaces_router,
+    meetings_router,
 )
 from core.config import settings
 from core.exceptions import setup_exception_handlers
@@ -65,6 +66,7 @@ app.include_router(projects_router)
 app.include_router(tasks_router)
 app.include_router(notifications_router)
 app.include_router(assets_router)
+app.include_router(meetings_router)
 
 
 # 6. Health & Readiness Probes

@@ -16,6 +16,9 @@ from modules.notifications.use_cases import (
 from modules.tasks.use_cases.task_reminder_use_cases import (
     CheckTaskDeadlinesUseCase,
 )
+from modules.meetings.use_cases.meeting_reminder_use_cases import (
+    CheckUpcomingMeetingsUseCase,
+)
 
 
 async def send_notification_job(ctx: dict[str, Any], payload: dict[str, Any]) -> None:
@@ -44,6 +47,16 @@ async def check_task_deadlines_job(ctx: dict[str, Any]) -> None:
         logger.info(f"Periodic deadline check completed: {result}")
 
 
+async def check_upcoming_meetings_job(ctx: dict[str, Any]) -> None:
+    """Scheduled Job Handler: Scans upcoming meetings and dispatches reminders."""
+    logger.info("ARQ Worker executing periodic upcoming meetings check...")
+    container = ctx["container"]
+    async with container() as request_container:
+        use_case = await request_container.get(CheckUpcomingMeetingsUseCase)
+        await use_case.execute()
+        logger.info("Periodic upcoming meetings check completed.")
+
+
 async def startup(ctx: dict[str, Any]) -> None:
     """Initialize DI container on worker startup."""
     logger.info("Meetly ARQ Worker starting up...")
@@ -61,9 +74,14 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """ARQ Worker configuration class."""
 
-    functions: ClassVar[list[Any]] = [send_notification_job, check_task_deadlines_job]
+    functions: ClassVar[list[Any]] = [
+        send_notification_job,
+        check_task_deadlines_job,
+        check_upcoming_meetings_job,
+    ]
     cron_jobs: ClassVar[list[Any]] = [
-        cron(check_task_deadlines_job, minute={0, 15, 30, 45})  # Every 15 minutes
+        cron(check_task_deadlines_job, minute={0, 15, 30, 45}),  # Every 15 minutes
+        cron(check_upcoming_meetings_job, minute=set(range(60))),  # Every minute
     ]
     queue_name: str = NOTIFICATION_QUEUE_KEY
     on_startup = startup
