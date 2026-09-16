@@ -627,6 +627,30 @@
     }
   }
 
+  // Định dạng thời gian theo múi giờ Việt Nam (Asia/Ho_Chi_Minh - GMT+7)
+  function getVietnamTimestamp(date = new Date()) {
+    try {
+      const formatter = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        hourCycle: 'h23'
+      });
+      const parts = formatter.formatToParts(date);
+      const getPart = (type) => parts.find((p) => p.type === type)?.value;
+      return `${getPart('year')}-${getPart('month')}-${getPart('day')}_${getPart('hour')}-${getPart('minute')}-${getPart('second')}`;
+    } catch (e) {
+      // Fallback cộng 7 tiếng nếu hệ thống không hỗ trợ Intl timeZone
+      const vnDate = new Date(date.getTime() + 7 * 60 * 60 * 1000);
+      return vnDate.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-');
+    }
+  }
+
   /**
    * Dừng ghi âm và tải file về máy
    */
@@ -642,7 +666,7 @@
         const blob = new Blob(recordedChunks, { type: mimeType });
 
         const meetingCode = getMeetingCode().replace(/[^a-zA-Z0-9-_]/g, '_');
-        const nowStr = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const nowStr = getVietnamTimestamp();
         const filename = `Meetly_${meetingCode}_${nowStr}.webm`;
 
         // Tải file trực tiếp về máy tính
