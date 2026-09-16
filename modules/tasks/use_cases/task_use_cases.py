@@ -17,6 +17,9 @@ from modules.notifications.dispatcher import NotificationDispatcher
 from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.services.discord_service import DiscordService
 from modules.notifications.services.zalo_bot_client import ZaloBotClient
+from modules.notifications.services.zalo_sticker_service import (
+    get_sticker_for_notification,
+)
 from modules.projects.domain.interfaces import IProjectRepository
 from modules.projects.dtos.project_dtos import ProjectResponseDTO
 from modules.tasks.domain.enums import TaskPriority, TaskStatus
@@ -171,6 +174,13 @@ async def _send_task_status_zalo_notification(
             f"👉 Chi tiết: {action_url}"
         )
         await zalo_client.send_message(chat_id=workspace.zalo_room_id, text=text)
+        sticker_id = get_sticker_for_notification(
+            event_type="task_status_changed",
+            title=f"Trạng thái: {new_st_label}",
+            content=task_name,
+        )
+        if sticker_id:
+            await zalo_client.send_sticker(chat_id=workspace.zalo_room_id, sticker=sticker_id)
     except Exception as e:
         logger.warning(f"Failed to send Zalo room notification: {e}")
 

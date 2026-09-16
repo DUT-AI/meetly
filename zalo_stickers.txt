@@ -1,0 +1,106 @@
+# ==============================================================================
+# MEETLY - ZALO STICKERS COLLECTION
+# ==============================================================================
+# Danh sách Sticker ID từ Zalo Sticker Store (https://stickers.zaloapp.com/)
+# Dùng để gửi kèm thông báo tự động qua Zalo Bot Platform.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 1. NORMAL STICKERS (Sticker bình thường)
+# Dùng cho các thông báo thông thường: giao việc, cập nhật công việc, bình luận,
+# phân quyền, lời mời workspace, cập nhật trạng thái thông thường.
+# ------------------------------------------------------------------------------
+[NORMAL]
+# Bư Mặt Ngáo & Cò Lõ Đi Làm Ổnt Mà & các bộ sticker thân thiện:
+9eb3a59c99d9708729c8
+5cb6159929dcc08299cd
+8658b2778e32676c3e23
+53084f6472219b7fc230
+2dcb3aa707e2eebcb7f3
+7b2e9e73a2364b681227
+fb8204df389ad1c4888b
+961a76474a02a35cfa13
+b572512f6d6a8434dd7b
+a28205d03995d0cb8984
+c0d266805ac5b39bead4
+0f0345b679f390adc9e2
+22e167545b11b24feb00
+6f7133c40f81e6dfbf90
+f92de19edddb34856dca
+49265f9563d08a8ed3c1
+f567dbd4e7910ecf5780
+5ec0127c2e39c7679e28
+8594b0288c6d65333c7c
+
+# ------------------------------------------------------------------------------
+# 2. ANGRY & DEADLINE STICKERS (Sticker tức giận, giận dỗi, giục deadline, trễ hạn)
+# Tự động gửi khi thông báo có nội dung: trễ hạn (overdue), sắp hết hạn (due soon),
+# nhắc nhở gấp, cảnh báo deadline.
+# ------------------------------------------------------------------------------
+[ANGRY_DEADLINE]
+# Bộ "Giận Rồi Nha" (cid: c6c516062a43c31d9a52)
+44fe3e760233eb6db222
+5987220f1e4af714ae5b
+45a3312b0d6ee430bd7f
+cd13b89b84de6d8034cf
+0ed3785b441ead40f40f
+aa7fddf7e1b208ec51a3
+0f817f09434caa12f35d
+b6d8c750fb15124b4b04
+535321db1d9ef4c0ad8f
+f03483bcbff956a70fe8
+fa2976a04ae5a3bbfaf4
+d7945a1d66588f06d649
+1a5394daa89f41c1188e
+f3537cda409fa9c1f08e
+7081f808c44d2d13745c
+d6465fcf638a8ad4d39b
+8984030d3f48d6168f59
+b57c3ef502b0ebeeb2a1
+09348dbdb1f858a601e9
+08918d18b15d5803014c
+
+# Bộ "Thỏ Cáu Kỉnh" (cid: 140c51c86d8d84d3dd9c)
+c70c9753ab1642481b07
+9bd2ca8df6c81f9646d9
+318063df5f9ab6c4ef8b
+cd0e9e51a2144b4a1205
+e0958ccab08f59d1009e
+048169de559bbcc5e58a
+92effcb0c0f529ab70e4
+1c9773c84f8da6d3ff9c
+c875a02a9c6f75312c7e
+0d266479583cb162e82d
+4cd3268c1ac9f397aad8
+423929661523fc7da532
+
+# Bộ "Zookiz Cục Súc" (cid: 98458381bfc4569a0fd5)
+878eaed692937bcd2282
+e940c318ff5d16034f4c
+2cab07f33bb6d2e88ba7
+6bb04fe873ad9af3c3bc
+a8158d4db10858560119
+40df66875ac2b39cead3
+adc38a9bb6de5f8006cf
+65dd458579c0909ec9d1
+d8d7f98fc5ca2c9475db
+d300f158cd1d24437d0c
+84e5a7bd9bf872a62be9
+0a8536dd0a98e3c6ba89
+
+# Bộ "Kim & Yim Nóng Nảy" (cid: 4d1311d72d92c4cc9d83)
+906450386c7d8523dc6c
+75f2b4ae88eb61b538fa
+f6e034bc08f9e1a7b8e8
+0a2cc970f5351c6b4524
+093cd560e925007b5934
+c2f11fad23e8cab693f9
+3832e66eda2b33756a3a
+9e3841647d21947fcd30
+
+# Bộ "Bà Già Kêu Ca" (cid: ddcc940fa84a4114185b)
+ed21cea3f2e61bb842f7
+6a3f56bd6af883a6dae9
+7b9d461f7a5a9304ca4b
+2dce134c2f09c6579f18
+193126b31af6f3a8aae7

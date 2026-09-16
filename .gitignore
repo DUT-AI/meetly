@@ -35,3 +35,19 @@ htmlcov/
 
 # Antigravity agents configuration
 .agents/
+.claude/
+
+# Scratch scripts
+inspect_zalo.py
+seed.py
+test_api_zalo.py
+test_send_photo.py
+test_zalo_photos.py
+test_zalo_sticker.py
+
+# Assets
+apps/api/assets/
+
+# Web docs
+web/AGENTS.md
+web/CLAUDE.md
