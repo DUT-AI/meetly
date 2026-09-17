@@ -152,6 +152,58 @@ async def seed_data():
         print(f"Task ID: {task.id}")
         print(f"URL xem task: http://localhost:3000/workspaces/{ws.id}/tasks")
 
+        # 6. Tùy chọn test dispatch notification ngay qua Zalo (nếu có cờ --dispatch)
+        if "--dispatch" in sys.argv or "-d" in sys.argv:
+            print("\n=== BẮT ĐẦU TEST DISPATCH THÔNG BÁO VÀ STICKER ZALO ===")
+            from modules.notifications.channels.zalo_channel import ZaloBotChannel
+            from modules.notifications.domain.entities import NotificationMessage
+            from modules.notifications.services.zalo_bot_client import ZaloBotClient
+
+            zalo_client = ZaloBotClient()
+            zalo_channel = ZaloBotChannel(zalo_client=zalo_client)
+
+            # Lấy chat_id từ tham số --chat-id hoặc từ user
+            chat_id = None
+            for idx, arg in enumerate(sys.argv):
+                if arg == "--chat-id" and idx + 1 < len(sys.argv):
+                    chat_id = sys.argv[idx + 1]
+                    break
+
+            target_user = admin_user or member_user
+            if not chat_id and target_user and getattr(target_user, "zalo_bot_id", None):
+                chat_id = target_user.zalo_bot_id
+
+            if not chat_id:
+                print("-> Chú ý: Chưa tìm thấy zalo_bot_id. Hãy truyền thêm tham số: --chat-id <zalo_chat_id>")
+            else:
+                if target_user:
+                    target_user.zalo_bot_id = chat_id
+                print(f"-> Gửi thông báo thử nghiệm tới Zalo Chat ID: {chat_id}")
+
+                # Test 1: Thông báo bình thường (sẽ tự động đính kèm sticker bình thường)
+                msg_normal = NotificationMessage(
+                    recipient_user_id=str(target_user.id if target_user else "test_user"),
+                    event_type="task_status_changed",
+                    title="Công việc 'test' đã chuyển trạng thái sang 'Đang làm'",
+                    content="Công việc test được cập nhật bởi hệ thống kiểm thử.",
+                    action_url=f"/workspaces/{ws.id}/tasks/{task.id}",
+                )
+                print("-> Đang gửi thông báo bình thường kèm sticker...")
+                ok_normal = await zalo_channel.send(target_user, msg_normal)
+                print(f"   Kết quả thông báo bình thường: {'Thành công' if ok_normal else 'Thất bại'}")
+
+                # Test 2: Thông báo trễ hạn / deadline (sẽ tự động đính kèm sticker giận dỗi / tức giận)
+                msg_angry = NotificationMessage(
+                    recipient_user_id=str(target_user.id if target_user else "test_user"),
+                    event_type="task_overdue",
+                    title="⚠️ Công việc 'test' đã quá hạn 1 ngày!",
+                    content="Hạn chót đã qua, vui lòng cập nhật tiến độ công việc ngay!",
+                    action_url=f"/workspaces/{ws.id}/tasks/{task.id}",
+                )
+                print("-> Đang gửi thông báo trễ hạn/deadline kèm sticker tức giận...")
+                ok_angry = await zalo_channel.send(target_user, msg_angry)
+                print(f"   Kết quả thông báo quá hạn: {'Thành công' if ok_angry else 'Thất bại'}")
+
 
 if __name__ == "__main__":
     asyncio.run(seed_data())

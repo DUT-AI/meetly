@@ -7,6 +7,7 @@ from core.config import redis_settings
 from modules.members.domain.interfaces import IMemberRepository
 from modules.notifications.dispatcher import NotificationDispatcher
 from modules.notifications.domain.entities import NotificationMessage
+from modules.notifications.services.zalo_sticker_service import get_random_angry_sticker
 from modules.tasks.domain.interfaces import ITaskRepository
 
 
@@ -89,6 +90,7 @@ class CheckTaskDeadlinesUseCase:
                                 workspace_id=task.workspace_id,
                                 entity_type="task",
                                 entity_id=task.id,
+                                sticker_id=get_random_angry_sticker(),
                             )
                             await self.notification_dispatcher.dispatch(msg)
                             await redis_client.set(cache_key, "1", ex=86400)
@@ -112,6 +114,7 @@ class CheckTaskDeadlinesUseCase:
                             workspace_id=task.workspace_id,
                             entity_type="task",
                             entity_id=task.id,
+                            sticker_id=get_random_angry_sticker(),
                         )
                         await self.notification_dispatcher.dispatch(msg)
                         await redis_client.set(cache_key, "1", ex=86400)
