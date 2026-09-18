@@ -21,7 +21,7 @@ chrome.runtime.onInstalled.addListener(() => {
     settings: {
       autoDownload: true,
       recordMic: true,
-      serverUrl: 'http://localhost:8000',
+      serverUrl: 'https://meetly.dutai.io.vn',
       workspaceId: ''
     }
   });
