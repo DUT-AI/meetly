@@ -32,6 +32,7 @@ htmlcov/
 # System & OS
 .DS_Store
 *.log
+*.zip
 
 # Antigravity agents configuration
 .agents/

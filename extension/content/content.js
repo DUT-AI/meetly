@@ -51,6 +51,7 @@
     widgetHost.style.userSelect = 'none';
 
     shadowRoot = widgetHost.attachShadow({ mode: 'open' });
+    const logoUrl = chrome.runtime.getURL('icons/icon48.png');
 
     // Inject CSS & HTML vào Shadow Root
     shadowRoot.innerHTML = `
@@ -335,9 +336,7 @@
         <div class="widget-card" id="fullCard">
           <div class="widget-header" id="dragHeader">
             <div class="brand">
-              <div class="brand-icon">
-                <div class="brand-dot"></div>
-              </div>
+              <img src="${logoUrl}" width="20" height="20" style="border-radius: 5px; object-fit: cover;" alt="Meetly">
               <span>Meetly Recorder</span>
             </div>
             <div class="header-actions">
@@ -393,6 +392,7 @@
 
         <!-- Pill thu nhỏ -->
         <div class="minimized-pill" id="miniPill" title="Bấm để mở rộng Meetly">
+          <img src="${logoUrl}" width="16" height="16" style="border-radius: 4px; object-fit: cover;" alt="Meetly">
           <div class="dot" id="miniDot"></div>
           <span style="font-weight:600; font-size:12px; color:#ffffff;">Meetly</span>
           <span class="timer" id="miniTimer" style="font-size:13px;">00:00</span>
