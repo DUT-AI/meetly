@@ -30,6 +30,12 @@ const AuthLayout = ({ children }: PropsWithChildren) => {
         </nav>
 
         <div className="flex flex-col items-center justify-center p-4 md:pt-14">{children}</div>
+
+        <footer className="mt-8 flex items-center justify-center pb-4 text-xs text-neutral-500">
+          <Link href="/privacy" className="hover:text-neutral-800 hover:underline">
+            Chính sách quyền riêng tư (Privacy Policy)
+          </Link>
+        </footer>
       </div>
     </main>
   );
