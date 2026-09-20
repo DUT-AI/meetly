@@ -3,16 +3,15 @@ from typing import Any
 from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
 import numpy as np
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from modules.transcription.domain.enums import SessionStatus, SpeakerLabel, StreamId
-from modules.transcription.domain.interfaces import (
-    ITranscriptSegmentRepository,
-    ITranscriptionSessionRepository,
-)
 from modules.transcription.infrastructure.event_broadcaster import event_broadcaster
 from modules.transcription.infrastructure.faster_whisper_engine import FasterWhisperEngine
 from modules.transcription.infrastructure.silero_vad import SileroVADDetector
 from modules.transcription.infrastructure.utterance_buffer import UtteranceBuffer
+from modules.transcription.repository.segment_repository import SqlTranscriptSegmentRepository
+from modules.transcription.repository.session_repository import SqlTranscriptionSessionRepository
 
 
 class StreamIngestionUseCase:
@@ -20,15 +19,11 @@ class StreamIngestionUseCase:
 
     def __init__(
         self,
-        session_repo: ITranscriptionSessionRepository,
-        segment_repo: ITranscriptSegmentRepository,
+        session_factory: async_sessionmaker[AsyncSession],
         whisper_engine: FasterWhisperEngine,
-        vad_detector: SileroVADDetector,
     ) -> None:
-        self.session_repo = session_repo
-        self.segment_repo = segment_repo
+        self.session_factory = session_factory
         self.whisper_engine = whisper_engine
-        self.vad_detector = vad_detector
 
     async def handle_producer_stream(
         self,
@@ -44,7 +39,10 @@ class StreamIngestionUseCase:
 
         # Update session status to STREAMING
         try:
-            await self.session_repo.update_status(session_id, SessionStatus.STREAMING.value)
+            async with self.session_factory() as session:
+                session_repo = SqlTranscriptionSessionRepository(session)
+                await session_repo.update_status(session_id, SessionStatus.STREAMING.value)
+                await session.commit()
         except Exception as e:
             logger.warning(f"[Ingestion] Could not update session {session_id} to STREAMING: {e}")
 
@@ -53,8 +51,8 @@ class StreamIngestionUseCase:
             {"type": "session.status_changed", "session_id": session_id, "status": SessionStatus.STREAMING.value},
         )
 
+        vad_detector = SileroVADDetector()
         utterance_buffer = UtteranceBuffer(sample_rate=16000)
-        self.vad_detector.reset_states()
 
         last_seq_by_stream: dict[int, int] = {}
         utterance_counter = 0
@@ -106,7 +104,7 @@ class StreamIngestionUseCase:
 
                 # Feed frame into utterance buffer with VAD gating
                 should_emit_partial, is_endpointed = utterance_buffer.push_frame(
-                    pcm16, start_sample, self.vad_detector
+                    pcm16, start_sample, vad_detector
                 )
 
                 speaker_label = (
@@ -168,23 +166,26 @@ class StreamIngestionUseCase:
                                 utterance_id = f"utt_{utt_start}_{utterance_counter}"
 
                                 # Persist final segment to PostgreSQL
+                                segment_id = f"temp_{utt_start}"
                                 try:
-                                    saved_segment = await self.segment_repo.upsert_segment(
-                                        session_id=session_id,
-                                        utterance_id=utterance_id,
-                                        revision=1,
-                                        start_ms=base_start_ms,
-                                        end_ms=base_end_ms,
-                                        text=final_text,
-                                        words=adjusted_words,
-                                        speaker_label=speaker_label,
-                                        confidence=conf,
-                                        is_final=True,
-                                    )
-                                    segment_id = saved_segment.id
+                                    async with self.session_factory() as session:
+                                        segment_repo = SqlTranscriptSegmentRepository(session)
+                                        saved_segment = await segment_repo.upsert_segment(
+                                            session_id=session_id,
+                                            utterance_id=utterance_id,
+                                            revision=1,
+                                            start_ms=base_start_ms,
+                                            end_ms=base_end_ms,
+                                            text=final_text,
+                                            words=adjusted_words,
+                                            speaker_label=speaker_label,
+                                            confidence=conf,
+                                            is_final=True,
+                                        )
+                                        await session.commit()
+                                        segment_id = saved_segment.id
                                 except Exception as db_err:
                                     logger.error(f"[Ingestion] Failed to persist segment: {db_err}")
-                                    segment_id = f"temp_{utt_start}"
 
                                 # Broadcast final transcript event
                                 await event_broadcaster.broadcast(
@@ -216,7 +217,7 @@ class StreamIngestionUseCase:
                         }
                     )
 
-        except WebSocketDisconnect:
+        except (WebSocketDisconnect, RuntimeError):
             logger.info(f"[Ingestion] Producer WebSocket disconnected for session {session_id}")
         except Exception as e:
             logger.error(f"[Ingestion] Error in producer stream {session_id}: {e}")
@@ -234,24 +235,33 @@ class StreamIngestionUseCase:
                             base_start_ms = int(utt_start * 1000 / 16000)
                             base_end_ms = int(utt_end * 1000 / 16000)
                             utterance_id = f"utt_{utt_start}_last"
-                            saved = await self.segment_repo.upsert_segment(
-                                session_id=session_id,
-                                utterance_id=utterance_id,
-                                revision=1,
-                                start_ms=base_start_ms,
-                                end_ms=base_end_ms,
-                                text=final_text,
-                                words=words,
-                                speaker_label=SpeakerLabel.UNKNOWN.value,
-                                confidence=conf,
-                                is_final=True,
-                            )
+                            saved_id = f"temp_{utt_start}_last"
+                            try:
+                                async with self.session_factory() as session:
+                                    segment_repo = SqlTranscriptSegmentRepository(session)
+                                    saved = await segment_repo.upsert_segment(
+                                        session_id=session_id,
+                                        utterance_id=utterance_id,
+                                        revision=1,
+                                        start_ms=base_start_ms,
+                                        end_ms=base_end_ms,
+                                        text=final_text,
+                                        words=words,
+                                        speaker_label=SpeakerLabel.UNKNOWN.value,
+                                        confidence=conf,
+                                        is_final=True,
+                                    )
+                                    await session.commit()
+                                    saved_id = saved.id
+                            except Exception as db_err:
+                                logger.error(f"[Ingestion] Failed to persist last segment: {db_err}")
+
                             await event_broadcaster.broadcast(
                                 session_id,
                                 {
                                     "type": "transcript.final",
                                     "session_id": session_id,
-                                    "segment_id": saved.id,
+                                    "segment_id": saved_id,
                                     "utterance_id": utterance_id,
                                     "revision": 1,
                                     "start_ms": base_start_ms,

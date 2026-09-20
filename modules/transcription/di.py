@@ -1,5 +1,5 @@
 from dishka import Provider, Scope, provide
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from modules.transcription.domain.interfaces import (
     ITranscriptSegmentRepository,
@@ -27,6 +27,17 @@ class TranscriptionProvider(Provider):
     def provide_whisper_engine(self) -> FasterWhisperEngine:
         return FasterWhisperEngine()
 
+    @provide(scope=Scope.APP)
+    def provide_stream_ingestion_use_case(
+        self,
+        session_factory: async_sessionmaker[AsyncSession],
+        whisper_engine: FasterWhisperEngine,
+    ) -> StreamIngestionUseCase:
+        return StreamIngestionUseCase(
+            session_factory=session_factory,
+            whisper_engine=whisper_engine,
+        )
+
     # Request-scoped repositories
     @provide
     def provide_session_repo(
@@ -42,4 +53,3 @@ class TranscriptionProvider(Provider):
 
     # Use cases
     session_use_cases = provide(TranscriptionSessionUseCases)
-    stream_ingestion_use_case = provide(StreamIngestionUseCase)

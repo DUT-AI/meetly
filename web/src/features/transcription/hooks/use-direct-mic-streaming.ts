@@ -21,6 +21,7 @@ export const useDirectMicStreaming = ({ workspaceId, meetingId }: UseDirectMicSt
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   const seqRef = useRef<number>(0);
+  const sampleCountRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
 
   const startRecording = useCallback(async () => {
@@ -49,15 +50,28 @@ export const useDirectMicStreaming = ({ workspaceId, meetingId }: UseDirectMicSt
       const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
       const cleanHost = apiBase.replace(/^https?:\/\//, '').split('/')[0];
       const protocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
-      const wsUrl = `${protocol}//${cleanHost}/api/v1/transcription-sessions/${session.session_id}/audio?ticket=${session.producer_ticket}`;
+      const wsUrl = `${protocol}//${cleanHost}/api/v1/transcription-sessions/${session.session_id}/audio?ticket=${encodeURIComponent(session.producer_ticket)}`;
 
       const ws = new WebSocket(wsUrl);
       ws.binaryType = 'arraybuffer';
       wsRef.current = ws;
 
       await new Promise<void>((resolve, reject) => {
-        ws.onopen = () => resolve();
-        ws.onerror = (e) => reject(e);
+        let isOpened = false;
+        ws.onopen = () => {
+          isOpened = true;
+          resolve();
+        };
+        ws.onerror = () => {
+          if (!isOpened) {
+            reject(new Error('Lỗi kết nối WebSocket (Handshake thất bại với Backend API)'));
+          }
+        };
+        ws.onclose = (ev) => {
+          if (!isOpened) {
+            reject(new Error(`WebSocket bị đóng (Code ${ev.code}: ${ev.reason || 'Server từ chối kết nối'})`));
+          }
+        };
       });
 
       // 4. Set up Web Audio API AudioContext at 16kHz
@@ -71,17 +85,14 @@ export const useDirectMicStreaming = ({ workspaceId, meetingId }: UseDirectMicSt
       processorRef.current = processor;
 
       seqRef.current = 0;
+      sampleCountRef.current = 0;
       startTimeRef.current = performance.now();
-
-      const speakerName = 'Bạn (Mic Web)';
-      const speakerBytes = new TextEncoder().encode(speakerName);
-      const speakerLen = Math.min(speakerBytes.length, 32);
 
       processor.onaudioprocess = (e) => {
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
 
         const inputData = e.inputBuffer.getChannelData(0);
-        // Convert Float32 to Int16 PCM
+        // Convert Float32 to Int16 PCM (Little-Endian)
         const int16 = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
           const s = Math.max(-1, Math.min(1, inputData[i]));
@@ -89,19 +100,19 @@ export const useDirectMicStreaming = ({ workspaceId, meetingId }: UseDirectMicSt
         }
 
         const pcmBytes = new Uint8Array(int16.buffer);
+        // 16-byte fixed header: version (u8), stream_id (u8), flags (u16 LE), seq (u32 LE), start_sample (u64 LE)
         const header = new ArrayBuffer(16);
         const view = new DataView(header);
-        view.setUint32(0, 0x4D454554, false); // Magic "MEET"
-        view.setUint32(4, seqRef.current++, false);
-        view.setUint32(8, Math.round(performance.now() - startTimeRef.current), false);
-        view.setUint8(12, 0x01); // 0x01: AUDIO_DATA
-        view.setUint8(13, speakerLen);
-        view.setUint16(14, pcmBytes.byteLength, false);
+        view.setUint8(0, 1); // version = 1
+        view.setUint8(1, 2); // stream_id = 2 (MIC)
+        view.setUint16(2, 0, true); // flags = 0
+        view.setUint32(4, seqRef.current++, true); // seq
+        view.setBigUint64(8, BigInt(sampleCountRef.current), true); // start_sample
+        sampleCountRef.current += int16.length;
 
-        const packet = new Uint8Array(16 + speakerLen + pcmBytes.byteLength);
+        const packet = new Uint8Array(16 + pcmBytes.byteLength);
         packet.set(new Uint8Array(header), 0);
-        packet.set(speakerBytes.subarray(0, speakerLen), 16);
-        packet.set(pcmBytes, 16 + speakerLen);
+        packet.set(pcmBytes, 16);
 
         wsRef.current.send(packet);
       };
@@ -136,15 +147,14 @@ export const useDirectMicStreaming = ({ workspaceId, meetingId }: UseDirectMicSt
       }
       if (wsRef.current) {
         if (wsRef.current.readyState === WebSocket.OPEN) {
-          // Send END frame flag 0x02
+          // Send EOS frame flag (flags = 0x01)
           const header = new ArrayBuffer(16);
           const view = new DataView(header);
-          view.setUint32(0, 0x4D454554, false);
-          view.setUint32(4, seqRef.current++, false);
-          view.setUint32(8, Math.round(performance.now() - startTimeRef.current), false);
-          view.setUint8(12, 0x02); // 0x02: END_OF_STREAM
-          view.setUint8(13, 0);
-          view.setUint16(14, 0, false);
+          view.setUint8(0, 1);
+          view.setUint8(1, 2); // MIC
+          view.setUint16(2, 0x01, true); // EOS flag
+          view.setUint32(4, seqRef.current++, true);
+          view.setBigUint64(8, BigInt(sampleCountRef.current), true);
           wsRef.current.send(header);
         }
         wsRef.current.close();
@@ -152,7 +162,7 @@ export const useDirectMicStreaming = ({ workspaceId, meetingId }: UseDirectMicSt
       }
 
       if (sessionIdRef.current) {
-        await transcriptionApi.stopSession(sessionIdRef.current, seqRef.current * 4096, seqRef.current);
+        await transcriptionApi.stopSession(sessionIdRef.current, sampleCountRef.current, seqRef.current);
         sessionIdRef.current = null;
       }
 

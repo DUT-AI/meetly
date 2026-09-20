@@ -1,7 +1,13 @@
 import asyncio
+import os
+import threading
 from typing import Any
 import numpy as np
 from loguru import logger
+
+# Ensure fast and reliable HuggingFace downloads in Vietnam
+os.environ.setdefault("HF_ENDPOINT", "https://hf-mirror.com")
+os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
 from core.config.stt import stt_settings
 
@@ -19,10 +25,12 @@ class FasterWhisperEngine:
         self.requested_device = device or stt_settings.stt_device
         self.requested_compute = compute_type or stt_settings.stt_compute_type
         self.model = None
+        self._is_loading = True
+        self._load_event = threading.Event()
         self._init_model()
 
     def _init_model(self) -> None:
-        """Resolve device/compute_type and instantiate WhisperModel."""
+        """Resolve device/compute_type and start loading weights in a background thread."""
         # 1. Determine Device
         if self.requested_device == "auto":
             try:
@@ -40,15 +48,38 @@ class FasterWhisperEngine:
         else:
             compute_type = self.requested_compute
 
-        logger.info(
-            f"[ASR] Initializing FasterWhisperEngine: model={self.model_id}, device={device}, compute_type={compute_type}"
-        )
+        # Normalize model ID for faster-whisper CTranslate2
+        model_name = self.model_id
+        alias_map = {
+            "openai/whisper-tiny": "tiny",
+            "whisper-tiny": "tiny",
+            "openai/whisper-base": "base",
+            "whisper-base": "base",
+            "openai/whisper-small": "small",
+            "whisper-small": "small",
+            "openai/whisper-medium": "medium",
+            "whisper-medium": "medium",
+            "openai/whisper-large-v3": "large-v3",
+            "whisper-large-v3": "large-v3",
+        }
+        model_name = alias_map.get(model_name, model_name)
 
+        threading.Thread(
+            target=self._load_weights,
+            args=(model_name, device, compute_type),
+            daemon=True,
+            name="FasterWhisperLoader",
+        ).start()
+
+    def _load_weights(self, model_name: str, device: str, compute_type: str) -> None:
+        logger.info(
+            f"[ASR] Loading FasterWhisperEngine in background: model={model_name}, device={device}, compute_type={compute_type}"
+        )
         try:
             from faster_whisper import WhisperModel
 
             self.model = WhisperModel(
-                self.model_id,
+                model_name,
                 device=device,
                 compute_type=compute_type,
             )
@@ -58,6 +89,9 @@ class FasterWhisperEngine:
                 f"[ASR] Could not initialize faster-whisper WhisperModel ({e}). Using mock/fallback for test mode."
             )
             self.model = None
+        finally:
+            self._is_loading = False
+            self._load_event.set()
 
     def _sync_transcribe(
         self,
@@ -68,8 +102,11 @@ class FasterWhisperEngine:
     ) -> tuple[str, list[dict[str, Any]], float]:
         """Synchronous decoding called inside a worker thread."""
         if self.model is None:
-            # Fallback mock for unit test or environments where weights aren't downloaded
-            return "", [], 1.0
+            if self._is_loading:
+                # Wait briefly if model is just finishing downloading
+                self._load_event.wait(timeout=2.0)
+            if self.model is None:
+                return "", [], 1.0
 
         segments, info = self.model.transcribe(
             audio_float32,
