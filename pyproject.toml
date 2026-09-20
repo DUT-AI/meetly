@@ -31,6 +31,10 @@ dependencies = [
     "arq>=0.28.0",
     "aiohttp>=3.14.3",
     "python-zalo-bot>=0.1.9",
+    # Audio & Streaming STT
+    "faster-whisper>=1.0.3",
+    "onnxruntime>=1.18.0",
+    "numpy>=1.26.4",
 ]
 
 [project.optional-dependencies]
