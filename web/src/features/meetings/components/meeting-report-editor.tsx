@@ -40,7 +40,7 @@ import {
   Undo,
   Redo,
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -58,7 +58,14 @@ export const MeetingReportEditor = ({
   onEditorReady,
   readOnly = false,
 }: MeetingReportEditorProps) => {
+  const onContentChangeRef = useRef(onContentChange);
+  onContentChangeRef.current = onContentChange;
+
+  const onEditorReadyRef = useRef(onEditorReady);
+  onEditorReadyRef.current = onEditorReady;
+
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,
@@ -81,9 +88,7 @@ export const MeetingReportEditor = ({
     editable: !readOnly,
     onUpdate: ({ editor }: { editor: any }) => {
       const json = editor.getJSON();
-      if (onContentChange) {
-        onContentChange(json);
-      }
+      onContentChangeRef.current?.(json);
     },
     editorProps: {
       attributes: {
@@ -96,13 +101,16 @@ export const MeetingReportEditor = ({
   });
 
   useEffect(() => {
-    if (editor) {
-      if (readOnly !== undefined) {
-        editor.setEditable(!readOnly);
-      }
-      onEditorReady?.(editor);
+    if (editor && readOnly !== undefined) {
+      editor.setEditable(!readOnly);
     }
-  }, [editor, readOnly, onEditorReady]);
+  }, [editor, readOnly]);
+
+  useEffect(() => {
+    if (editor) {
+      onEditorReadyRef.current?.(editor);
+    }
+  }, [editor]);
 
   if (!editor) {
     return null;

@@ -15,7 +15,13 @@ export const useCurrentMember = ({ workspaceId }: UseCurrentMemberProps) => {
 
   const currentMember = useMemo(() => {
     if (!user || !members?.documents) return null;
-    return members.documents.find((member) => member.userId === user.id || member.userId === (user as any).$id) || null;
+    const targetId = String(user.id || (user as any).$id || '');
+    return (
+      members.documents.find((m) => {
+        const mUserId = String(m.userId || m.user_id || '');
+        return mUserId && mUserId === targetId;
+      }) || null
+    );
   }, [user, members]);
 
   return {

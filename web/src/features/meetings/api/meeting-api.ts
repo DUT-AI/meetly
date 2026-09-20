@@ -19,14 +19,21 @@ export interface UpdateMeetingPayload {
 
 export const meetingApi = {
   getMeetings: async (workspaceId: string): Promise<{ documents: Meeting[]; total: number }> => {
-    const response = await api.get<{ data: { documents: Meeting[]; total: number } }>(
+    const response = await api.get<any>(
       `/workspaces/${workspaceId}/meetings`,
     );
-    return response.data?.data ?? response.data;
+    const resData = response.data?.data ?? response.data;
+    if (Array.isArray(resData)) {
+      return { documents: resData, total: resData.length };
+    }
+    if (resData && Array.isArray(resData.documents)) {
+      return resData;
+    }
+    return { documents: [], total: 0 };
   },
 
   getMeeting: async (workspaceId: string, meetingId: string): Promise<Meeting> => {
-    const response = await api.get<{ data: Meeting }>(
+    const response = await api.get<any>(
       `/workspaces/${workspaceId}/meetings/${meetingId}`,
     );
     return response.data?.data ?? response.data;

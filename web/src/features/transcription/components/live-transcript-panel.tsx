@@ -11,6 +11,9 @@ import {
   Clock,
   User,
   Check,
+  Mic,
+  Square,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { TranscriptSegment } from '../types';
 import { useGetTranscripts } from '../api/use-get-transcripts';
 import { useTranscriptionSubscriber } from '../api/use-transcription-subscriber';
+import { useDirectMicStreaming } from '../hooks/use-direct-mic-streaming';
 
 interface LiveTranscriptPanelProps {
   workspaceId: string;
@@ -45,7 +49,15 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
   // 1. Initial history from REST API
   const { data: transcriptsData, isLoading } = useGetTranscripts(workspaceId, meetingId);
 
-  // 2. Real-time updates from WebSocket
+  // 2. Direct browser microphone streaming for live testing
+  const {
+    isRecording,
+    isInitializing,
+    startRecording,
+    stopRecording,
+  } = useDirectMicStreaming({ workspaceId, meetingId });
+
+  // 3. Real-time updates from WebSocket
   const {
     segments: liveSegments,
     partialText,
@@ -131,6 +143,38 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5">
+          {/* Quick Mic Recording Button */}
+          {isRecording ? (
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              onClick={stopRecording}
+              className="h-7 text-[11px] font-bold gap-1 px-2.5 rounded-lg animate-pulse"
+              title="Dừng ghi âm mic"
+            >
+              <Square className="size-3 fill-current" />
+              Dừng mic
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isInitializing}
+              onClick={startRecording}
+              className="h-7 text-[11px] font-bold text-emerald-700 hover:bg-emerald-50 border-emerald-300 gap-1 px-2.5 rounded-lg shadow-2xs"
+              title="Bật mic trình duyệt để nói và test bóc băng trực tiếp"
+            >
+              {isInitializing ? (
+                <Loader2 className="size-3 animate-spin text-emerald-600" />
+              ) : (
+                <Mic className="size-3 text-emerald-600" />
+              )}
+              Thu âm thử
+            </Button>
+          )}
+
           {onInsertToEditor && liveSegments.length > 0 && (
             <Button
               type="button"
@@ -177,12 +221,39 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
 
       {/* Transcript Stream List */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2.5">
-        {!hasSession && !isLoading && (
-          <div className="flex flex-col items-center justify-center p-8 text-center text-slate-500 h-full">
-            <Radio className="size-8 text-slate-300 mb-2" />
-            <p className="text-xs font-semibold text-slate-700">Chưa có phiên ghi âm trực tiếp</p>
-            <p className="text-[11px] text-slate-400 mt-1 max-w-[240px]">
-              Sử dụng Meetly Chrome Extension khi họp Google Meet để ghi âm và bóc băng tự động.
+        {!hasSession && !isLoading && !isRecording && (
+          <div className="flex flex-col items-center justify-center p-8 text-center text-slate-500 h-full gap-3">
+            <div className="size-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+              <Radio className="size-6" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-700">Chưa có phiên ghi âm trực tiếp</p>
+              <p className="text-[11px] text-slate-400 mt-1 max-w-[260px] leading-relaxed">
+                Bấm nút <b>"Thu âm thử"</b> ở trên để nói qua Mic bóc băng ngay, hoặc dùng <b>Meetly Chrome Extension</b> khi họp Google Meet.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isInitializing}
+              onClick={startRecording}
+              className="mt-1 h-8 text-xs font-bold text-emerald-700 hover:bg-emerald-50 border-emerald-300 gap-1.5 px-3 rounded-xl shadow-2xs"
+            >
+              <Mic className="size-3.5 text-emerald-600" />
+              Bật Mic thu âm thử ngay
+            </Button>
+          </div>
+        )}
+
+        {isRecording && liveSegments.length === 0 && !partialText && (
+          <div className="flex flex-col items-center justify-center p-8 text-center text-slate-500 h-full gap-2">
+            <div className="size-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 animate-pulse">
+              <Mic className="size-5" />
+            </div>
+            <p className="text-xs font-bold text-emerald-700">Đang lắng nghe từ Microphone...</p>
+            <p className="text-[11px] text-slate-400 max-w-[240px]">
+              Hãy nói một câu tiếng Việt vào mic, chữ sẽ chạy trực tiếp ra màn hình!
             </p>
           </div>
         )}

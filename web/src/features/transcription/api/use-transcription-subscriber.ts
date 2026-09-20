@@ -40,12 +40,12 @@ export const useTranscriptionSubscriber = ({
 
         if (!session.subscriber_ticket) return;
 
-        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const host = process.env.NEXT_PUBLIC_API_URL
-          ? process.env.NEXT_PUBLIC_API_URL.replace(/^https?:\/\//, '')
-          : window.location.host;
+        const apiBase =
+          process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+        const cleanHost = apiBase.replace(/^https?:\/\//, '').split('/')[0];
+        const protocol = apiBase.startsWith('https') ? 'wss:' : 'ws:';
 
-        const wsUrl = `${protocol}//${host}/api/v1/transcription-sessions/${session.session_id}/events?ticket=${session.subscriber_ticket}`;
+        const wsUrl = `${protocol}//${cleanHost}/api/v1/transcription-sessions/${session.session_id}/events?ticket=${session.subscriber_ticket}`;
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;
 

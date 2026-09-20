@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
 import { PageError } from '@/components/page-error';
@@ -48,6 +48,14 @@ export default function MeetingReportPage() {
   const [editorInstance, setEditorInstance] = useState<any>(null);
   const audioPlayerRef = useRef<AudioTimelinePlayerRef | null>(null);
   const [currentTimeMs, setCurrentTimeMs] = useState<number>(0);
+
+  const handleEditorReady = useCallback((editor: any) => {
+    setEditorInstance(editor);
+  }, []);
+
+  const handleContentChange = useCallback((json: Record<string, any>) => {
+    setReport(json);
+  }, []);
 
   if (isLoadingMeeting) return <PageLoader />;
   if (!meeting) return <PageError message="Không tìm thấy cuộc họp" />;
@@ -178,8 +186,8 @@ export default function MeetingReportPage() {
           {/* TipTap Rich Text Editor Body */}
           <MeetingReportEditor
             initialContent={meeting.report || {}}
-            onContentChange={(json) => setReport(json)}
-            onEditorReady={(editor) => setEditorInstance(editor)}
+            onContentChange={handleContentChange}
+            onEditorReady={handleEditorReady}
           />
         </div>
 

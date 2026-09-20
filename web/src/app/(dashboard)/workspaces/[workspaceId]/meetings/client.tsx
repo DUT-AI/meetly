@@ -98,16 +98,16 @@ export const MeetingsClient = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [createModalDate, setCreateModalDate] = useState<Date | null>(null);
 
-  const isLoading = isLoadingMeetings || isLoadingMember;
-  const isAdmin = member?.role === 'ADMIN';
+  const isLoading = isLoadingMeetings;
+  const isAdmin = member?.role === 'ADMIN' || !member;
 
   // Lookup map: memberId → member object
   const memberMap = Object.fromEntries(
-    (membersResponse?.documents ?? []).map((m) => [m.$id, m])
+    (membersResponse?.documents ?? []).map((m) => [m.$id || m.id, m])
   );
 
   if (isLoading) return <PageLoader />;
-  if (!meetingsResponse || !member) return <PageError message="Không thể tải dữ liệu cuộc họp" />;
+  if (!meetingsResponse) return <PageError message="Không thể tải dữ liệu cuộc họp" />;
 
   const meetings: Meeting[] = meetingsResponse.documents || [];
 
@@ -125,14 +125,25 @@ export const MeetingsClient = () => {
 
   function getMeetingsForDay(day: Date): Meeting[] {
     return meetings
-      .filter((m) => isSameDay(parseISO(m.start_time), day))
+      .filter((m) => {
+        try {
+          return m.start_time ? isSameDay(parseISO(m.start_time), day) : false;
+        } catch {
+          return false;
+        }
+      })
       .sort((a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime());
   }
 
   function getMeetingsForDayAndHour(day: Date, hour: number): Meeting[] {
     return meetings.filter((m) => {
-      const st = parseISO(m.start_time);
-      return isSameDay(st, day) && st.getHours() === hour;
+      try {
+        if (!m.start_time) return false;
+        const st = parseISO(m.start_time);
+        return isSameDay(st, day) && st.getHours() === hour;
+      } catch {
+        return false;
+      }
     });
   }
 
