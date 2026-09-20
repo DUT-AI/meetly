@@ -74,6 +74,10 @@ class StreamIngestionUseCase:
                 version, stream_id, flags, seq, start_sample = struct.unpack_from("<BBHIQ", raw_bytes, 0)
                 payload_bytes = raw_bytes[16:]
 
+                if flags & 0x01:
+                    logger.info(f"[Ingestion] Received EOS frame for stream {stream_id} on session {session_id}")
+                    break
+
                 if len(payload_bytes) == 0:
                     continue
 

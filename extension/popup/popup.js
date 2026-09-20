@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const chkAutoDownload = document.getElementById('chkAutoDownload');
   const txtServerUrl = document.getElementById('txtServerUrl');
 
+  const txtWorkspaceId = document.getElementById('txtWorkspaceId');
+  const txtMeetingId = document.getElementById('txtMeetingId');
+
   let activeMeetTab = null;
 
   // 1. Tải cài đặt đã lưu
@@ -24,6 +27,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (settings.recordMic !== undefined) chkRecordMic.checked = settings.recordMic;
   if (settings.autoDownload !== undefined) chkAutoDownload.checked = settings.autoDownload;
   if (settings.serverUrl) txtServerUrl.value = settings.serverUrl;
+  if (settings.workspaceId && txtWorkspaceId) txtWorkspaceId.value = settings.workspaceId;
+  if (settings.meetingId && txtMeetingId) txtMeetingId.value = settings.meetingId;
 
   // Lưu cài đặt khi thay đổi
   function saveSettings() {
@@ -31,13 +36,17 @@ document.addEventListener('DOMContentLoaded', async () => {
       settings: {
         recordMic: chkRecordMic.checked,
         autoDownload: chkAutoDownload.checked,
-        serverUrl: txtServerUrl.value.trim()
+        serverUrl: txtServerUrl.value.trim() || 'http://localhost:8000',
+        workspaceId: txtWorkspaceId ? txtWorkspaceId.value.trim() : '',
+        meetingId: txtMeetingId ? txtMeetingId.value.trim() : ''
       }
     });
   }
   chkRecordMic.addEventListener('change', saveSettings);
   chkAutoDownload.addEventListener('change', saveSettings);
   txtServerUrl.addEventListener('input', saveSettings);
+  if (txtWorkspaceId) txtWorkspaceId.addEventListener('input', saveSettings);
+  if (txtMeetingId) txtMeetingId.addEventListener('input', saveSettings);
 
   // 2. Tìm tab Google Meet đang active hoặc gần nhất
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });

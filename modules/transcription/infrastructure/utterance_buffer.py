@@ -70,7 +70,7 @@ class UtteranceBuffer:
                 self.utterance_start_sample = max(0, start_sample - pre_roll_len)
                 self._utterance_chunks = [self._pre_roll.copy(), frame_pcm16.copy()]
                 self._utterance_sample_count = pre_roll_len + len(frame_pcm16)
-                self._last_partial_sample_count = self._utterance_sample_count
+                self._last_partial_sample_count = pre_roll_len
             else:
                 self._utterance_chunks.append(frame_pcm16.copy())
                 self._utterance_sample_count += len(frame_pcm16)

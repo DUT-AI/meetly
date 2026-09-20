@@ -48,12 +48,14 @@ import { cn } from '@/lib/utils';
 interface MeetingReportEditorProps {
   initialContent?: Record<string, any>;
   onContentChange?: (content: Record<string, any>) => void;
+  onEditorReady?: (editor: any) => void;
   readOnly?: boolean;
 }
 
 export const MeetingReportEditor = ({
   initialContent = {},
   onContentChange,
+  onEditorReady,
   readOnly = false,
 }: MeetingReportEditorProps) => {
   const editor = useEditor({
@@ -77,7 +79,7 @@ export const MeetingReportEditor = ({
     ],
     content: initialContent && Object.keys(initialContent).length > 0 ? initialContent : '',
     editable: !readOnly,
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor }: { editor: any }) => {
       const json = editor.getJSON();
       if (onContentChange) {
         onContentChange(json);
@@ -94,10 +96,13 @@ export const MeetingReportEditor = ({
   });
 
   useEffect(() => {
-    if (editor && readOnly !== undefined) {
-      editor.setEditable(!readOnly);
+    if (editor) {
+      if (readOnly !== undefined) {
+        editor.setEditable(!readOnly);
+      }
+      onEditorReady?.(editor);
     }
-  }, [editor, readOnly]);
+  }, [editor, readOnly, onEditorReady]);
 
   if (!editor) {
     return null;
