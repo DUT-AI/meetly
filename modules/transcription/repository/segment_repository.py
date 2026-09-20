@@ -89,3 +89,15 @@ class SqlTranscriptSegmentRepository(ITranscriptSegmentRepository):
         result = await self.session.execute(stmt)
         models = result.scalars().all()
         return [m.to_entity() for m in models]
+
+    async def batch_update_speaker_labels(
+        self, updates: list[tuple[str, str]]
+    ) -> None:
+        for seg_id, spk in updates:
+            stmt = select(TranscriptSegmentModel).where(TranscriptSegmentModel.id == seg_id)
+            res = await self.session.execute(stmt)
+            model = res.scalar_one_or_none()
+            if model:
+                model.speaker_label = spk
+        await self.session.flush()
+

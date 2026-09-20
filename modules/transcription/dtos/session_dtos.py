@@ -51,3 +51,25 @@ class MeetingTranscriptsResponse(BaseModel):
     session: SessionResponse | None = None
     recording_url: str | None = None
     segments: list[TranscriptSegmentDTO] = Field(default_factory=list)
+
+
+class DiarizeTurnDTO(BaseModel):
+    turn_id: int
+    start_ms: int
+    end_ms: int
+    speaker: str
+    confidence: float = 1.0
+
+
+class DiarizeSessionRequest(BaseModel):
+    expected_speakers: int | None = None
+    distance_threshold: float = 0.45
+
+
+class DiarizeSessionResponse(BaseModel):
+    session_id: str
+    speaker_count: int
+    speakers: list[str]
+    turns: list[DiarizeTurnDTO]
+    updated_segment_count: int
+

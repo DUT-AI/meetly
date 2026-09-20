@@ -4,12 +4,15 @@ from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconn
 from apps.api.deps.auth import CurrentUser
 from modules.transcription.dtos.session_dtos import (
     CreateSessionRequest,
+    DiarizeSessionRequest,
+    DiarizeSessionResponse,
     MeetingTranscriptsResponse,
     SessionResponse,
     StopSessionRequest,
 )
 from modules.transcription.infrastructure.event_broadcaster import event_broadcaster
 from modules.transcription.infrastructure.ticket_store import ticket_store
+from modules.transcription.use_cases.diarization_use_cases import DiarizationUseCases
 from modules.transcription.use_cases.session_use_cases import TranscriptionSessionUseCases
 from modules.transcription.use_cases.stream_ingestion_use_case import StreamIngestionUseCase
 
@@ -102,7 +105,28 @@ async def get_meeting_transcripts(
     return {"data": result.model_dump()}
 
 
+@router.post(
+    "/api/v1/transcription-sessions/{session_id}/diarize",
+    response_model=dict,
+)
+@inject
+async def diarize_transcription_session(
+    session_id: str,
+    payload: DiarizeSessionRequest,
+    current_user: CurrentUser,
+    use_cases: FromDishka[DiarizationUseCases],
+) -> dict:
+    """Execute offline speaker diarization and turn clustering on session audio."""
+    result = await use_cases.run_session_diarization(
+        session_id=session_id,
+        expected_speakers=payload.expected_speakers,
+        actor_id=str(current_user.id),
+    )
+    return {"data": result.model_dump()}
+
+
 # ─── WEBSOCKET ENDPOINTS ─────────────────────────────────────────────────────
+
 
 
 @router.websocket("/api/v1/transcription-sessions/{session_id}/audio")

@@ -35,6 +35,10 @@ dependencies = [
     "faster-whisper>=1.0.3",
     "onnxruntime>=1.18.0",
     "numpy>=1.26.4",
+    "scikit-learn>=1.9.1",
+    "scipy>=1.17.1",
+    "soundfile>=0.14.0",
+    "speechbrain>=1.1.1",
 ]
 
 [project.optional-dependencies]
