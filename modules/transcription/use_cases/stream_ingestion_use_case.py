@@ -1,4 +1,5 @@
 import asyncio
+import json
 import struct
 from typing import Any
 from fastapi import WebSocket, WebSocketDisconnect
@@ -201,9 +202,33 @@ class StreamIngestionUseCase:
         last_seq_by_stream: dict[int, int] = {}
         utterance_counter = 0
 
+        # Dynamic speaker mapping per stream (defaults to LOCAL_USER for MIC, REMOTE_SPEAKER for TAB)
+        speaker_by_stream: dict[int, str] = {
+            StreamId.MIC: SpeakerLabel.LOCAL_USER.value,
+            StreamId.TAB: SpeakerLabel.REMOTE_SPEAKER.value,
+        }
+
         try:
             while True:
                 message = await websocket.receive()
+
+                # Handle JSON control frames (e.g. dynamic speaker identification updates)
+                if "text" in message:
+                    try:
+                        ctrl = json.loads(message["text"])
+                        if ctrl.get("type") == "speaker_update":
+                            s_id = int(ctrl.get("stream_id", StreamId.TAB))
+                            s_name = str(ctrl.get("speaker_name", "")).strip()
+                            if s_name:
+                                # Truncate to 50 chars to adhere to DB column schema
+                                speaker_by_stream[s_id] = s_name[:50]
+                                logger.info(
+                                    f"[Ingestion] Session {session_id} stream {s_id} speaker updated -> '{speaker_by_stream[s_id]}'"
+                                )
+                    except Exception as e:
+                        logger.debug(f"[Ingestion] Failed to parse text control message: {e}")
+                    continue
+
                 if "bytes" not in message:
                     continue
 
@@ -259,10 +284,11 @@ class StreamIngestionUseCase:
                     pcm16, start_sample, vad_detector
                 )
 
-                speaker_label = (
+                speaker_label = speaker_by_stream.get(
+                    stream_id,
                     SpeakerLabel.LOCAL_USER.value
                     if stream_id == StreamId.MIC
-                    else SpeakerLabel.REMOTE_SPEAKER.value
+                    else SpeakerLabel.REMOTE_SPEAKER.value,
                 )
 
                 # 1. Handle Final Utterance Endpointing (Non-blocking background task)
@@ -336,10 +362,11 @@ class StreamIngestionUseCase:
                     if len(final_audio) >= 4000:
                         utterance_counter += 1
                         utterance_id = f"utt_{utt_start}_last_{utterance_counter}"
-                        s_label = (
+                        s_label = speaker_by_stream.get(
+                            sid,
                             SpeakerLabel.LOCAL_USER.value
                             if sid == StreamId.MIC
-                            else SpeakerLabel.REMOTE_SPEAKER.value
+                            else SpeakerLabel.REMOTE_SPEAKER.value,
                         )
                         task = asyncio.create_task(
                             self._process_final_utterance(

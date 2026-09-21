@@ -77,6 +77,7 @@ class StreamHandler {
     this.serverUrl = 'http://localhost:8000';
     this.sampleCount = 0;
     this.seq = 0;
+    this.pendingControlMessages = [];
   }
 
   async start({ workspaceId, meetingId, serverUrl }) {
@@ -147,6 +148,13 @@ class StreamHandler {
 
       this.producerWs.onopen = () => {
         console.log('[Meetly Service Worker] Producer WebSocket đã kết nối thành công!');
+        // Gửi các control messages còn xếp hàng (ví dụ: gán tên speaker ban đầu)
+        while (this.pendingControlMessages.length > 0) {
+          const ctrlMsg = this.pendingControlMessages.shift();
+          try {
+            this.producerWs.send(JSON.stringify(ctrlMsg));
+          } catch (e) {}
+        }
         this.port.postMessage({
           type: 'STREAMING_READY',
           sessionId: this.sessionId,
@@ -198,6 +206,18 @@ class StreamHandler {
     if (this.producerWs && this.producerWs.readyState === WebSocket.OPEN) {
       const uint8 = new Uint8Array(frameArray);
       this.producerWs.send(uint8.buffer);
+    }
+  }
+
+  sendControlMessage(msgObj) {
+    if (this.producerWs && this.producerWs.readyState === WebSocket.OPEN) {
+      try {
+        this.producerWs.send(JSON.stringify(msgObj));
+      } catch (err) {
+        console.warn('[Meetly Service Worker] Lỗi gửi control message:', err);
+      }
+    } else {
+      this.pendingControlMessages.push(msgObj);
     }
   }
 
@@ -272,6 +292,14 @@ chrome.runtime.onConnect.addListener((port) => {
             handler.seq = msg.seq || handler.seq;
             handler.sendAudioFrame(msg.data);
           }
+          break;
+
+        case 'SPEAKER_UPDATE':
+          handler.sendControlMessage({
+            type: 'speaker_update',
+            stream_id: msg.streamId || 1,
+            speaker_name: msg.speakerName || '',
+          });
           break;
 
         case 'STOP_STREAMING':

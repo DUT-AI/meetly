@@ -35,6 +35,10 @@
   let producerWs = null;
   let subscriberWs = null;
   let pcmProcessorNode = null;
+  let tabPcmNode = null;
+  let micPcmNode = null;
+  let speakerPollInterval = null;
+  let lastDetectedRemoteSpeaker = '';
   let streamSeq = 0;
   let totalAudioSamples = 0;
   let activeSessionId = null;
@@ -84,6 +88,110 @@
     combined.set(new Uint8Array(headerBuffer), 0);
     combined.set(new Uint8Array(pcmInt16Data.buffer, pcmInt16Data.byteOffset, pcmInt16Data.byteLength), 16);
     return combined.buffer;
+  }
+
+  /**
+   * Tự động nhận diện người đang phát biểu trong phòng họp Google Meet qua DOM
+   */
+  function detectActiveRemoteSpeaker() {
+    try {
+      const selfNameEl = document.querySelector('[data-self-name]');
+      const selfName = selfNameEl ? selfNameEl.getAttribute('data-self-name')?.trim() : '';
+
+      // Cách 1: Tìm qua thuộc tính aria-label (VD: "Nguyễn Văn A đang nói", "John Doe is speaking")
+      const speakingAriaEls = document.querySelectorAll(
+        '[aria-label*="đang nói"], [aria-label*="is speaking"], [aria-label*="speaking"]'
+      );
+      for (const el of speakingAriaEls) {
+        const label = el.getAttribute('aria-label') || '';
+        const match = label.match(/^(.+?)\s+(?:đang nói|is speaking)/i) ||
+                      label.match(/(?:speaking:\s*)(.+)/i);
+        if (match && match[1]) {
+          const name = match[1].trim();
+          if (name && name !== selfName && name.length <= 50) {
+            return name;
+          }
+        }
+      }
+
+      // Cách 2: Tìm qua tile người tham gia có chỉ báo âm lượng / border highlight màu xanh của Meet
+      const tiles = document.querySelectorAll('div[data-participant-id], div[data-requested-participant-id]');
+      for (const tile of tiles) {
+        const hasSpeakingIndicator = tile.querySelector('.I5xfaf, [data-is-muted="false"], svg.speaking, div[aria-hidden="true"] > div[style*="height"]');
+        let isHighlighted = false;
+        try {
+          const style = window.getComputedStyle(tile);
+          isHighlighted = style.borderColor.includes('26, 115, 232') || style.borderColor.includes('66, 133, 244');
+        } catch (e) {}
+
+        if (hasSpeakingIndicator || isHighlighted) {
+          const nameEl = tile.querySelector('.zWGUib, [data-self-name], span[dir="auto"]');
+          const name = nameEl ? (nameEl.getAttribute('data-self-name') || nameEl.textContent || '').trim() : '';
+          if (name && name !== selfName && name.length <= 50) {
+            return name;
+          }
+        }
+      }
+
+      // Cách 3: Thông báo qua Live Region / Toast của Google Meet
+      const notifEls = document.querySelectorAll('[aria-live="polite"], [aria-live="assertive"]');
+      for (const el of notifEls) {
+        const text = el.textContent || '';
+        const match = text.match(/^(.+?)\s+(?:đang nói|is speaking)/i);
+        if (match && match[1]) {
+          const name = match[1].trim();
+          if (name && name !== selfName && name.length <= 50) {
+            return name;
+          }
+        }
+      }
+    } catch (e) {
+      // Non-blocking fallback
+    }
+    return null;
+  }
+
+  function startSpeakerTracking() {
+    if (speakerPollInterval) clearInterval(speakerPollInterval);
+    lastDetectedRemoteSpeaker = '';
+
+    // Gửi định danh người dùng cục bộ nếu Google Meet có sẵn tên của bạn
+    try {
+      const selfNameEl = document.querySelector('[data-self-name]');
+      const selfName = selfNameEl ? selfNameEl.getAttribute('data-self-name')?.trim() : '';
+      if (selfName && streamPort) {
+        streamPort.postMessage({
+          type: 'SPEAKER_UPDATE',
+          streamId: 2, // StreamId.MIC
+          speakerName: selfName,
+        });
+      }
+    } catch (e) {}
+
+    // Polling nhẹ nhàng mỗi 400ms để bắt kịp lượt nói của người khác
+    speakerPollInterval = setInterval(() => {
+      if (currentStatus !== 'RECORDING') return;
+      const detectedName = detectActiveRemoteSpeaker();
+      if (detectedName && detectedName !== lastDetectedRemoteSpeaker) {
+        lastDetectedRemoteSpeaker = detectedName;
+        console.log('[Meetly] Phát hiện người đang phát biểu trong Google Meet:', detectedName);
+        if (streamPort) {
+          streamPort.postMessage({
+            type: 'SPEAKER_UPDATE',
+            streamId: 1, // StreamId.TAB
+            speakerName: detectedName,
+          });
+        }
+      }
+    }, 400);
+  }
+
+  function stopSpeakerTracking() {
+    if (speakerPollInterval) {
+      clearInterval(speakerPollInterval);
+      speakerPollInterval = null;
+    }
+    lastDetectedRemoteSpeaker = '';
   }
 
   // Lấy mã phòng họp từ URL (ví dụ: meet.google.com/abc-defg-hij -> abc-defg-hij)
@@ -670,8 +778,9 @@
     mixerNode.connect(mixedDestination);
 
     // Đưa âm thanh tab vào luồng ghi âm (Âm thanh tab đã được trình duyệt phát ra loa tự nhiên)
+    let tabSource = null;
     if (hasTabAudio) {
-      const tabSource = audioCtx.createMediaStreamSource(new MediaStream([tabAudioTracks[0]]));
+      tabSource = audioCtx.createMediaStreamSource(new MediaStream([tabAudioTracks[0]]));
       tabSource.connect(mixerNode);
 
       // Tự động dừng và lưu khi người dùng bấm nút "Dừng chia sẻ" trên thanh trình duyệt
@@ -683,8 +792,9 @@
     }
 
     // Đưa âm thanh micro vào luồng ghi âm
+    let micSource = null;
     if (micStream && micStream.getAudioTracks().length > 0) {
-      const micSource = audioCtx.createMediaStreamSource(micStream);
+      micSource = audioCtx.createMediaStreamSource(micStream);
       micSource.connect(mixerNode);
     }
 
@@ -734,7 +844,11 @@
           const event = msg.event;
           if (event && event.text) {
             if (transcriptBox) transcriptBox.style.display = 'flex';
-            if (transcriptContent) transcriptContent.textContent = event.text;
+            const speakerBadge = event.speaker_label === 'LOCAL_USER'
+              ? 'Bạn'
+              : (event.speaker_label === 'REMOTE_SPEAKER' ? 'Khách' : (event.speaker_label || ''));
+            const speakerPrefix = speakerBadge ? `[${speakerBadge}] ` : '';
+            if (transcriptContent) transcriptContent.textContent = `${speakerPrefix}${event.text}`;
             if (transcriptTranslation) {
               if (event.translation) {
                 transcriptTranslation.textContent = `EN: ${event.translation}`;
@@ -766,22 +880,27 @@
       }
 
       const inputSampleRate = audioCtx.sampleRate;
+      const streamSeqByStream = { 1: 0, 2: 0 };
+      const totalSamplesByStream = { 1: 0, 2: 0 };
 
-      const handleAudioData = (channelData) => {
+      const handleStreamAudioData = (streamId, channelData) => {
         if (currentStatus !== 'RECORDING') return;
         const resampled = downsampleTo16k(channelData, inputSampleRate);
         const pcm16 = floatTo16BitPCM(resampled);
 
-        const startSample = totalAudioSamples;
-        totalAudioSamples += pcm16.length;
+        const startSample = totalSamplesByStream[streamId] || 0;
+        totalSamplesByStream[streamId] = startSample + pcm16.length;
+        const seq = streamSeqByStream[streamId] || 0;
+        streamSeqByStream[streamId] = seq + 1;
 
         if (streamPort) {
-          const frameBuffer = createBinaryFrame(1, 0, streamSeq++, startSample, pcm16);
+          const frameBuffer = createBinaryFrame(streamId, 0, seq, startSample, pcm16);
           streamPort.postMessage({
             type: 'AUDIO_FRAME',
             data: Array.from(new Uint8Array(frameBuffer)),
             sampleCount: pcm16.length,
-            seq: streamSeq,
+            seq: seq,
+            streamId: streamId,
           });
         }
       };
@@ -791,34 +910,54 @@
         try {
           const workletUrl = chrome.runtime.getURL('content/pcm-processor.js');
           await audioCtx.audioWorklet.addModule(workletUrl);
-          const workletNode = new AudioWorkletNode(audioCtx, 'pcm-processor');
-          workletNode.port.onmessage = (e) => {
-            if (e.data) {
-              handleAudioData(e.data);
-            }
-          };
-          pcmProcessorNode = workletNode;
           workletLoaded = true;
-          console.log('[Meetly] Đã kích hoạt AudioWorkletNode thay thế ScriptProcessorNode thành công.');
+          console.log('[Meetly] Đã kích hoạt AudioWorklet pcm-processor cho Dual-Stream.');
         } catch (workletErr) {
           console.warn('[Meetly] Không thể nạp AudioWorklet, chuyển sang ScriptProcessor fallback:', workletErr);
         }
       }
 
-      if (!workletLoaded) {
-        pcmProcessorNode = audioCtx.createScriptProcessor(4096, 1, 1);
-        pcmProcessorNode.onaudioprocess = (e) => {
-          const channelData = e.inputBuffer.getChannelData(0);
-          handleAudioData(channelData);
-        };
-      }
-
       // Mute gain để ngăn chặn tiếng vang (feedback loop) ra loa máy tính
       const muteGain = audioCtx.createGain();
       muteGain.gain.value = 0;
-      mixerNode.connect(pcmProcessorNode);
-      pcmProcessorNode.connect(muteGain);
       muteGain.connect(audioCtx.destination);
+
+      // Kênh 1: Âm thanh tab Google Meet (StreamId = 1, gán nhãn REMOTE_SPEAKER / tên người trong Meet)
+      if (tabSource) {
+        if (workletLoaded) {
+          tabPcmNode = new AudioWorkletNode(audioCtx, 'pcm-processor');
+          tabPcmNode.port.onmessage = (e) => {
+            if (e.data) handleStreamAudioData(1, e.data);
+          };
+        } else {
+          tabPcmNode = audioCtx.createScriptProcessor(4096, 1, 1);
+          tabPcmNode.onaudioprocess = (e) => {
+            handleStreamAudioData(1, e.inputBuffer.getChannelData(0));
+          };
+        }
+        tabSource.connect(tabPcmNode);
+        tabPcmNode.connect(muteGain);
+      }
+
+      // Kênh 2: Âm thanh Micro của bạn (StreamId = 2, gán nhãn LOCAL_USER / Bạn)
+      if (micSource) {
+        if (workletLoaded) {
+          micPcmNode = new AudioWorkletNode(audioCtx, 'pcm-processor');
+          micPcmNode.port.onmessage = (e) => {
+            if (e.data) handleStreamAudioData(2, e.data);
+          };
+        } else {
+          micPcmNode = audioCtx.createScriptProcessor(4096, 1, 1);
+          micPcmNode.onaudioprocess = (e) => {
+            handleStreamAudioData(2, e.inputBuffer.getChannelData(0));
+          };
+        }
+        micSource.connect(micPcmNode);
+        micPcmNode.connect(muteGain);
+      }
+
+      // Kích hoạt theo dõi nhận diện người phát biểu trong Google Meet theo thời gian thực
+      startSpeakerTracking();
     } catch (streamErr) {
       console.warn('[Meetly] Lỗi khởi tạo live PCM stream:', streamErr?.message || streamErr);
     }
@@ -979,6 +1118,21 @@
         streamPort.disconnect();
       } catch (e) {}
       streamPort = null;
+    }
+    stopSpeakerTracking();
+    if (tabPcmNode) {
+      if (tabPcmNode.port) {
+        try { tabPcmNode.port.onmessage = null; } catch (e) {}
+      }
+      try { tabPcmNode.disconnect(); } catch (e) {}
+      tabPcmNode = null;
+    }
+    if (micPcmNode) {
+      if (micPcmNode.port) {
+        try { micPcmNode.port.onmessage = null; } catch (e) {}
+      }
+      try { micPcmNode.disconnect(); } catch (e) {}
+      micPcmNode = null;
     }
     if (pcmProcessorNode) {
       if (pcmProcessorNode.port) {
