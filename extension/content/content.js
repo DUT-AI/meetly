@@ -822,7 +822,7 @@
     try {
       const storageData = await chrome.storage.local.get('settings');
       const settings = storageData.settings || {};
-      const serverUrl = settings.serverUrl || 'http://localhost:8000';
+      const serverUrl = settings.serverUrl || 'https://meetly.dutai.io.vn';
       activeWorkspaceId = settings.workspaceId || '';
       activeMeetingId = settings.meetingId || '';
 

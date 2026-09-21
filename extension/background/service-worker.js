@@ -23,7 +23,7 @@ chrome.runtime.onInstalled.addListener(() => {
     settings: {
       autoDownload: true,
       recordMic: true,
-      serverUrl: 'http://localhost:8000',
+      serverUrl: 'https://meetly.dutai.io.vn',
       workspaceId: '',
       meetingId: '',
       authToken: '',
@@ -40,14 +40,11 @@ async function resolveAuthToken(serverUrl) {
     return settings.authToken.trim();
   }
 
-  // Thử tìm cookie access_token trên các domain phổ biến
+  // Thử tìm cookie access_token trên domain Meetly
   const candidateUrls = [
-    'http://localhost:3000',
-    'http://localhost:8000',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:8000',
+    'https://meetly.dutai.io.vn',
     serverUrl,
-  ];
+  ].filter(Boolean);
 
   for (const url of candidateUrls) {
     try {
@@ -74,14 +71,14 @@ class StreamHandler {
     this.producerWs = null;
     this.subscriberWs = null;
     this.sessionId = null;
-    this.serverUrl = 'http://localhost:8000';
+    this.serverUrl = 'https://meetly.dutai.io.vn';
     this.sampleCount = 0;
     this.seq = 0;
     this.pendingControlMessages = [];
   }
 
   async start({ workspaceId, meetingId, serverUrl }) {
-    this.serverUrl = serverUrl || 'http://localhost:8000';
+    this.serverUrl = serverUrl || 'https://meetly.dutai.io.vn';
     console.log(`[Meetly Service Worker] Bắt đầu phiên streaming cho WS: ${workspaceId}, Meet: ${meetingId}`);
 
     const token = await resolveAuthToken(this.serverUrl);
@@ -324,7 +321,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
 
     case 'CHECK_AUTH':
-      resolveAuthToken(message.serverUrl || 'http://localhost:8000').then((token) => {
+      resolveAuthToken(message.serverUrl || 'https://meetly.dutai.io.vn').then((token) => {
         sendResponse({ hasToken: !!token, tokenPreview: token ? `${token.substring(0, 10)}...` : '' });
       });
       return true;

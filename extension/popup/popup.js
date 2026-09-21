@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Kiểm tra trạng thái xác thực
   function checkAuthStatus() {
-    const sUrl = txtServerUrl.value.trim() || 'http://localhost:8000';
+    const sUrl = txtServerUrl.value.trim() || 'https://meetly.dutai.io.vn';
     chrome.runtime.sendMessage({ type: 'CHECK_AUTH', serverUrl: sUrl }, (res) => {
       if (res && res.hasToken) {
         authStatusBadge.textContent = '✓ Đã kết nối token';
@@ -53,7 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       settings: {
         recordMic: chkRecordMic.checked,
         autoDownload: chkAutoDownload.checked,
-        serverUrl: txtServerUrl.value.trim() || 'http://localhost:8000',
+        serverUrl: txtServerUrl.value.trim() || 'https://meetly.dutai.io.vn',
         workspaceId: txtWorkspaceId ? txtWorkspaceId.value.trim() : '',
         meetingId: txtMeetingId ? txtMeetingId.value.trim() : '',
         authToken: txtAuthToken ? txtAuthToken.value.trim() : ''

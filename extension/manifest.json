@@ -1,24 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Meetly - Audio Recorder for Google Meet",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Ghi âm cuộc họp Google Meet 2 chiều (âm thanh phòng họp + micro) chất lượng cao và tự động tải file cho Meetly.",
   "permissions": [
     "storage",
-    "downloads",
     "activeTab",
     "cookies"
   ],
   "host_permissions": [
     "https://meet.google.com/*",
-    "http://localhost:3000/*",
-    "http://127.0.0.1:3000/*",
-    "http://localhost:8000/*",
-    "http://127.0.0.1:8000/*",
-    "ws://localhost:8000/*",
-    "ws://127.0.0.1:8000/*",
-    "https://meetly.dutai.io.vn/*",
-    "wss://meetly.dutai.io.vn/*"
+    "https://meetly.dutai.io.vn/*"
   ],
   "background": {
     "service_worker": "background/service-worker.js"
@@ -54,7 +46,6 @@
         "icons/icon16.png",
         "icons/icon48.png",
         "icons/icon128.png",
-        "icons/image.png",
         "content/pcm-processor.js"
       ],
       "matches": [
