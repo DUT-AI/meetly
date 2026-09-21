@@ -219,14 +219,39 @@ export const useDirectMicStreaming = ({
           recognition.interimResults = true;
           recognition.lang = 'vi-VN';
 
+          let clearTimer: NodeJS.Timeout | null = null;
           recognition.onresult = (event: any) => {
             let interim = '';
+            let hasFinal = false;
             for (let i = event.resultIndex; i < event.results.length; i++) {
-              interim += event.results[i][0].transcript;
+              const res = event.results[i];
+              if (res.isFinal) {
+                hasFinal = true;
+              } else {
+                interim += res[0].transcript;
+              }
             }
             if (interim) {
               setClientPartialText(interim);
+              if (clearTimer) clearTimeout(clearTimer);
+              clearTimer = setTimeout(() => {
+                setClientPartialText('');
+              }, 1200);
+            } else if (hasFinal) {
+              // Speech finished on client: clear interim preview rapidly (150ms) to prevent freezing
+              if (clearTimer) clearTimeout(clearTimer);
+              clearTimer = setTimeout(() => {
+                setClientPartialText('');
+              }, 150);
             }
+          };
+
+          recognition.onspeechend = () => {
+            // User paused speech: clear preview quickly so stale text does not linger
+            if (clearTimer) clearTimeout(clearTimer);
+            clearTimer = setTimeout(() => {
+              setClientPartialText('');
+            }, 300);
           };
 
           recognition.onerror = () => {};
@@ -302,11 +327,16 @@ export const useDirectMicStreaming = ({
     }
   }, [workspaceId, meetingId, queryClient]);
 
+  const resetClientPartialText = useCallback(() => {
+    setClientPartialText('');
+  }, []);
+
   return {
     isRecording,
     isInitializing,
     activeSessionId,
     clientPartialText,
+    resetClientPartialText,
     startRecording,
     stopRecording,
   };

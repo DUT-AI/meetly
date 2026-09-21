@@ -61,6 +61,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
     isRecording,
     isInitializing,
     clientPartialText,
+    resetClientPartialText,
     startRecording,
     stopRecording,
   } = useDirectMicStreaming({
@@ -80,6 +81,13 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
     isConnected,
     sessionStatus,
   } = subscriber;
+
+  // Automatically reset preview draft as soon as a new final segment is committed by the server
+  useEffect(() => {
+    if (liveSegments.length > 0) {
+      resetClientPartialText();
+    }
+  }, [liveSegments.length, resetClientPartialText]);
 
   const activePartialText = isRecording ? (clientPartialText || partialText) : partialText;
 

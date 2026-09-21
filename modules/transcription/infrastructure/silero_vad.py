@@ -44,6 +44,9 @@ class SileroVADDetector:
         else:
             frame_float = frame_pcm16
 
+        # Calculate RMS energy for fallback and validation
+        rms = float(np.sqrt(np.mean(frame_float ** 2))) if len(frame_float) > 0 else 0.0
+
         if self._model is not None and len(frame_float) == 512:
             try:
                 out = self._model(frame_float)
@@ -52,8 +55,6 @@ class SileroVADDetector:
             except Exception as e:
                 logger.debug(f"[VAD] Silero inference error: {e}")
 
-        # Fallback: Root-Mean-Square (RMS) Energy VAD
-        rms = float(np.sqrt(np.mean(frame_float**2))) if len(frame_float) > 0 else 0.0
-        # Adaptive scaling for conversational speech
-        prob = min(1.0, rms * 80.0)
+        # Adaptive scaling for conversational speech (speech typically > 0.01 RMS)
+        prob = min(1.0, rms * 50.0)
         return prob >= self.threshold, prob
