@@ -34,20 +34,28 @@ function downsampleTo16k(input: Float32Array, inputSampleRate: number): Float32A
 }
 
 const buildWsUrl = (pathWithQuery: string): string => {
-  const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
   let host = 'localhost:8000';
   let isHttps = false;
-  if (apiBase.startsWith('http://') || apiBase.startsWith('https://')) {
-    try {
-      const parsed = new URL(apiBase);
-      host = parsed.host;
-      isHttps = parsed.protocol === 'https:';
-    } catch {
-      host = 'localhost:8000';
-    }
-  } else if (typeof window !== 'undefined') {
-    host = window.location.host;
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    host =
+      hostname !== 'localhost' && hostname !== '127.0.0.1'
+        ? `${hostname}:8000`
+        : process.env.NEXT_PUBLIC_API_BASE_URL
+          ? new URL(process.env.NEXT_PUBLIC_API_BASE_URL).host
+          : 'localhost:8000';
     isHttps = window.location.protocol === 'https:';
+  } else {
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
+    if (apiBase.startsWith('http://') || apiBase.startsWith('https://')) {
+      try {
+        const parsed = new URL(apiBase);
+        host = parsed.host;
+        isHttps = parsed.protocol === 'https:';
+      } catch {
+        host = 'localhost:8000';
+      }
+    }
   }
   const protocol = isHttps ? 'wss:' : 'ws:';
   return `${protocol}//${host}${pathWithQuery}`;
@@ -211,14 +219,39 @@ export const useDirectMicStreaming = ({
           recognition.interimResults = true;
           recognition.lang = 'vi-VN';
 
+          let clearTimer: NodeJS.Timeout | null = null;
           recognition.onresult = (event: any) => {
             let interim = '';
+            let hasFinal = false;
             for (let i = event.resultIndex; i < event.results.length; i++) {
-              interim += event.results[i][0].transcript;
+              const res = event.results[i];
+              if (res.isFinal) {
+                hasFinal = true;
+              } else {
+                interim += res[0].transcript;
+              }
             }
             if (interim) {
               setClientPartialText(interim);
+              if (clearTimer) clearTimeout(clearTimer);
+              clearTimer = setTimeout(() => {
+                setClientPartialText('');
+              }, 1200);
+            } else if (hasFinal) {
+              // Speech finished on client: clear interim preview rapidly (150ms) to prevent freezing
+              if (clearTimer) clearTimeout(clearTimer);
+              clearTimer = setTimeout(() => {
+                setClientPartialText('');
+              }, 150);
             }
+          };
+
+          recognition.onspeechend = () => {
+            // User paused speech: clear preview quickly so stale text does not linger
+            if (clearTimer) clearTimeout(clearTimer);
+            clearTimer = setTimeout(() => {
+              setClientPartialText('');
+            }, 300);
           };
 
           recognition.onerror = () => {};
@@ -294,11 +327,16 @@ export const useDirectMicStreaming = ({
     }
   }, [workspaceId, meetingId, queryClient]);
 
+  const resetClientPartialText = useCallback(() => {
+    setClientPartialText('');
+  }, []);
+
   return {
     isRecording,
     isInitializing,
     activeSessionId,
     clientPartialText,
+    resetClientPartialText,
     startRecording,
     stopRecording,
   };

@@ -12,10 +12,10 @@ class UtteranceBuffer:
     def __init__(
         self,
         sample_rate: int = 16000,
-        pre_roll_ms: int = 250,
-        partial_cadence_ms: int = 1000,
-        silence_endpoint_ms: int = 800,
-        max_utterance_s: float = 20.0,
+        pre_roll_ms: int = 200,
+        partial_cadence_ms: int = 700,
+        silence_endpoint_ms: int = 400,
+        max_utterance_s: float = 6.0,
     ) -> None:
         self.sample_rate = sample_rate
         self.pre_roll_samples = int(sample_rate * (pre_roll_ms / 1000.0))
@@ -44,17 +44,21 @@ class UtteranceBuffer:
         Push incoming 100ms frame.
         Returns: (should_emit_partial, is_endpointed)
         """
+        # Energy floor check: if frame energy is very low (room noise/mic static), force silence
+        frame_rms = float(np.sqrt(np.mean(frame_pcm16.astype(np.float32) ** 2))) if len(frame_pcm16) > 0 else 0.0
+
         # Run VAD across 32ms sub-chunks (512 samples)
         sub_chunk_size = 512
         frame_has_speech = False
 
-        for i in range(0, len(frame_pcm16), sub_chunk_size):
-            sub_chunk = frame_pcm16[i : i + sub_chunk_size]
-            if len(sub_chunk) == sub_chunk_size:
-                has_speech, _ = vad.is_speech(sub_chunk, self.sample_rate)
-                if has_speech:
-                    frame_has_speech = True
-                    break
+        if frame_rms >= 50.0:  # ~ -56 dBFS: sensitive enough to capture soft speech
+            for i in range(0, len(frame_pcm16), sub_chunk_size):
+                sub_chunk = frame_pcm16[i : i + sub_chunk_size]
+                if len(sub_chunk) == sub_chunk_size:
+                    has_speech, _ = vad.is_speech(sub_chunk, self.sample_rate)
+                    if has_speech:
+                        frame_has_speech = True
+                        break
 
         should_emit_partial = False
         is_endpointed = False

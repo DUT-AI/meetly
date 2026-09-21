@@ -38,25 +38,46 @@ class StreamIngestionUseCase:
     ) -> None:
         """Transcribe completed utterance and persist to DB asynchronously."""
         try:
+            # Fast inference without word-level alignment penalty on CPU
             final_text, words, conf = await self.whisper_engine.transcribe_samples(
-                final_audio, language="vi", beam_size=1, word_timestamps=True
+                final_audio, language="vi", beam_size=1, word_timestamps=False
             )
             if not final_text:
+                logger.debug(f"[Ingestion] Utterance {utterance_id} produced empty text")
                 return
+
+            logger.info(f"[Ingestion] Finalized {utterance_id}: {final_text!r} (conf={conf})")
 
             base_start_ms = int(utt_start * 1000 / 16000)
             base_end_ms = int(utt_end * 1000 / 16000)
 
             adjusted_words = []
-            for w in words:
-                adjusted_words.append(
-                    {
-                        "word": w["word"],
-                        "start_ms": base_start_ms + w["start_ms"],
-                        "end_ms": base_end_ms + w["end_ms"],
-                        "score": w["score"],
-                    }
-                )
+            if words:
+                for w in words:
+                    adjusted_words.append(
+                        {
+                            "word": w["word"],
+                            "start_ms": base_start_ms + w["start_ms"],
+                            "end_ms": base_end_ms + w["end_ms"],
+                            "score": w["score"],
+                        }
+                    )
+            else:
+                # Fast linear word timestamp estimation without cross-attention CPU penalty
+                tokens = final_text.split()
+                if tokens:
+                    dur_per_word = max(1, (base_end_ms - base_start_ms) // len(tokens))
+                    for idx, tok in enumerate(tokens):
+                        w_start = base_start_ms + idx * dur_per_word
+                        w_end = min(base_end_ms, w_start + dur_per_word)
+                        adjusted_words.append(
+                            {
+                                "word": tok,
+                                "start_ms": w_start,
+                                "end_ms": w_end,
+                                "score": conf,
+                            }
+                        )
 
             segment_id = f"temp_{utt_start}"
             try:
@@ -108,6 +129,10 @@ class StreamIngestionUseCase:
         speaker_label: str,
     ) -> None:
         """Transcribe in-flight partial audio without blocking frame ingestion."""
+        # Never queue partials behind final utterances to prevent CPU backlog
+        if self.whisper_engine.is_busy:
+            return
+
         try:
             # Cap partial inference window to latest 2.5s (40,000 samples) to ensure sub-second CPU response
             audio_for_partial = current_audio[-40000:] if len(current_audio) > 40000 else current_audio
@@ -234,6 +259,11 @@ class StreamIngestionUseCase:
 
                 # 1. Handle Final Utterance Endpointing (Non-blocking background task)
                 if is_endpointed:
+                    # Cancel any in-flight partial task for this stream to free CPU for final utterance
+                    p_task = active_partial_tasks.get(stream_id)
+                    if p_task and not p_task.done():
+                        p_task.cancel()
+
                     final_res = buf.finish_utterance()
                     if final_res is not None:
                         final_audio, utt_start, utt_end = final_res
@@ -253,22 +283,23 @@ class StreamIngestionUseCase:
                             pending_final_tasks.add(task)
                             pending_final_tasks = {t for t in pending_final_tasks if not t.done()}
 
-                # 2. Handle Partial Transcription event (Only if no partial is currently running)
+                # 2. Handle Partial Transcription event (Only if no partial is currently running and engine is idle)
                 elif should_emit_partial:
-                    prev_task = active_partial_tasks.get(stream_id)
-                    if prev_task is None or prev_task.done():
-                        current_audio, utt_start, utt_end = buf.get_current_audio()
-                        if len(current_audio) >= 4000:
-                            task = asyncio.create_task(
-                                self._process_partial_utterance(
-                                    session_id=session_id,
-                                    current_audio=current_audio,
-                                    utt_start=utt_start,
-                                    utt_end=utt_end,
-                                    speaker_label=speaker_label,
+                    if not self.whisper_engine.is_busy:
+                        prev_task = active_partial_tasks.get(stream_id)
+                        if prev_task is None or prev_task.done():
+                            current_audio, utt_start, utt_end = buf.get_current_audio()
+                            if len(current_audio) >= 4000:
+                                task = asyncio.create_task(
+                                    self._process_partial_utterance(
+                                        session_id=session_id,
+                                        current_audio=current_audio,
+                                        utt_start=utt_start,
+                                        utt_end=utt_end,
+                                        speaker_label=speaker_label,
+                                    )
                                 )
-                            )
-                            active_partial_tasks[stream_id] = task
+                                active_partial_tasks[stream_id] = task
 
                 # Send Ack every 50 frames (~5s)
                 if seq % 50 == 0:
