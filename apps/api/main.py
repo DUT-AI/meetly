@@ -45,7 +45,15 @@ class AppCORSMiddleware(CORSMiddleware):
         if super().is_allowed_origin(origin):
             return True
         return origin.startswith(
-            ("http://localhost:", "http://127.0.0.1:", "http://[::1]:")
+            (
+                "http://localhost:",
+                "http://127.0.0.1:",
+                "http://[::1]:",
+                "http://192.168.",
+                "http://100.",
+                "http://10.",
+                "http://172.",
+            )
         ) or origin in ("http://localhost", "http://127.0.0.1", "http://[::1]")
 
 
