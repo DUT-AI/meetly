@@ -199,8 +199,6 @@ export const useDirectMicStreaming = ({
 
         const packet = new Uint8Array(16 + pcmBytes.byteLength);
         packet.set(new Uint8Array(header), 0);
-        packet.set(pcmBytes, 16);
-
         wsRef.current.send(packet);
       };
 

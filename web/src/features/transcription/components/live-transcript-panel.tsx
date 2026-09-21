@@ -81,7 +81,6 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
     isConnected,
     sessionStatus,
   } = subscriber;
-
   // Filtered segments
   const filteredSegments = useMemo(() => {
     if (!searchQuery.trim()) return liveSegments;

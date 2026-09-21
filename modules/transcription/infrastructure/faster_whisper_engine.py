@@ -29,8 +29,14 @@ class FasterWhisperEngine:
         self.model = None
         self._is_loading = True
         self._load_event = threading.Event()
+        self._lock = asyncio.Lock()
         self._http_client: httpx.AsyncClient | None = None
         self._init_model()
+
+    @property
+    def is_busy(self) -> bool:
+        """Check whether an inference task is currently holding the model lock."""
+        return self._lock.locked()
 
     def _get_http_client(self) -> httpx.AsyncClient:
         if self._http_client is None or self._http_client.is_closed:
@@ -108,6 +114,34 @@ class FasterWhisperEngine:
             self._is_loading = False
             self._load_event.set()
 
+    HALLUCINATION_PHRASES = {
+        "hãy subscribe và like and subscribe",
+        "hãy subscribe",
+        "like and subscribe",
+        "like và subscribe",
+        "hãy like và subscribe",
+        "hãy like và đăng ký",
+        "cảm ơn các bạn đã theo dõi",
+        "cảm ơn các bạn đã xem video",
+        "cảm ơn quý vị và các bạn",
+        "hãy đăng ký kênh",
+        "hãy nhìn nhìn ăn cháu",
+        "hãy like, share và subscribe",
+        "subscribe",
+    }
+
+    def _is_hallucination(self, text: str) -> bool:
+        """Detect Whisper YouTube/silence hallucinations."""
+        clean = text.strip().lower().rstrip(".,!?")
+        if not clean:
+            return True
+        if clean in self.HALLUCINATION_PHRASES:
+            return True
+        for phrase in self.HALLUCINATION_PHRASES:
+            if phrase in clean and len(clean) < len(phrase) + 15:
+                return True
+        return False
+
     def _sync_transcribe(
         self,
         audio_float32: np.ndarray,
@@ -119,6 +153,11 @@ class FasterWhisperEngine:
     ) -> tuple[str, list[dict[str, Any]], float]:
         """Synchronous decoding called inside a worker thread."""
         if len(audio_float32) < 3200:  # Less than 200ms audio
+            return "", [], 1.0
+
+        # Energy filter: if audio is near-silence or noise floor, skip Whisper entirely
+        rms = float(np.sqrt(np.mean(audio_float32**2)))
+        if rms < 0.002:  # Safe low threshold: only drop pure silence
             return "", [], 1.0
 
         if self.model is None:
@@ -134,50 +173,41 @@ class FasterWhisperEngine:
         )
         skip_timestamps = (not word_timestamps) if without_timestamps is None else without_timestamps
 
-        segments, info = self.model.transcribe(
-            audio_float32,
-            language=language,
-            task="transcribe",
-            beam_size=beam_size,
-            best_of=1,
-            temperature=0.0,
-            condition_on_previous_text=False,
-            initial_prompt=prompt,
-            repetition_penalty=1.2,
-            no_repeat_ngram_size=3,
-            no_speech_threshold=0.5,
-            log_prob_threshold=-1.0,
-            compression_ratio_threshold=2.4,
-            hallucination_silence_threshold=2.0,
-            vad_filter=True,
-            vad_parameters=dict(min_silence_duration_ms=400, threshold=0.35, min_speech_duration_ms=200),
-            word_timestamps=word_timestamps,
-            without_timestamps=skip_timestamps,
-        )
-
-        HALLUCINATION_KEYWORDS = (
-            "subscribe",
-            "đăng ký kênh",
-            "la la school",
-            "ghiền mì gõ",
-            "cảm ơn các bạn đã theo dõi",
-            "cảm ơn các bạn đã xem",
-            "hẹn gặp lại các bạn",
-            "những video hấp dẫn",
-        )
+        try:
+            segments, info = self.model.transcribe(
+                audio_float32,
+                language=language,
+                task="transcribe",
+                beam_size=beam_size,
+                best_of=1,
+                temperature=0.0,
+                condition_on_previous_text=False,
+                initial_prompt=prompt,
+                repetition_penalty=1.1,
+                no_repeat_ngram_size=3,
+                no_speech_threshold=0.5,
+                log_prob_threshold=-1.0,
+                compression_ratio_threshold=2.4,
+                hallucination_silence_threshold=2.0,
+                vad_filter=True,
+                vad_parameters=dict(min_silence_duration_ms=400, threshold=0.35, min_speech_duration_ms=200),
+                word_timestamps=word_timestamps,
+                without_timestamps=skip_timestamps,
+            )
+        except Exception as e:
+            logger.warning(f"[ASR] Error during model.transcribe: {e}")
+            return "", [], 1.0
 
         full_text_parts = []
         words_list: list[dict[str, Any]] = []
 
         for seg in segments:
-            # Discard segments detected as background silence/noise
-            if getattr(seg, "no_speech_prob", 0.0) > 0.45:
+            # Drop segments with high silence probability
+            if getattr(seg, "no_speech_prob", 0.0) > 0.5:
                 continue
 
             text = seg.text.strip()
-            lower_text = text.lower()
-            if any(kw in lower_text for kw in HALLUCINATION_KEYWORDS):
-                logger.info(f"[ASR] Filtered out Whisper hallucination: '{text}'")
+            if not text or self._is_hallucination(text):
                 continue
 
             full_text_parts.append(text)
@@ -206,7 +236,8 @@ class FasterWhisperEngine:
         without_timestamps: bool | None = None,
     ) -> tuple[str, list[dict[str, Any]], float]:
         """
-        Non-blocking async wrapper converting PCM16 to float32 and executing in thread pool.
+        Non-blocking async wrapper with strict concurrency lock.
+        Prevents CPU thread contention and queuing delays.
         """
         if len(samples_pcm16) < 3200:
             return "", [], 1.0
@@ -249,12 +280,13 @@ class FasterWhisperEngine:
         else:
             audio_float32 = samples_pcm16
 
-        return await asyncio.to_thread(
-            self._sync_transcribe,
-            audio_float32,
-            language=language,
-            beam_size=beam_size,
-            word_timestamps=word_timestamps,
-            initial_prompt=initial_prompt,
-            without_timestamps=without_timestamps,
-        )
+        async with self._lock:
+            return await asyncio.to_thread(
+                self._sync_transcribe,
+                audio_float32,
+                language=language,
+                beam_size=beam_size,
+                word_timestamps=word_timestamps,
+                initial_prompt=initial_prompt,
+                without_timestamps=without_timestamps,
+            )
