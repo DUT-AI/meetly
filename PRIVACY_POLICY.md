@@ -27,9 +27,10 @@ The single purpose of **Meetly - Audio Recorder for Google Meet** is to record t
 
 ## 4. Permissions Justification
 - `storage`: Required to store your recording preferences locally on your browser.
-- `downloads`: Required to save the generated `.webm` recording file to your computer.
 - `activeTab`: Required to interact with your active Google Meet tab.
+- `cookies`: Required to seamlessly read session authentication tokens from https://meetly.dutai.io.vn.
 - `https://meet.google.com/*`: Required to inject the in-meeting recorder floating widget and capture meeting audio streams upon user request.
+- `https://meetly.dutai.io.vn/*`: Required to communicate with the Meetly backend API for real-time transcription and synchronization.
 
 ---
 
