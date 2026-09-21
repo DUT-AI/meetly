@@ -1,7 +1,9 @@
 import asyncio
+import base64
 import os
 import threading
 from typing import Any
+import httpx
 import numpy as np
 from loguru import logger
 
@@ -27,7 +29,16 @@ class FasterWhisperEngine:
         self.model = None
         self._is_loading = True
         self._load_event = threading.Event()
+        self._http_client: httpx.AsyncClient | None = None
         self._init_model()
+
+    def _get_http_client(self) -> httpx.AsyncClient:
+        if self._http_client is None or self._http_client.is_closed:
+            self._http_client = httpx.AsyncClient(
+                base_url=stt_settings.stt_service_url.rstrip("/"),
+                timeout=httpx.Timeout(stt_settings.stt_remote_timeout_s, connect=1.5),
+            )
+        return self._http_client
 
     def _init_model(self) -> None:
         """Resolve device/compute_type and start loading weights in a background thread."""
@@ -117,7 +128,10 @@ class FasterWhisperEngine:
             if self.model is None:
                 return "", [], 1.0
 
-        prompt = initial_prompt or "Đây là cuộc họp trực tuyến tiếng Việt."
+        prompt = (
+            initial_prompt
+            or "Chào mọi người, đây là cuộc họp trực tuyến của dự án Meetly. Chúng ta cùng trao đổi công việc, thảo luận báo cáo, cập nhật tiến độ, chia sẻ màn hình và xử lý các vấn đề kỹ thuật."
+        )
         skip_timestamps = (not word_timestamps) if without_timestamps is None else without_timestamps
 
         segments, info = self.model.transcribe(
@@ -129,18 +143,44 @@ class FasterWhisperEngine:
             temperature=0.0,
             condition_on_previous_text=False,
             initial_prompt=prompt,
-            repetition_penalty=1.1,
+            repetition_penalty=1.2,
             no_repeat_ngram_size=3,
-            vad_filter=False,  # External Silero VAD is applied beforehand
+            no_speech_threshold=0.5,
+            log_prob_threshold=-1.0,
+            compression_ratio_threshold=2.4,
+            hallucination_silence_threshold=2.0,
+            vad_filter=True,
+            vad_parameters=dict(min_silence_duration_ms=400, threshold=0.35, min_speech_duration_ms=200),
             word_timestamps=word_timestamps,
             without_timestamps=skip_timestamps,
+        )
+
+        HALLUCINATION_KEYWORDS = (
+            "subscribe",
+            "đăng ký kênh",
+            "la la school",
+            "ghiền mì gõ",
+            "cảm ơn các bạn đã theo dõi",
+            "cảm ơn các bạn đã xem",
+            "hẹn gặp lại các bạn",
+            "những video hấp dẫn",
         )
 
         full_text_parts = []
         words_list: list[dict[str, Any]] = []
 
         for seg in segments:
-            full_text_parts.append(seg.text.strip())
+            # Discard segments detected as background silence/noise
+            if getattr(seg, "no_speech_prob", 0.0) > 0.45:
+                continue
+
+            text = seg.text.strip()
+            lower_text = text.lower()
+            if any(kw in lower_text for kw in HALLUCINATION_KEYWORDS):
+                logger.info(f"[ASR] Filtered out Whisper hallucination: '{text}'")
+                continue
+
+            full_text_parts.append(text)
             if word_timestamps and hasattr(seg, "words") and seg.words:
                 for w in seg.words:
                     words_list.append(
@@ -171,6 +211,39 @@ class FasterWhisperEngine:
         if len(samples_pcm16) < 3200:
             return "", [], 1.0
 
+        # 1. Try Remote GPU ASR (Whisper large-v3) if enabled
+        if stt_settings.stt_remote_enabled and stt_settings.stt_service_url:
+            try:
+                if samples_pcm16.dtype == np.int16:
+                    pcm_bytes = samples_pcm16.tobytes()
+                else:
+                    pcm16 = (np.clip(samples_pcm16, -1.0, 1.0) * 32767).astype(np.int16)
+                    pcm_bytes = pcm16.tobytes()
+
+                b64_audio = base64.b64encode(pcm_bytes).decode("ascii")
+                client = self._get_http_client()
+                response = await client.post(
+                    "/api/v1/asr/transcribe",
+                    json={
+                        "audio_base64": b64_audio,
+                        "language": language,
+                        "beam_size": beam_size,
+                        "word_timestamps": word_timestamps,
+                        "initial_prompt": initial_prompt,
+                    },
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    text = data.get("text", "")
+                    words = data.get("words", [])
+                    confidence = data.get("confidence", 1.0)
+                    return text, words, confidence
+                else:
+                    logger.debug(f"[ASR] Remote service HTTP {response.status_code}, falling back to local CPU")
+            except Exception as e:
+                logger.debug(f"[ASR] Remote GPU ASR error/timeout ({e}), falling back to local CPU")
+
+        # 2. Local CPU Fallback
         if samples_pcm16.dtype != np.float32:
             audio_float32 = samples_pcm16.astype(np.float32) / 32768.0
         else:

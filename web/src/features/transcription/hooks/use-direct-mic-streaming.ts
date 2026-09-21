@@ -69,14 +69,12 @@ export const useDirectMicStreaming = ({
   const [isRecording, setIsRecording] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [clientPartialText, setClientPartialText] = useState<string>('');
   const queryClient = useQueryClient();
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const recognitionRef = useRef<any>(null);
   const sessionIdRef = useRef<string | null>(null);
   const seqRef = useRef<number>(0);
   const sampleCountRef = useRef<number>(0);
@@ -206,37 +204,6 @@ export const useDirectMicStreaming = ({
         wsRef.current.send(packet);
       };
 
-      // 5. Client-side SpeechRecognition booster (for instant sub-100ms visual feedback on CPU)
-      const SpeechRecognition =
-        typeof window !== 'undefined'
-          ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-          : null;
-
-      if (SpeechRecognition) {
-        try {
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = 'vi-VN';
-
-          recognition.onresult = (event: any) => {
-            let interim = '';
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              interim += event.results[i][0].transcript;
-            }
-            if (interim) {
-              setClientPartialText(interim);
-            }
-          };
-
-          recognition.onerror = () => {};
-          recognition.start();
-          recognitionRef.current = recognition;
-        } catch (e) {
-          console.debug('[SpeechRecognition booster inactive]:', e);
-        }
-      }
-
       setIsRecording(true);
       toast.success('Đã bật Mic ghi âm trực tiếp! Hãy nói thử vào microphone.');
     } catch (err: any) {
@@ -250,14 +217,6 @@ export const useDirectMicStreaming = ({
 
   const stopRecording = useCallback(async () => {
     try {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-        recognitionRef.current = null;
-      }
-      setClientPartialText('');
-
       if (processorRef.current) {
         processorRef.current.disconnect();
         processorRef.current = null;
@@ -306,7 +265,6 @@ export const useDirectMicStreaming = ({
     isRecording,
     isInitializing,
     activeSessionId,
-    clientPartialText,
     startRecording,
     stopRecording,
   };

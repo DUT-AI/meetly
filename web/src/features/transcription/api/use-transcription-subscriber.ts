@@ -45,6 +45,7 @@ export const useTranscriptionSubscriber = ({
 }: UseTranscriptionSubscriberProps) => {
   const [segments, setSegments] = useState<TranscriptSegment[]>(initialSegments);
   const [partialText, setPartialText] = useState<string>('');
+  const [partialTranslation, setPartialTranslation] = useState<string>('');
   const [partialSpeaker, setPartialSpeaker] = useState<string>('');
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [sessionStatus, setSessionStatus] = useState<string>('IDLE');
@@ -68,9 +69,11 @@ export const useTranscriptionSubscriber = ({
         const data: LiveTranscriptEvent = JSON.parse(event.data);
         if (data.type === 'transcript.partial') {
           setPartialText(data.text || '');
+          setPartialTranslation(data.translation || '');
           setPartialSpeaker(data.speaker_label || 'UNKNOWN');
         } else if (data.type === 'transcript.final') {
           setPartialText('');
+          setPartialTranslation('');
           setPartialSpeaker('');
           const newSegment: TranscriptSegment = {
             id: data.segment_id || `seg_${Date.now()}`,
@@ -80,6 +83,7 @@ export const useTranscriptionSubscriber = ({
             start_ms: data.start_ms || 0,
             end_ms: data.end_ms || 0,
             text: data.text || '',
+            translation: data.translation || null,
             words: data.words || [],
             speaker_label: data.speaker_label || 'UNKNOWN',
             confidence: data.confidence || 1.0,
@@ -174,6 +178,7 @@ export const useTranscriptionSubscriber = ({
   return {
     segments,
     partialText,
+    partialTranslation,
     partialSpeaker,
     isConnected,
     sessionStatus,

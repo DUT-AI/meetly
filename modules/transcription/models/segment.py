@@ -32,6 +32,7 @@ class TranscriptSegmentModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
     start_ms: Mapped[int] = mapped_column(BigInteger, nullable=False)
     end_ms: Mapped[int] = mapped_column(BigInteger, nullable=False)
     text: Mapped[str] = mapped_column(Text, nullable=False)
+    translation: Mapped[str | None] = mapped_column(Text, nullable=True)
     words: Mapped[list[dict]] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"), default=list, nullable=False
     )
@@ -62,6 +63,7 @@ class TranscriptSegmentModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
             start_ms=self.start_ms,
             end_ms=self.end_ms,
             text=self.text,
+            translation=self.translation,
             words=self.words or [],
             speaker_label=self.speaker_label,
             confidence=self.confidence,

@@ -24,6 +24,7 @@ class SqlTranscriptSegmentRepository(ITranscriptSegmentRepository):
         end_ms: int,
         text: str,
         words: list[dict[str, Any]],
+        translation: str | None = None,
         speaker_label: str = "UNKNOWN",
         confidence: float = 1.0,
         is_final: bool = True,
@@ -40,6 +41,7 @@ class SqlTranscriptSegmentRepository(ITranscriptSegmentRepository):
             model.start_ms = start_ms
             model.end_ms = end_ms
             model.text = text
+            model.translation = translation
             model.words = words
             model.speaker_label = speaker_label
             model.confidence = confidence
@@ -52,6 +54,7 @@ class SqlTranscriptSegmentRepository(ITranscriptSegmentRepository):
                 start_ms=start_ms,
                 end_ms=end_ms,
                 text=text,
+                translation=translation,
                 words=words,
                 speaker_label=speaker_label,
                 confidence=confidence,

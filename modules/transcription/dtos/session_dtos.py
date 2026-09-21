@@ -41,6 +41,7 @@ class TranscriptSegmentDTO(BaseModel):
     start_ms: int
     end_ms: int
     text: str
+    translation: str | None = None
     words: list[dict[str, Any]] = Field(default_factory=list)
     speaker_label: str = "UNKNOWN"
     confidence: float = 1.0

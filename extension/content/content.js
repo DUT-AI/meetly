@@ -28,6 +28,7 @@
   let displayStream = null;
   let micStream = null;
   let audioCtx = null;
+  let mixerNode = null;
 
   // Live Streaming & Audio Resampling state
   let streamPort = null;
@@ -328,6 +329,23 @@
           word-break: break-word;
         }
 
+        .transcript-translation {
+          font-size: 11px;
+          line-height: 1.4;
+          color: #a5b4fc;
+          background: rgba(99, 102, 241, 0.12);
+          border-left: 2px solid #6366f1;
+          padding: 4px 6px;
+          border-radius: 4px;
+          margin-top: 3px;
+          word-break: break-word;
+          font-style: italic;
+        }
+
+        .transcript-translation-empty {
+          display: none;
+        }
+
         .action-group {
           display: flex;
           gap: 8px;
@@ -461,13 +479,14 @@
               <div class="audio-bar"></div>
             </div>
 
-            <!-- Phụ đề trực tiếp -->
+            <!-- Phụ đề & Dịch trực tiếp -->
             <div class="transcript-preview" id="transcriptPreview" style="display: none;">
               <div class="transcript-label">
                 <div class="transcript-live-dot"></div>
-                <span>Phụ đề trực tiếp (Whisper)</span>
+                <span>Phụ đề & Dịch trực tiếp (SeamlessM4T)</span>
               </div>
               <div class="transcript-content" id="transcriptContent">Đang lắng nghe âm thanh...</div>
+              <div class="transcript-translation transcript-translation-empty" id="transcriptTranslation"></div>
             </div>
 
             <!-- Nút điều khiển -->
@@ -636,15 +655,24 @@
       console.warn('[Meetly] Không thể truy cập Micro, chỉ thu âm thanh phòng họp:', micErr);
     }
 
-    // 3. Khởi tạo Web Audio API để gộp các luồng
+    // 3. Khởi tạo Web Audio API để gộp các luồng (ưu tiên 16kHz native để âm thanh trong trẻo, không bị méo tiếng)
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    audioCtx = new AudioContextClass();
+    try {
+      audioCtx = new AudioContextClass({ sampleRate: 16000 });
+    } catch (e) {
+      audioCtx = new AudioContextClass();
+    }
+    if (audioCtx.state === 'suspended') {
+      await audioCtx.resume();
+    }
+    mixerNode = audioCtx.createGain();
     const mixedDestination = audioCtx.createMediaStreamDestination();
+    mixerNode.connect(mixedDestination);
 
     // Đưa âm thanh tab vào luồng ghi âm (Âm thanh tab đã được trình duyệt phát ra loa tự nhiên)
     if (hasTabAudio) {
       const tabSource = audioCtx.createMediaStreamSource(new MediaStream([tabAudioTracks[0]]));
-      tabSource.connect(mixedDestination);
+      tabSource.connect(mixerNode);
 
       // Tự động dừng và lưu khi người dùng bấm nút "Dừng chia sẻ" trên thanh trình duyệt
       tabAudioTracks[0].onended = () => {
@@ -657,7 +685,7 @@
     // Đưa âm thanh micro vào luồng ghi âm
     if (micStream && micStream.getAudioTracks().length > 0) {
       const micSource = audioCtx.createMediaStreamSource(micStream);
-      micSource.connect(mixedDestination);
+      micSource.connect(mixerNode);
     }
 
     // 4. Khởi tạo MediaRecorder
@@ -699,6 +727,7 @@
 
       const transcriptBox = shadowRoot.getElementById('transcriptPreview');
       const transcriptContent = shadowRoot.getElementById('transcriptContent');
+      const transcriptTranslation = shadowRoot.getElementById('transcriptTranslation');
 
       streamPort.onMessage.addListener((msg) => {
         if (msg.type === 'TRANSCRIPT_EVENT') {
@@ -706,11 +735,20 @@
           if (event && event.text) {
             if (transcriptBox) transcriptBox.style.display = 'flex';
             if (transcriptContent) transcriptContent.textContent = event.text;
+            if (transcriptTranslation) {
+              if (event.translation) {
+                transcriptTranslation.textContent = `EN: ${event.translation}`;
+                transcriptTranslation.classList.remove('transcript-translation-empty');
+              } else {
+                transcriptTranslation.classList.add('transcript-translation-empty');
+              }
+            }
           }
         } else if (msg.type === 'STREAMING_READY') {
           console.log('[Meetly Content] Background stream ready for session:', msg.sessionId);
           if (transcriptBox) transcriptBox.style.display = 'flex';
           if (transcriptContent) transcriptContent.textContent = 'Đang lắng nghe âm thanh cuộc họp...';
+          if (transcriptTranslation) transcriptTranslation.classList.add('transcript-translation-empty');
         } else if (msg.type === 'ERROR') {
           console.warn('[Meetly Content] Stream error:', msg.message);
           showToast(msg.message, true);
@@ -728,11 +766,9 @@
       }
 
       const inputSampleRate = audioCtx.sampleRate;
-      pcmProcessorNode = audioCtx.createScriptProcessor(4096, 1, 1);
 
-      pcmProcessorNode.onaudioprocess = (e) => {
+      const handleAudioData = (channelData) => {
         if (currentStatus !== 'RECORDING') return;
-        const channelData = e.inputBuffer.getChannelData(0);
         const resampled = downsampleTo16k(channelData, inputSampleRate);
         const pcm16 = floatTo16BitPCM(resampled);
 
@@ -750,14 +786,41 @@
         }
       };
 
+      let workletLoaded = false;
+      if (audioCtx.audioWorklet) {
+        try {
+          const workletUrl = chrome.runtime.getURL('content/pcm-processor.js');
+          await audioCtx.audioWorklet.addModule(workletUrl);
+          const workletNode = new AudioWorkletNode(audioCtx, 'pcm-processor');
+          workletNode.port.onmessage = (e) => {
+            if (e.data) {
+              handleAudioData(e.data);
+            }
+          };
+          pcmProcessorNode = workletNode;
+          workletLoaded = true;
+          console.log('[Meetly] Đã kích hoạt AudioWorkletNode thay thế ScriptProcessorNode thành công.');
+        } catch (workletErr) {
+          console.warn('[Meetly] Không thể nạp AudioWorklet, chuyển sang ScriptProcessor fallback:', workletErr);
+        }
+      }
+
+      if (!workletLoaded) {
+        pcmProcessorNode = audioCtx.createScriptProcessor(4096, 1, 1);
+        pcmProcessorNode.onaudioprocess = (e) => {
+          const channelData = e.inputBuffer.getChannelData(0);
+          handleAudioData(channelData);
+        };
+      }
+
       // Mute gain để ngăn chặn tiếng vang (feedback loop) ra loa máy tính
       const muteGain = audioCtx.createGain();
       muteGain.gain.value = 0;
-      mixedDestination.connect(pcmProcessorNode);
+      mixerNode.connect(pcmProcessorNode);
       pcmProcessorNode.connect(muteGain);
       muteGain.connect(audioCtx.destination);
     } catch (streamErr) {
-      console.warn('[Meetly] Lỗi khởi tạo live PCM stream:', streamErr);
+      console.warn('[Meetly] Lỗi khởi tạo live PCM stream:', streamErr?.message || streamErr);
     }
 
     // Cập nhật trạng thái
@@ -918,8 +981,15 @@
       streamPort = null;
     }
     if (pcmProcessorNode) {
-      pcmProcessorNode.disconnect();
+      if (pcmProcessorNode.port) {
+        try { pcmProcessorNode.port.onmessage = null; } catch (e) {}
+      }
+      try { pcmProcessorNode.disconnect(); } catch (e) {}
       pcmProcessorNode = null;
+    }
+    if (mixerNode) {
+      try { mixerNode.disconnect(); } catch (e) {}
+      mixerNode = null;
     }
     if (producerWs) {
       producerWs.close();

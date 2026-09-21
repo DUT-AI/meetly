@@ -22,6 +22,10 @@ class STTSettings(BaseSettings):
     stt_step_size_ms: int = 400
     stt_sample_rate: int = 16000
     stt_ticket_ttl_seconds: int = 60
+    stt_service_url: str = "http://100.84.133.34:8005"
+    stt_remote_enabled: bool = True
+    stt_remote_timeout_s: float = 3.0
 
 
 stt_settings = STTSettings()
+
