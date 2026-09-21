@@ -106,6 +106,36 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const getSpeakerDisplay = (label?: string) => {
+    if (!label || label === 'UNKNOWN') {
+      return {
+        name: 'Người nói',
+        isLocal: false,
+        badgeClass: 'text-slate-600 bg-slate-100/90 border-slate-200/80',
+      };
+    }
+    if (label === 'LOCAL_USER') {
+      return {
+        name: 'Bạn',
+        isLocal: true,
+        badgeClass: 'text-purple-700 bg-purple-100/80 border-purple-200 font-semibold',
+      };
+    }
+    if (label === 'REMOTE_SPEAKER') {
+      return {
+        name: 'Người tham gia',
+        isLocal: false,
+        badgeClass: 'text-blue-700 bg-blue-100/80 border-blue-200 font-medium',
+      };
+    }
+    // Dynamic name from Google Meet (e.g. "Phước Nguyễn")
+    return {
+      name: label,
+      isLocal: false,
+      badgeClass: 'text-indigo-700 bg-indigo-100/80 border-indigo-200 font-semibold',
+    };
+  };
+
   const handleCopy = (text: string, id: string) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -115,7 +145,12 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
   const handleInsertAll = () => {
     if (!onInsertToEditor || liveSegments.length === 0) return;
     const formatted = liveSegments
-      .map((s) => `[${formatMs(s.start_ms)}] ${s.speaker_label || 'Speaker'}: ${s.text}`)
+      .map(
+        (s) =>
+          `[${formatMs(s.start_ms)}] ${getSpeakerDisplay(s.speaker_label).name}: ${s.text}${
+            s.translation ? `\n   -> ${s.translation}` : ''
+          }`
+      )
       .join('\n\n');
     onInsertToEditor(formatted);
   };
@@ -291,10 +326,20 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             >
               <div className="flex items-center justify-between text-[11px]">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-slate-700 flex items-center gap-1">
-                    <User className="size-3 text-slate-400" />
-                    {seg.speaker_label || 'Người nói'}
-                  </span>
+                  {(() => {
+                    const speaker = getSpeakerDisplay(seg.speaker_label);
+                    return (
+                      <span
+                        className={cn(
+                          'flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10.5px]',
+                          speaker.badgeClass
+                        )}
+                      >
+                        <User className="size-2.5 shrink-0" />
+                        <span>{speaker.name}</span>
+                      </span>
+                    );
+                  })()}
                   <button
                     type="button"
                     onClick={() => onSeek?.(seg.start_ms)}
@@ -324,7 +369,9 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                       type="button"
                       onClick={() =>
                         onInsertToEditor(
-                          `[${formatMs(seg.start_ms)}] ${seg.speaker_label || 'Người nói'}: ${seg.text}`
+                          `[${formatMs(seg.start_ms)}] ${
+                            getSpeakerDisplay(seg.speaker_label).name
+                          }: ${seg.text}${seg.translation ? `\n   -> ${seg.translation}` : ''}`
                         )
                       }
                       className="p-1 text-blue-600 hover:text-blue-800 rounded hover:bg-blue-100"
@@ -354,7 +401,9 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
           <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/50 flex flex-col gap-1 animate-pulse">
             <div className="flex items-center gap-1.5 text-[11px] text-blue-600 font-semibold">
               <Sparkles className="size-3" />
-              <span>Đang nhận dạng ({partialSpeaker || 'Người nói'})...</span>
+              <span>
+                Đang nhận dạng ({getSpeakerDisplay(partialSpeaker).name})...
+              </span>
             </div>
             <p className="text-xs text-blue-950 italic leading-relaxed">
               {partialText}

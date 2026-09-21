@@ -49,6 +49,6 @@ extension/
 Chạy lệnh sau tại thư mục gốc dự án:
 ```bash
 cd extension
-zip -r ../meetly-extension.zip . -x ".*" -x "__MACOSX" -x "README.md"
+zip -r ../meetly-extension.zip . -x ".*" -x "__MACOSX*" -x "*/__MACOSX*" -x "README.md" -x "screenshots/*" -x "icons/image.png"
 ```
 Sau đó truy cập [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) và tải file `meetly-extension.zip` lên.
