@@ -29,6 +29,62 @@
   let micStream = null;
   let audioCtx = null;
 
+  // Live Streaming & Audio Resampling state
+  let streamPort = null;
+  let producerWs = null;
+  let subscriberWs = null;
+  let pcmProcessorNode = null;
+  let streamSeq = 0;
+  let totalAudioSamples = 0;
+  let activeSessionId = null;
+  let activeWorkspaceId = '';
+  let activeMeetingId = '';
+
+  function downsampleTo16k(inputBuffer, inputSampleRate) {
+    if (inputSampleRate === 16000) return inputBuffer;
+    const ratio = inputSampleRate / 16000;
+    const newLength = Math.round(inputBuffer.length / ratio);
+    const result = new Float32Array(newLength);
+    let offsetResult = 0;
+    let offsetBuffer = 0;
+    while (offsetResult < result.length) {
+      const nextOffsetBuffer = Math.round((offsetResult + 1) * ratio);
+      let accum = 0, count = 0;
+      for (let i = offsetBuffer; i < nextOffsetBuffer && i < inputBuffer.length; i++) {
+        accum += inputBuffer[i];
+        count++;
+      }
+      result[offsetResult] = count > 0 ? accum / count : 0;
+      offsetResult++;
+      offsetBuffer = nextOffsetBuffer;
+    }
+    return result;
+  }
+
+  function floatTo16BitPCM(float32Array) {
+    const int16Array = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+      const s = Math.max(-1, Math.min(1, float32Array[i]));
+      int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+    return int16Array;
+  }
+
+  function createBinaryFrame(streamId, flags, seq, startSample, pcmInt16Data) {
+    const headerBuffer = new ArrayBuffer(16);
+    const view = new DataView(headerBuffer);
+    view.setUint8(0, 1); // version 1
+    view.setUint8(1, streamId); // streamId 1
+    view.setUint16(2, flags, true); // flags (LE)
+    view.setUint32(4, seq, true); // seq (LE)
+    view.setBigUint64(8, BigInt(startSample), true); // start_sample (uint64 LE)
+
+    const combined = new Uint8Array(16 + pcmInt16Data.byteLength);
+    combined.set(new Uint8Array(headerBuffer), 0);
+    combined.set(new Uint8Array(pcmInt16Data.buffer, pcmInt16Data.byteOffset, pcmInt16Data.byteLength), 16);
+    return combined.buffer;
+  }
+
   // Lấy mã phòng họp từ URL (ví dụ: meet.google.com/abc-defg-hij -> abc-defg-hij)
   function getMeetingCode() {
     const path = window.location.pathname.replace(/^\/+|\/+$/g, '');
@@ -233,6 +289,45 @@
           100% { height: 14px; }
         }
 
+        .transcript-preview {
+          background: rgba(15, 23, 42, 0.85);
+          border: 1px solid rgba(255, 255, 255, 0.12);
+          border-radius: 10px;
+          padding: 8px 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          max-height: 110px;
+          overflow-y: auto;
+        }
+
+        .transcript-label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          font-size: 10px;
+          font-weight: 700;
+          color: #818cf8;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+
+        .transcript-live-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: #ef4444;
+          box-shadow: 0 0 6px #ef4444;
+          animation: pulse 1s infinite;
+        }
+
+        .transcript-content {
+          font-size: 11px;
+          line-height: 1.4;
+          color: #f1f5f9;
+          word-break: break-word;
+        }
+
         .action-group {
           display: flex;
           gap: 8px;
@@ -364,6 +459,15 @@
               <div class="audio-bar"></div>
               <div class="audio-bar"></div>
               <div class="audio-bar"></div>
+            </div>
+
+            <!-- Phụ đề trực tiếp -->
+            <div class="transcript-preview" id="transcriptPreview" style="display: none;">
+              <div class="transcript-label">
+                <div class="transcript-live-dot"></div>
+                <span>Phụ đề trực tiếp (Whisper)</span>
+              </div>
+              <div class="transcript-content" id="transcriptContent">Đang lắng nghe âm thanh...</div>
             </div>
 
             <!-- Nút điều khiển -->
@@ -576,6 +680,86 @@
 
     mediaRecorder.start(1000); // Thu thập dữ liệu mỗi 1 giây
 
+    // 5. Khởi tạo streaming âm thanh PCM 16kHz tới Background Service Worker
+    try {
+      const storageData = await chrome.storage.local.get('settings');
+      const settings = storageData.settings || {};
+      const serverUrl = settings.serverUrl || 'http://localhost:8000';
+      activeWorkspaceId = settings.workspaceId || '';
+      activeMeetingId = settings.meetingId || '';
+
+      streamSeq = 0;
+      totalAudioSamples = 0;
+
+      // Kết nối long-lived port tới Background Service Worker
+      if (streamPort) {
+        try { streamPort.disconnect(); } catch (e) {}
+      }
+      streamPort = chrome.runtime.connect({ name: 'meetly-audio-stream' });
+
+      const transcriptBox = shadowRoot.getElementById('transcriptPreview');
+      const transcriptContent = shadowRoot.getElementById('transcriptContent');
+
+      streamPort.onMessage.addListener((msg) => {
+        if (msg.type === 'TRANSCRIPT_EVENT') {
+          const event = msg.event;
+          if (event && event.text) {
+            if (transcriptBox) transcriptBox.style.display = 'flex';
+            if (transcriptContent) transcriptContent.textContent = event.text;
+          }
+        } else if (msg.type === 'STREAMING_READY') {
+          console.log('[Meetly Content] Background stream ready for session:', msg.sessionId);
+          if (transcriptBox) transcriptBox.style.display = 'flex';
+          if (transcriptContent) transcriptContent.textContent = 'Đang lắng nghe âm thanh cuộc họp...';
+        } else if (msg.type === 'ERROR') {
+          console.warn('[Meetly Content] Stream error:', msg.message);
+          showToast(msg.message, true);
+        }
+      });
+
+      // Nếu có Workspace ID và Meeting ID, báo Service Worker khởi động phiên
+      if (activeWorkspaceId && activeMeetingId) {
+        streamPort.postMessage({
+          type: 'START_STREAMING',
+          workspaceId: activeWorkspaceId,
+          meetingId: activeMeetingId,
+          serverUrl: serverUrl,
+        });
+      }
+
+      const inputSampleRate = audioCtx.sampleRate;
+      pcmProcessorNode = audioCtx.createScriptProcessor(4096, 1, 1);
+
+      pcmProcessorNode.onaudioprocess = (e) => {
+        if (currentStatus !== 'RECORDING') return;
+        const channelData = e.inputBuffer.getChannelData(0);
+        const resampled = downsampleTo16k(channelData, inputSampleRate);
+        const pcm16 = floatTo16BitPCM(resampled);
+
+        const startSample = totalAudioSamples;
+        totalAudioSamples += pcm16.length;
+
+        if (streamPort) {
+          const frameBuffer = createBinaryFrame(1, 0, streamSeq++, startSample, pcm16);
+          streamPort.postMessage({
+            type: 'AUDIO_FRAME',
+            data: Array.from(new Uint8Array(frameBuffer)),
+            sampleCount: pcm16.length,
+            seq: streamSeq,
+          });
+        }
+      };
+
+      // Mute gain để ngăn chặn tiếng vang (feedback loop) ra loa máy tính
+      const muteGain = audioCtx.createGain();
+      muteGain.gain.value = 0;
+      mixedDestination.connect(pcmProcessorNode);
+      pcmProcessorNode.connect(muteGain);
+      muteGain.connect(audioCtx.destination);
+    } catch (streamErr) {
+      console.warn('[Meetly] Lỗi khởi tạo live PCM stream:', streamErr);
+    }
+
     // Cập nhật trạng thái
     currentStatus = 'RECORDING';
     secondsElapsed = 0;
@@ -669,6 +853,15 @@
         const nowStr = getVietnamTimestamp();
         const filename = `Meetly_${meetingCode}_${nowStr}.webm`;
 
+        // Gửi thông báo kết thúc stream tới Background Service Worker
+        if (streamPort) {
+          try {
+            streamPort.postMessage({ type: 'STOP_STREAMING' });
+            streamPort.disconnect();
+          } catch (e) {}
+          streamPort = null;
+        }
+
         // Tải file trực tiếp về máy tính
         downloadBlob(blob, filename);
 
@@ -718,6 +911,24 @@
    * Dọn dẹp các track audio và AudioContext
    */
   function cleanupResources() {
+    if (streamPort) {
+      try {
+        streamPort.disconnect();
+      } catch (e) {}
+      streamPort = null;
+    }
+    if (pcmProcessorNode) {
+      pcmProcessorNode.disconnect();
+      pcmProcessorNode = null;
+    }
+    if (producerWs) {
+      producerWs.close();
+      producerWs = null;
+    }
+    if (subscriberWs) {
+      subscriberWs.close();
+      subscriberWs = null;
+    }
     if (displayStream) {
       displayStream.getTracks().forEach((t) => t.stop());
       displayStream = null;

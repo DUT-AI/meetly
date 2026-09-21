@@ -9,6 +9,8 @@ class EntityType(StrEnum):
     TASK_COMMENT = "TASK_COMMENT"
     PROJECT = "PROJECT"
     WORKSPACE = "WORKSPACE"
+    MEETING = "MEETING"
+    TRANSCRIPTION_SESSION = "TRANSCRIPTION_SESSION"
 
 
 class AssetCategory(StrEnum):

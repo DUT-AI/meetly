@@ -40,7 +40,7 @@ import {
   Undo,
   Redo,
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -48,15 +48,24 @@ import { cn } from '@/lib/utils';
 interface MeetingReportEditorProps {
   initialContent?: Record<string, any>;
   onContentChange?: (content: Record<string, any>) => void;
+  onEditorReady?: (editor: any) => void;
   readOnly?: boolean;
 }
 
 export const MeetingReportEditor = ({
   initialContent = {},
   onContentChange,
+  onEditorReady,
   readOnly = false,
 }: MeetingReportEditorProps) => {
+  const onContentChangeRef = useRef(onContentChange);
+  onContentChangeRef.current = onContentChange;
+
+  const onEditorReadyRef = useRef(onEditorReady);
+  onEditorReadyRef.current = onEditorReady;
+
   const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit,
       Underline,
@@ -77,11 +86,9 @@ export const MeetingReportEditor = ({
     ],
     content: initialContent && Object.keys(initialContent).length > 0 ? initialContent : '',
     editable: !readOnly,
-    onUpdate: ({ editor }) => {
+    onUpdate: ({ editor }: { editor: any }) => {
       const json = editor.getJSON();
-      if (onContentChange) {
-        onContentChange(json);
-      }
+      onContentChangeRef.current?.(json);
     },
     editorProps: {
       attributes: {
@@ -98,6 +105,12 @@ export const MeetingReportEditor = ({
       editor.setEditable(!readOnly);
     }
   }, [editor, readOnly]);
+
+  useEffect(() => {
+    if (editor) {
+      onEditorReadyRef.current?.(editor);
+    }
+  }, [editor]);
 
   if (!editor) {
     return null;

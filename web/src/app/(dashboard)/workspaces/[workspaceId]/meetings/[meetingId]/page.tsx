@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { toast } from 'sonner';
 
 import { PageError } from '@/components/page-error';
@@ -25,6 +25,13 @@ import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { useGetMeeting } from '@/features/meetings/api/use-get-meeting';
 import { useUpdateMeeting } from '@/features/meetings/api/use-update-meeting';
 import { MeetingReportEditor } from '@/features/meetings/components/meeting-report-editor';
+import {
+  AudioTimelinePlayer,
+  AudioTimelinePlayerRef,
+  LiveTranscriptPanel,
+  useGetTranscripts,
+} from '@/features/transcription';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 export default function MeetingReportPage() {
   const params = useParams();
@@ -35,8 +42,20 @@ export default function MeetingReportPage() {
   const { data: meeting, isLoading: isLoadingMeeting } = useGetMeeting(workspaceId, meetingId);
   const { data: membersResponse } = useGetMembers({ workspaceId });
   const { mutate: updateMeeting, isPending: isSaving } = useUpdateMeeting(workspaceId);
+  const { data: transcriptsData } = useGetTranscripts(workspaceId, meetingId);
 
   const [report, setReport] = useState<Record<string, any> | null>(null);
+  const [editorInstance, setEditorInstance] = useState<any>(null);
+  const audioPlayerRef = useRef<AudioTimelinePlayerRef | null>(null);
+  const [currentTimeMs, setCurrentTimeMs] = useState<number>(0);
+
+  const handleEditorReady = useCallback((editor: any) => {
+    setEditorInstance(editor);
+  }, []);
+
+  const handleContentChange = useCallback((json: Record<string, any>) => {
+    setReport(json);
+  }, []);
 
   if (isLoadingMeeting) return <PageLoader />;
   if (!meeting) return <PageError message="Không tìm thấy cuộc họp" />;
@@ -60,6 +79,19 @@ export default function MeetingReportPage() {
         },
       }
     );
+  };
+
+  const handleInsertToEditor = (text: string) => {
+    if (editorInstance) {
+      editorInstance.chain().focus().insertContent(`<p>${text}</p>`).run();
+      toast.success('Đã chèn nội dung vào biên bản');
+    } else {
+      toast.info('Trình soạn thảo chưa sẵn sàng');
+    }
+  };
+
+  const handleSeek = (timeMs: number) => {
+    audioPlayerRef.current?.seekTo(timeMs);
   };
 
   const durationMinutes = Math.round(
@@ -120,7 +152,7 @@ export default function MeetingReportPage() {
       </div>
 
       {/* ── Main Google Docs Paper Workspace ── */}
-      <div className="flex-1 w-full max-w-[1400px] mx-auto p-4 sm:p-8 flex justify-center items-start gap-8 print:p-0 print:m-0">
+      <div className="flex-1 w-full max-w-[1500px] mx-auto p-4 sm:p-8 flex justify-center items-start gap-6 print:p-0 print:m-0">
         {/* Center Google Docs Paper Sheet */}
         <div className="bg-white border border-slate-300/80 shadow-md rounded-xs w-full max-w-[850px] min-h-[1100px] p-8 sm:p-16 my-2 transition-all printable-paper">
           {/* Formal Document Title Header */}
@@ -154,34 +186,67 @@ export default function MeetingReportPage() {
           {/* TipTap Rich Text Editor Body */}
           <MeetingReportEditor
             initialContent={meeting.report || {}}
-            onContentChange={(json) => setReport(json)}
+            onContentChange={handleContentChange}
+            onEditorReady={handleEditorReady}
           />
         </div>
 
-        {/* Right Sidebar: Google Docs Style Document Info & Attendees Panel */}
-        <div className="w-80 hidden xl:flex flex-col gap-5 sticky top-20 print:hidden no-print">
-          <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col gap-4">
-            <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-3">
-              <Users className="size-4 text-blue-600" />
-              Thành viên tham dự ({meeting.participants?.length || 0})
-            </h4>
+        {/* Right Sidebar: Tabs for Transcript & Audio or Meeting Info */}
+        <div className="w-[420px] hidden xl:flex flex-col gap-4 sticky top-20 print:hidden no-print">
+          <Tabs defaultValue="transcript" className="w-full">
+            <TabsList className="w-full grid grid-cols-2 p-1 bg-white border border-slate-200/90 rounded-2xl shadow-xs">
+              <TabsTrigger value="transcript" className="rounded-xl text-xs font-bold gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                <Sparkles className="size-3.5" />
+                Transcript & Âm thanh
+              </TabsTrigger>
+              <TabsTrigger value="attendees" className="rounded-xl text-xs font-bold gap-1.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+                <Users className="size-3.5" />
+                Thành viên ({meeting.participants?.length || 0})
+              </TabsTrigger>
+            </TabsList>
 
-            <div className="flex flex-col gap-2 max-h-[450px] overflow-y-auto pr-1">
-              {(meeting.participants ?? []).map((pid) => {
-                const m = memberMap[pid];
-                if (!m) return null;
-                return (
-                  <div key={pid} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
-                    <MemberAvatar name={m.name} image={m.avatar_url ?? m.avatarUrl} className="size-8 ring-2 ring-blue-100 shrink-0" />
-                    <div className="flex flex-col leading-tight min-w-0 flex-1">
-                      <span className="text-xs font-bold text-slate-900 truncate">{m.name}</span>
-                      <span className="text-[11px] text-slate-500 font-medium truncate">{m.email}</span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+            <TabsContent value="transcript" className="mt-3 flex flex-col gap-3">
+              {transcriptsData?.recording_url && (
+                <AudioTimelinePlayer
+                  ref={audioPlayerRef}
+                  audioUrl={transcriptsData.recording_url}
+                  onTimeUpdate={setCurrentTimeMs}
+                />
+              )}
+              <LiveTranscriptPanel
+                workspaceId={workspaceId}
+                meetingId={meetingId}
+                currentTimeMs={currentTimeMs}
+                onSeek={handleSeek}
+                onInsertToEditor={handleInsertToEditor}
+              />
+            </TabsContent>
+
+            <TabsContent value="attendees" className="mt-3">
+              <div className="bg-white border border-slate-200/90 rounded-2xl p-5 shadow-xs flex flex-col gap-4">
+                <h4 className="text-xs font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-3">
+                  <Users className="size-4 text-blue-600" />
+                  Thành viên tham dự ({meeting.participants?.length || 0})
+                </h4>
+
+                <div className="flex flex-col gap-2 max-h-[450px] overflow-y-auto pr-1">
+                  {(meeting.participants ?? []).map((pid) => {
+                    const m = memberMap[pid];
+                    if (!m) return null;
+                    return (
+                      <div key={pid} className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-100">
+                        <MemberAvatar name={m.name} image={m.avatar_url ?? m.avatarUrl} className="size-8 ring-2 ring-blue-100 shrink-0" />
+                        <div className="flex flex-col leading-tight min-w-0 flex-1">
+                          <span className="text-xs font-bold text-slate-900 truncate">{m.name}</span>
+                          <span className="text-[11px] text-slate-500 font-medium truncate">{m.email}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </div>

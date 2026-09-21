@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const chkRecordMic = document.getElementById('chkRecordMic');
   const chkAutoDownload = document.getElementById('chkAutoDownload');
   const txtServerUrl = document.getElementById('txtServerUrl');
+  const txtWorkspaceId = document.getElementById('txtWorkspaceId');
+  const txtMeetingId = document.getElementById('txtMeetingId');
+  const txtAuthToken = document.getElementById('txtAuthToken');
+  const authStatusBadge = document.getElementById('authStatusBadge');
 
   let activeMeetTab = null;
 
@@ -24,6 +28,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (settings.recordMic !== undefined) chkRecordMic.checked = settings.recordMic;
   if (settings.autoDownload !== undefined) chkAutoDownload.checked = settings.autoDownload;
   if (settings.serverUrl) txtServerUrl.value = settings.serverUrl;
+  if (settings.workspaceId && txtWorkspaceId) txtWorkspaceId.value = settings.workspaceId;
+  if (settings.meetingId && txtMeetingId) txtMeetingId.value = settings.meetingId;
+  if (settings.authToken && txtAuthToken) txtAuthToken.value = settings.authToken;
+
+  // Kiểm tra trạng thái xác thực
+  function checkAuthStatus() {
+    const sUrl = txtServerUrl.value.trim() || 'http://localhost:8000';
+    chrome.runtime.sendMessage({ type: 'CHECK_AUTH', serverUrl: sUrl }, (res) => {
+      if (res && res.hasToken) {
+        authStatusBadge.textContent = '✓ Đã kết nối token';
+        authStatusBadge.style.color = '#10b981';
+      } else {
+        authStatusBadge.textContent = '⚠ Chưa có token';
+        authStatusBadge.style.color = '#f59e0b';
+      }
+    });
+  }
+  checkAuthStatus();
 
   // Lưu cài đặt khi thay đổi
   function saveSettings() {
@@ -31,13 +53,20 @@ document.addEventListener('DOMContentLoaded', async () => {
       settings: {
         recordMic: chkRecordMic.checked,
         autoDownload: chkAutoDownload.checked,
-        serverUrl: txtServerUrl.value.trim()
+        serverUrl: txtServerUrl.value.trim() || 'http://localhost:8000',
+        workspaceId: txtWorkspaceId ? txtWorkspaceId.value.trim() : '',
+        meetingId: txtMeetingId ? txtMeetingId.value.trim() : '',
+        authToken: txtAuthToken ? txtAuthToken.value.trim() : ''
       }
     });
+    checkAuthStatus();
   }
   chkRecordMic.addEventListener('change', saveSettings);
   chkAutoDownload.addEventListener('change', saveSettings);
   txtServerUrl.addEventListener('input', saveSettings);
+  if (txtWorkspaceId) txtWorkspaceId.addEventListener('input', saveSettings);
+  if (txtMeetingId) txtMeetingId.addEventListener('input', saveSettings);
+  if (txtAuthToken) txtAuthToken.addEventListener('input', saveSettings);
 
   // 2. Tìm tab Google Meet đang active hoặc gần nhất
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });

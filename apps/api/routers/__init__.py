@@ -7,6 +7,7 @@ from apps.api.routers.tasks import router as tasks_router
 from apps.api.routers.users import router as users_router
 from apps.api.routers.workspaces import router as workspaces_router
 from apps.api.routers.meetings import router as meetings_router
+from apps.api.routers.transcription import router as transcription_router
 
 __all__ = [
     "assets_router",
@@ -18,4 +19,5 @@ __all__ = [
     "users_router",
     "workspaces_router",
     "meetings_router",
+    "transcription_router",
 ]
