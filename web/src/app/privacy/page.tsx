@@ -98,16 +98,20 @@ export default function PrivacyPolicyPage() {
                       <td className="py-2">Lưu trữ các cài đặt tùy chọn của người dùng (bật/tắt micro, server URL) trên máy cục bộ.</td>
                     </tr>
                     <tr>
-                      <td className="py-2 font-mono font-medium text-slate-800">downloads</td>
-                      <td className="py-2">Tải file ghi âm .webm về máy tính sau khi người dùng bấm dừng cuộc họp.</td>
-                    </tr>
-                    <tr>
                       <td className="py-2 font-mono font-medium text-slate-800">activeTab</td>
                       <td className="py-2">Tương tác và chuyển hướng đến tab cuộc họp Google Meet đang hoạt động.</td>
                     </tr>
                     <tr>
+                      <td className="py-2 font-mono font-medium text-slate-800">cookies</td>
+                      <td className="py-2">Đọc cookie access_token để tự động xác thực phiên làm việc với hệ thống Meetly.</td>
+                    </tr>
+                    <tr>
                       <td className="py-2 font-mono font-medium text-slate-800">meet.google.com</td>
                       <td className="py-2">Hiển thị widget điều khiển nổi (nút bắt đầu/dừng ghi âm) trong cuộc họp Google Meet.</td>
+                    </tr>
+                    <tr>
+                      <td className="py-2 font-mono font-medium text-slate-800">meetly.dutai.io.vn</td>
+                      <td className="py-2">Kết nối API máy chủ Meetly để khởi tạo phiên phiên âm thời gian thực và đồng bộ dữ liệu.</td>
                     </tr>
                   </tbody>
                 </table>
