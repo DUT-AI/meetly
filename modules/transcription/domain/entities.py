@@ -30,6 +30,7 @@ class TranscriptSegmentEntity:
     start_ms: int = 0
     end_ms: int = 0
     text: str = ""
+    translation: str | None = None
     words: list[dict[str, Any]] = field(default_factory=list)
     speaker_label: str = SpeakerLabel.UNKNOWN.value
     confidence: float = 1.0

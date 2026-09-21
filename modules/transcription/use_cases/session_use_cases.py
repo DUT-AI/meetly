@@ -181,6 +181,7 @@ class TranscriptionSessionUseCases:
                 start_ms=s.start_ms,
                 end_ms=s.end_ms,
                 text=s.text,
+                translation=s.translation,
                 words=s.words,
                 speaker_label=s.speaker_label,
                 confidence=s.confidence,

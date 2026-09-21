@@ -13,6 +13,7 @@ export interface TranscriptSegment {
   start_ms: number;
   end_ms: number;
   text: string;
+  translation?: string | null;
   words?: TranscriptWord[];
   speaker_label: 'LOCAL_USER' | 'REMOTE_SPEAKER' | 'UNKNOWN' | string;
   confidence: number;
@@ -46,6 +47,7 @@ export interface LiveTranscriptEvent {
   start_ms?: number;
   end_ms?: number;
   text?: string;
+  translation?: string | null;
   words?: TranscriptWord[];
   speaker_label?: string;
   confidence?: number;

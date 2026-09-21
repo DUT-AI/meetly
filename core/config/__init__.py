@@ -6,6 +6,7 @@ from core.config.notification import NotificationSettings, notification_settings
 from core.config.redis import RedisSettings
 from core.config.s3 import S3Settings
 from core.config.stt import STTSettings, stt_settings
+from core.config.translation import TranslationSettings, translation_settings
 
 settings = AppSettings()
 app_settings = settings
@@ -22,6 +23,7 @@ __all__ = [
     "RedisSettings",
     "S3Settings",
     "STTSettings",
+    "TranslationSettings",
     "app_settings",
     "auth_settings",
     "db_settings",
@@ -31,4 +33,6 @@ __all__ = [
     "s3_settings",
     "settings",
     "stt_settings",
+    "translation_settings",
 ]
+

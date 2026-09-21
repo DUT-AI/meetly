@@ -69,14 +69,12 @@ export const useDirectMicStreaming = ({
   const [isRecording, setIsRecording] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [clientPartialText, setClientPartialText] = useState<string>('');
   const queryClient = useQueryClient();
 
   const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
-  const recognitionRef = useRef<any>(null);
   const sessionIdRef = useRef<string | null>(null);
   const seqRef = useRef<number>(0);
   const sampleCountRef = useRef<number>(0);
@@ -201,66 +199,8 @@ export const useDirectMicStreaming = ({
 
         const packet = new Uint8Array(16 + pcmBytes.byteLength);
         packet.set(new Uint8Array(header), 0);
-        packet.set(pcmBytes, 16);
-
         wsRef.current.send(packet);
       };
-
-      // 5. Client-side SpeechRecognition booster (for instant sub-100ms visual feedback on CPU)
-      const SpeechRecognition =
-        typeof window !== 'undefined'
-          ? (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
-          : null;
-
-      if (SpeechRecognition) {
-        try {
-          const recognition = new SpeechRecognition();
-          recognition.continuous = true;
-          recognition.interimResults = true;
-          recognition.lang = 'vi-VN';
-
-          let clearTimer: NodeJS.Timeout | null = null;
-          recognition.onresult = (event: any) => {
-            let interim = '';
-            let hasFinal = false;
-            for (let i = event.resultIndex; i < event.results.length; i++) {
-              const res = event.results[i];
-              if (res.isFinal) {
-                hasFinal = true;
-              } else {
-                interim += res[0].transcript;
-              }
-            }
-            if (interim) {
-              setClientPartialText(interim);
-              if (clearTimer) clearTimeout(clearTimer);
-              clearTimer = setTimeout(() => {
-                setClientPartialText('');
-              }, 1200);
-            } else if (hasFinal) {
-              // Speech finished on client: clear interim preview rapidly (150ms) to prevent freezing
-              if (clearTimer) clearTimeout(clearTimer);
-              clearTimer = setTimeout(() => {
-                setClientPartialText('');
-              }, 150);
-            }
-          };
-
-          recognition.onspeechend = () => {
-            // User paused speech: clear preview quickly so stale text does not linger
-            if (clearTimer) clearTimeout(clearTimer);
-            clearTimer = setTimeout(() => {
-              setClientPartialText('');
-            }, 300);
-          };
-
-          recognition.onerror = () => {};
-          recognition.start();
-          recognitionRef.current = recognition;
-        } catch (e) {
-          console.debug('[SpeechRecognition booster inactive]:', e);
-        }
-      }
 
       setIsRecording(true);
       toast.success('Đã bật Mic ghi âm trực tiếp! Hãy nói thử vào microphone.');
@@ -275,14 +215,6 @@ export const useDirectMicStreaming = ({
 
   const stopRecording = useCallback(async () => {
     try {
-      if (recognitionRef.current) {
-        try {
-          recognitionRef.current.stop();
-        } catch (e) {}
-        recognitionRef.current = null;
-      }
-      setClientPartialText('');
-
       if (processorRef.current) {
         processorRef.current.disconnect();
         processorRef.current = null;
@@ -327,16 +259,10 @@ export const useDirectMicStreaming = ({
     }
   }, [workspaceId, meetingId, queryClient]);
 
-  const resetClientPartialText = useCallback(() => {
-    setClientPartialText('');
-  }, []);
-
   return {
     isRecording,
     isInitializing,
     activeSessionId,
-    clientPartialText,
-    resetClientPartialText,
     startRecording,
     stopRecording,
   };

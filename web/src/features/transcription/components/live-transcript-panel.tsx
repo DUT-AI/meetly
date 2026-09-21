@@ -14,6 +14,7 @@ import {
   Mic,
   Square,
   Loader2,
+  Languages,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -60,8 +61,6 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
   const {
     isRecording,
     isInitializing,
-    clientPartialText,
-    resetClientPartialText,
     startRecording,
     stopRecording,
   } = useDirectMicStreaming({
@@ -77,20 +76,11 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
   const {
     segments: liveSegments,
     partialText,
+    partialTranslation,
     partialSpeaker,
     isConnected,
     sessionStatus,
   } = subscriber;
-
-  // Automatically reset preview draft as soon as a new final segment is committed by the server
-  useEffect(() => {
-    if (liveSegments.length > 0) {
-      resetClientPartialText();
-    }
-  }, [liveSegments.length, resetClientPartialText]);
-
-  const activePartialText = isRecording ? (clientPartialText || partialText) : partialText;
-
   // Filtered segments
   const filteredSegments = useMemo(() => {
     if (!searchQuery.trim()) return liveSegments;
@@ -107,7 +97,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [liveSegments.length, activePartialText, autoScroll]);
+  }, [liveSegments.length, partialText, autoScroll]);
 
   const formatMs = (ms: number) => {
     const totalSec = Math.floor(ms / 1000);
@@ -267,7 +257,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
           </div>
         )}
 
-        {isRecording && liveSegments.length === 0 && !activePartialText && (
+        {isRecording && liveSegments.length === 0 && !partialText && (
           <div className="flex flex-col items-center justify-center p-8 text-center text-slate-500 h-full gap-2">
             <div className="size-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 animate-pulse">
               <Mic className="size-5" />
@@ -279,7 +269,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
           </div>
         )}
 
-        {filteredSegments.length === 0 && hasSession && !activePartialText && (
+        {filteredSegments.length === 0 && hasSession && !partialText && (
           <div className="text-center py-12 text-slate-400 text-xs">
             {isLoading ? 'Đang tải transcript...' : 'Chưa có lời thoại nào được ghi nhận.'}
           </div>
@@ -349,20 +339,32 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               <p className="text-xs text-slate-800 leading-relaxed select-text font-normal">
                 {seg.text}
               </p>
+              {seg.translation && (
+                <div className="flex items-start gap-1.5 pt-1 mt-0.5 border-t border-slate-100/80 text-[11px] text-indigo-700 font-medium">
+                  <Languages className="size-3 text-indigo-500 mt-0.5 shrink-0" />
+                  <span className="italic leading-relaxed">{seg.translation}</span>
+                </div>
+              )}
             </div>
           );
         })}
 
         {/* Streaming Partial Utterance */}
-        {activePartialText && (
+        {partialText && (
           <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/50 flex flex-col gap-1 animate-pulse">
             <div className="flex items-center gap-1.5 text-[11px] text-blue-600 font-semibold">
               <Sparkles className="size-3" />
               <span>Đang nhận dạng ({partialSpeaker || 'Người nói'})...</span>
             </div>
             <p className="text-xs text-blue-950 italic leading-relaxed">
-              {activePartialText}
+              {partialText}
             </p>
+            {partialTranslation && (
+              <div className="flex items-start gap-1.5 pt-1 mt-0.5 border-t border-blue-100 text-[11px] text-indigo-700 font-medium">
+                <Languages className="size-3 text-indigo-500 mt-0.5 shrink-0" />
+                <span className="italic leading-relaxed">{partialTranslation}</span>
+              </div>
+            )}
           </div>
         )}
       </div>

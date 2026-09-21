@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from modules.transcription.domain.enums import SessionStatus, SpeakerLabel, StreamId
 from modules.transcription.infrastructure.event_broadcaster import event_broadcaster
 from modules.transcription.infrastructure.faster_whisper_engine import FasterWhisperEngine
+from modules.transcription.infrastructure.seamless_client import seamless_client
 from modules.transcription.infrastructure.silero_vad import SileroVADDetector
 from modules.transcription.infrastructure.utterance_buffer import UtteranceBuffer
 from modules.transcription.repository.segment_repository import SqlTranscriptSegmentRepository
@@ -40,13 +41,15 @@ class StreamIngestionUseCase:
         try:
             # Fast inference without word-level alignment penalty on CPU
             final_text, words, conf = await self.whisper_engine.transcribe_samples(
-                final_audio, language="vi", beam_size=1, word_timestamps=False
+                final_audio, language="vi", beam_size=5, word_timestamps=True
             )
             if not final_text:
                 logger.debug(f"[Ingestion] Utterance {utterance_id} produced empty text")
                 return
 
             logger.info(f"[Ingestion] Finalized {utterance_id}: {final_text!r} (conf={conf})")
+            # Cascaded Streaming Translation (Vietnamese -> English via SeamlessStreaming)
+            translation = await seamless_client.translate(final_text, src_lang="vie", tgt_lang="eng")
 
             base_start_ms = int(utt_start * 1000 / 16000)
             base_end_ms = int(utt_end * 1000 / 16000)
@@ -90,6 +93,7 @@ class StreamIngestionUseCase:
                         start_ms=base_start_ms,
                         end_ms=base_end_ms,
                         text=final_text,
+                        translation=translation,
                         words=adjusted_words,
                         speaker_label=speaker_label,
                         confidence=conf,
@@ -111,6 +115,7 @@ class StreamIngestionUseCase:
                     "start_ms": base_start_ms,
                     "end_ms": base_end_ms,
                     "text": final_text,
+                    "translation": translation,
                     "words": adjusted_words,
                     "speaker_label": speaker_label,
                     "confidence": conf,
@@ -134,12 +139,14 @@ class StreamIngestionUseCase:
             return
 
         try:
-            # Cap partial inference window to latest 2.5s (40,000 samples) to ensure sub-second CPU response
-            audio_for_partial = current_audio[-40000:] if len(current_audio) > 40000 else current_audio
+            # Cap partial inference window to latest 5.0s (80,000 samples) to ensure coherent context and sub-second response
+            audio_for_partial = current_audio[-80000:] if len(current_audio) > 80000 else current_audio
             partial_text, _, _ = await self.whisper_engine.transcribe_samples(
                 audio_for_partial, language="vi", beam_size=1, word_timestamps=False, without_timestamps=True
             )
             if partial_text:
+                # Fast translation for partial utterance
+                partial_translation = await seamless_client.translate(partial_text, src_lang="vie", tgt_lang="eng")
                 start_ms = int(utt_start * 1000 / 16000)
                 end_ms = int(utt_end * 1000 / 16000)
                 await event_broadcaster.broadcast(
@@ -151,6 +158,7 @@ class StreamIngestionUseCase:
                         "start_ms": start_ms,
                         "end_ms": end_ms,
                         "text": partial_text,
+                        "translation": partial_translation,
                         "speaker_label": speaker_label,
                         "is_final": False,
                     },

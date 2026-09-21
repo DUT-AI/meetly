@@ -56,6 +56,7 @@ class ITranscriptSegmentRepository(ABC):
         end_ms: int,
         text: str,
         words: list[dict[str, Any]],
+        translation: str | None = None,
         speaker_label: str = "UNKNOWN",
         confidence: float = 1.0,
         is_final: bool = True,
