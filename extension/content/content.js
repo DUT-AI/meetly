@@ -30,6 +30,7 @@
   let audioCtx = null;
 
   // Live Streaming & Audio Resampling state
+  let streamPort = null;
   let producerWs = null;
   let subscriberWs = null;
   let pcmProcessorNode = null;
@@ -679,7 +680,7 @@
 
     mediaRecorder.start(1000); // Thu thập dữ liệu mỗi 1 giây
 
-    // 5. Khởi tạo streaming âm thanh PCM 16kHz tới Backend Meetly
+    // 5. Khởi tạo streaming âm thanh PCM 16kHz tới Background Service Worker
     try {
       const storageData = await chrome.storage.local.get('settings');
       const settings = storageData.settings || {};
@@ -689,7 +690,42 @@
 
       streamSeq = 0;
       totalAudioSamples = 0;
-      activeSessionId = null;
+
+      // Kết nối long-lived port tới Background Service Worker
+      if (streamPort) {
+        try { streamPort.disconnect(); } catch (e) {}
+      }
+      streamPort = chrome.runtime.connect({ name: 'meetly-audio-stream' });
+
+      const transcriptBox = shadowRoot.getElementById('transcriptPreview');
+      const transcriptContent = shadowRoot.getElementById('transcriptContent');
+
+      streamPort.onMessage.addListener((msg) => {
+        if (msg.type === 'TRANSCRIPT_EVENT') {
+          const event = msg.event;
+          if (event && event.text) {
+            if (transcriptBox) transcriptBox.style.display = 'flex';
+            if (transcriptContent) transcriptContent.textContent = event.text;
+          }
+        } else if (msg.type === 'STREAMING_READY') {
+          console.log('[Meetly Content] Background stream ready for session:', msg.sessionId);
+          if (transcriptBox) transcriptBox.style.display = 'flex';
+          if (transcriptContent) transcriptContent.textContent = 'Đang lắng nghe âm thanh cuộc họp...';
+        } else if (msg.type === 'ERROR') {
+          console.warn('[Meetly Content] Stream error:', msg.message);
+          showToast(msg.message, true);
+        }
+      });
+
+      // Nếu có Workspace ID và Meeting ID, báo Service Worker khởi động phiên
+      if (activeWorkspaceId && activeMeetingId) {
+        streamPort.postMessage({
+          type: 'START_STREAMING',
+          workspaceId: activeWorkspaceId,
+          meetingId: activeMeetingId,
+          serverUrl: serverUrl,
+        });
+      }
 
       const inputSampleRate = audioCtx.sampleRate;
       pcmProcessorNode = audioCtx.createScriptProcessor(4096, 1, 1);
@@ -703,63 +739,23 @@
         const startSample = totalAudioSamples;
         totalAudioSamples += pcm16.length;
 
-        if (producerWs && producerWs.readyState === WebSocket.OPEN) {
-          const frame = createBinaryFrame(1, 0, streamSeq++, startSample, pcm16);
-          producerWs.send(frame);
+        if (streamPort) {
+          const frameBuffer = createBinaryFrame(1, 0, streamSeq++, startSample, pcm16);
+          streamPort.postMessage({
+            type: 'AUDIO_FRAME',
+            data: Array.from(new Uint8Array(frameBuffer)),
+            sampleCount: pcm16.length,
+            seq: streamSeq,
+          });
         }
       };
 
+      // Mute gain để ngăn chặn tiếng vang (feedback loop) ra loa máy tính
+      const muteGain = audioCtx.createGain();
+      muteGain.gain.value = 0;
       mixedDestination.connect(pcmProcessorNode);
-      pcmProcessorNode.connect(audioCtx.destination);
-
-      // Kết nối phiên backend nếu có workspace và meeting cấu hình
-      if (activeWorkspaceId && activeMeetingId) {
-        fetch(`${serverUrl}/api/v1/workspaces/${activeWorkspaceId}/meetings/${activeMeetingId}/transcription-sessions`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            source_type: 'GOOGLE_MEET',
-            sample_rate: 16000,
-            stt_model: 'openai/whisper-small',
-          })
-        })
-          .then((res) => (res.ok ? res.json() : null))
-          .then((resData) => {
-            if (!resData || !resData.data) return;
-            const sessionData = resData.data;
-            activeSessionId = sessionData.session_id;
-            const prodTicket = sessionData.producer_ticket;
-            const subTicket = sessionData.subscriber_ticket;
-
-            const wsProto = serverUrl.startsWith('https') ? 'wss:' : 'ws:';
-            const host = serverUrl.replace(/^https?:\/\//, '');
-
-            if (prodTicket) {
-              producerWs = new WebSocket(`${wsProto}//${host}/api/v1/transcription-sessions/${activeSessionId}/audio?ticket=${prodTicket}`);
-              producerWs.binaryType = 'arraybuffer';
-            }
-
-            if (subTicket) {
-              subscriberWs = new WebSocket(`${wsProto}//${host}/api/v1/transcription-sessions/${activeSessionId}/events?ticket=${subTicket}`);
-              const transcriptBox = shadowRoot.getElementById('transcriptPreview');
-              const transcriptContent = shadowRoot.getElementById('transcriptContent');
-              if (transcriptBox) transcriptBox.style.display = 'flex';
-
-              subscriberWs.onmessage = (event) => {
-                try {
-                  const msg = JSON.parse(event.data);
-                  if (msg.type === 'transcript.partial' && msg.text) {
-                    if (transcriptContent) transcriptContent.textContent = msg.text;
-                  } else if (msg.type === 'transcript.final' && msg.text) {
-                    if (transcriptContent) transcriptContent.textContent = msg.text;
-                  }
-                } catch (err) {}
-              };
-            }
-          })
-          .catch((err) => console.warn('[Meetly] Session init error:', err));
-      }
+      pcmProcessorNode.connect(muteGain);
+      muteGain.connect(audioCtx.destination);
     } catch (streamErr) {
       console.warn('[Meetly] Lỗi khởi tạo live PCM stream:', streamErr);
     }
@@ -857,34 +853,13 @@
         const nowStr = getVietnamTimestamp();
         const filename = `Meetly_${meetingCode}_${nowStr}.webm`;
 
-        // Gửi cờ kết thúc stream tới Backend và đóng kết nối
-        if (producerWs && producerWs.readyState === WebSocket.OPEN) {
+        // Gửi thông báo kết thúc stream tới Background Service Worker
+        if (streamPort) {
           try {
-            const eosFrame = createBinaryFrame(1, 1, streamSeq++, totalAudioSamples, new Int16Array(0));
-            producerWs.send(eosFrame);
+            streamPort.postMessage({ type: 'STOP_STREAMING' });
+            streamPort.disconnect();
           } catch (e) {}
-          producerWs.close();
-          producerWs = null;
-        }
-        if (subscriberWs) {
-          subscriberWs.close();
-          subscriberWs = null;
-        }
-
-        if (activeSessionId) {
-          chrome.storage.local.get('settings').then((data) => {
-            const serverUrl = data.settings?.serverUrl || 'http://localhost:8000';
-            fetch(`${serverUrl}/api/v1/transcription-sessions/${activeSessionId}/stop`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({
-                total_samples: totalAudioSamples,
-                last_seq: streamSeq,
-                recording_part_count: 1
-              })
-            }).catch(() => {});
-          });
+          streamPort = null;
         }
 
         // Tải file trực tiếp về máy tính
@@ -936,6 +911,12 @@
    * Dọn dẹp các track audio và AudioContext
    */
   function cleanupResources() {
+    if (streamPort) {
+      try {
+        streamPort.disconnect();
+      } catch (e) {}
+      streamPort = null;
+    }
     if (pcmProcessorNode) {
       pcmProcessorNode.disconnect();
       pcmProcessorNode = null;

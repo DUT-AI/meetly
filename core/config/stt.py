@@ -14,7 +14,7 @@ class STTSettings(BaseSettings):
         case_sensitive=False,
     )
 
-    stt_model_id: str = "small"
+    stt_model_id: str = "tiny"
     stt_device: str = "auto"  # "auto", "cuda", "cpu"
     stt_compute_type: str = "auto"  # "auto", "float16", "int8", "float32"
     stt_vad_threshold: float = 0.5

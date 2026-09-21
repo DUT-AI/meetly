@@ -78,12 +78,16 @@ class FasterWhisperEngine:
         try:
             from faster_whisper import WhisperModel
 
+            # Optimize CPU threads to prevent thread contention on low-spec CPUs
+            cpu_threads = min(4, os.cpu_count() or 4) if device == "cpu" else 0
+
             self.model = WhisperModel(
                 model_name,
                 device=device,
                 compute_type=compute_type,
+                cpu_threads=cpu_threads,
             )
-            logger.info("[ASR] Successfully loaded WhisperModel weights.")
+            logger.info(f"[ASR] Successfully loaded WhisperModel weights (device={device}, cpu_threads={cpu_threads}).")
         except Exception as e:
             logger.warning(
                 f"[ASR] Could not initialize faster-whisper WhisperModel ({e}). Using mock/fallback for test mode."
@@ -99,14 +103,22 @@ class FasterWhisperEngine:
         language: str = "vi",
         beam_size: int = 1,
         word_timestamps: bool = False,
+        initial_prompt: str | None = None,
+        without_timestamps: bool | None = None,
     ) -> tuple[str, list[dict[str, Any]], float]:
         """Synchronous decoding called inside a worker thread."""
+        if len(audio_float32) < 3200:  # Less than 200ms audio
+            return "", [], 1.0
+
         if self.model is None:
             if self._is_loading:
                 # Wait briefly if model is just finishing downloading
                 self._load_event.wait(timeout=2.0)
             if self.model is None:
                 return "", [], 1.0
+
+        prompt = initial_prompt or "Đây là cuộc họp trực tuyến tiếng Việt."
+        skip_timestamps = (not word_timestamps) if without_timestamps is None else without_timestamps
 
         segments, info = self.model.transcribe(
             audio_float32,
@@ -116,8 +128,12 @@ class FasterWhisperEngine:
             best_of=1,
             temperature=0.0,
             condition_on_previous_text=False,
+            initial_prompt=prompt,
+            repetition_penalty=1.1,
+            no_repeat_ngram_size=3,
             vad_filter=False,  # External Silero VAD is applied beforehand
             word_timestamps=word_timestamps,
+            without_timestamps=skip_timestamps,
         )
 
         full_text_parts = []
@@ -146,10 +162,15 @@ class FasterWhisperEngine:
         language: str = "vi",
         beam_size: int = 1,
         word_timestamps: bool = False,
+        initial_prompt: str | None = None,
+        without_timestamps: bool | None = None,
     ) -> tuple[str, list[dict[str, Any]], float]:
         """
         Non-blocking async wrapper converting PCM16 to float32 and executing in thread pool.
         """
+        if len(samples_pcm16) < 3200:
+            return "", [], 1.0
+
         if samples_pcm16.dtype != np.float32:
             audio_float32 = samples_pcm16.astype(np.float32) / 32768.0
         else:
@@ -161,4 +182,6 @@ class FasterWhisperEngine:
             language=language,
             beam_size=beam_size,
             word_timestamps=word_timestamps,
+            initial_prompt=initial_prompt,
+            without_timestamps=without_timestamps,
         )

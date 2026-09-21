@@ -69,8 +69,16 @@
       </div>
 
       <div class="server-config" style="margin-top: 8px;">
-        <label for="txtMeetingId">Meeting ID (hoặc để trống):</label>
+        <label for="txtMeetingId">Meeting ID:</label>
         <input type="text" id="txtMeetingId" placeholder="ULID của Meeting">
+      </div>
+
+      <div class="server-config" style="margin-top: 8px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <label for="txtAuthToken" style="margin-bottom: 0;">Auth Token (Bearer):</label>
+          <span id="authStatusBadge" style="font-size: 10px; font-weight: 600; color: #10b981;">Đang kiểm tra...</span>
+        </div>
+        <input type="password" id="txtAuthToken" placeholder="Tự động lấy từ Cookie hoặc dán Bearer token">
       </div>
     </div>
 

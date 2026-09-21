@@ -13,8 +13,8 @@ class UtteranceBuffer:
         self,
         sample_rate: int = 16000,
         pre_roll_ms: int = 250,
-        partial_cadence_ms: int = 800,
-        silence_endpoint_ms: int = 600,
+        partial_cadence_ms: int = 1000,
+        silence_endpoint_ms: int = 800,
         max_utterance_s: float = 20.0,
     ) -> None:
         self.sample_rate = sample_rate
@@ -117,6 +117,14 @@ class UtteranceBuffer:
 
         audio = np.concatenate(self._utterance_chunks)
         start_sample = self.utterance_start_sample
+
+        # Trim excess trailing silence (keep at most 250ms of silence at the end)
+        keep_silence = int(self.sample_rate * 0.25)
+        if self._silence_sample_count > keep_silence:
+            trim_samples = self._silence_sample_count - keep_silence
+            if len(audio) > trim_samples + 1600:  # Ensure at least 100ms speech remains
+                audio = audio[:-trim_samples]
+
         end_sample = start_sample + len(audio)
 
         # Reset active utterance state

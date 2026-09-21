@@ -49,26 +49,39 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
   // 1. Initial history from REST API
   const { data: transcriptsData, isLoading } = useGetTranscripts(workspaceId, meetingId);
 
-  // 2. Direct browser microphone streaming for live testing
+  // 2. Real-time updates from WebSocket
+  const subscriber = useTranscriptionSubscriber({
+    workspaceId,
+    meetingId,
+    initialSegments: transcriptsData?.segments,
+  });
+
+  // 3. Direct browser microphone streaming for live testing
   const {
     isRecording,
     isInitializing,
+    clientPartialText,
     startRecording,
     stopRecording,
-  } = useDirectMicStreaming({ workspaceId, meetingId });
+  } = useDirectMicStreaming({
+    workspaceId,
+    meetingId,
+    onSessionCreated: (session) => {
+      if (session.subscriber_ticket) {
+        subscriber.connectToSession(session.session_id, session.subscriber_ticket);
+      }
+    },
+  });
 
-  // 3. Real-time updates from WebSocket
   const {
     segments: liveSegments,
     partialText,
     partialSpeaker,
     isConnected,
     sessionStatus,
-  } = useTranscriptionSubscriber({
-    workspaceId,
-    meetingId,
-    initialSegments: transcriptsData?.segments,
-  });
+  } = subscriber;
+
+  const activePartialText = isRecording ? (clientPartialText || partialText) : partialText;
 
   // Filtered segments
   const filteredSegments = useMemo(() => {
@@ -86,7 +99,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
     if (autoScroll && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [liveSegments.length, partialText, autoScroll]);
+  }, [liveSegments.length, activePartialText, autoScroll]);
 
   const formatMs = (ms: number) => {
     const totalSec = Math.floor(ms / 1000);
@@ -246,7 +259,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
           </div>
         )}
 
-        {isRecording && liveSegments.length === 0 && !partialText && (
+        {isRecording && liveSegments.length === 0 && !activePartialText && (
           <div className="flex flex-col items-center justify-center p-8 text-center text-slate-500 h-full gap-2">
             <div className="size-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 animate-pulse">
               <Mic className="size-5" />
@@ -258,7 +271,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
           </div>
         )}
 
-        {filteredSegments.length === 0 && hasSession && !partialText && (
+        {filteredSegments.length === 0 && hasSession && !activePartialText && (
           <div className="text-center py-12 text-slate-400 text-xs">
             {isLoading ? 'Đang tải transcript...' : 'Chưa có lời thoại nào được ghi nhận.'}
           </div>
@@ -333,14 +346,14 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
         })}
 
         {/* Streaming Partial Utterance */}
-        {partialText && (
+        {activePartialText && (
           <div className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/50 flex flex-col gap-1 animate-pulse">
             <div className="flex items-center gap-1.5 text-[11px] text-blue-600 font-semibold">
               <Sparkles className="size-3" />
               <span>Đang nhận dạng ({partialSpeaker || 'Người nói'})...</span>
             </div>
             <p className="text-xs text-blue-950 italic leading-relaxed">
-              {partialText}
+              {activePartialText}
             </p>
           </div>
         )}

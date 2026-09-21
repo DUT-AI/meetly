@@ -20,26 +20,10 @@ def create_mock_binary_frame(stream_id: int, flags: int, seq: int, start_sample:
 @pytest.mark.asyncio
 async def test_stream_ingestion_full_lifecycle():
     """Verify StreamIngestionUseCase receives binary frames, invokes ASR on speech endpoint, and persists segment."""
-    session_repo = AsyncMock()
-    segment_repo = AsyncMock()
-    session_repo.get_by_id.return_value = TranscriptionSessionEntity(
-        id="sess_test123",
-        meeting_id="meet_123",
-        workspace_id="ws_123",
-        status=SessionStatus.STREAMING.value,
-        source_type="GOOGLE_MEET",
-        sample_rate=16000,
-        duration_samples=0,
-        stt_model="openai/whisper-small",
-        recording_asset_id=None,
-        created_by="user_123",
-        created_at=None,
-        updated_at=None,
-    )
-
-    vad_mock = MagicMock(spec=SileroVADDetector)
-    # Speech on first call, silence afterwards
-    vad_mock.is_speech.side_effect = [(True, 0.9)] * 10 + [(False, 0.05)] * 100
+    mock_session = AsyncMock()
+    mock_session_factory = MagicMock()
+    mock_session_factory.return_value.__aenter__.return_value = mock_session
+    mock_session_factory.return_value.__aexit__.return_value = None
 
     whisper_mock = AsyncMock(spec=FasterWhisperEngine)
     whisper_mock.transcribe_samples.return_value = (
@@ -49,11 +33,11 @@ async def test_stream_ingestion_full_lifecycle():
     )
 
     use_case = StreamIngestionUseCase(
-        session_repo=session_repo,
-        segment_repo=segment_repo,
-        vad_detector=vad_mock,
+        session_factory=mock_session_factory,
         whisper_engine=whisper_mock,
     )
+
+    from unittest.mock import patch
 
     # Mock WebSocket
     mock_ws = AsyncMock()
@@ -70,19 +54,31 @@ async def test_stream_ingestion_full_lifecycle():
     # Frame 9: EOS frame
     eos_frame = create_mock_binary_frame(stream_id=1, flags=1, seq=9, start_sample=9 * 1600, pcm_data=np.array([], dtype=np.int16))
 
-    segment_repo.upsert_segment.return_value = MagicMock(id="seg_saved123")
-
     raw_frames = [frame0] + silence_frames + [eos_frame]
     mock_ws.receive.side_effect = [{"type": "websocket.receive", "bytes": f} for f in raw_frames]
 
-    await use_case.handle_producer_stream("sess_test123", mock_ws)
+    with (
+        patch("modules.transcription.use_cases.stream_ingestion_use_case.SqlTranscriptSegmentRepository") as mock_segment_repo_cls,
+        patch("modules.transcription.use_cases.stream_ingestion_use_case.SqlTranscriptionSessionRepository") as mock_session_repo_cls,
+        patch("modules.transcription.use_cases.stream_ingestion_use_case.SileroVADDetector") as mock_vad_cls,
+    ):
+        mock_segment_repo = mock_segment_repo_cls.return_value
+        mock_segment_repo.upsert_segment = AsyncMock(return_value=MagicMock(id="seg_saved123"))
 
-    # Verify ASR was called
-    assert whisper_mock.transcribe_samples.called
+        mock_session_repo = mock_session_repo_cls.return_value
+        mock_session_repo.update_status = AsyncMock()
 
-    # Verify segment was saved to DB
-    assert segment_repo.upsert_segment.called
-    saved_segment = segment_repo.upsert_segment.call_args.kwargs
-    assert saved_segment["session_id"] == "sess_test123"
-    assert saved_segment["text"] == "Chào mừng bạn đến với Meetly!"
-    assert saved_segment["is_final"] is True
+        mock_vad = mock_vad_cls.return_value
+        mock_vad.is_speech.side_effect = [(True, 0.9)] * 10 + [(False, 0.05)] * 100
+
+        await use_case.handle_producer_stream("sess_test123", mock_ws)
+
+        # Verify ASR was called
+        assert whisper_mock.transcribe_samples.called
+
+        # Verify segment was saved to DB
+        assert mock_segment_repo.upsert_segment.called
+        saved_segment = mock_segment_repo.upsert_segment.call_args.kwargs
+        assert saved_segment["session_id"] == "sess_test123"
+        assert saved_segment["text"] == "Chào mừng bạn đến với Meetly!"
+        assert saved_segment["is_final"] is True

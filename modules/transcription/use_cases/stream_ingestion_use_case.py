@@ -1,3 +1,4 @@
+import asyncio
 import struct
 from typing import Any
 from fastapi import WebSocket, WebSocketDisconnect
@@ -25,6 +26,113 @@ class StreamIngestionUseCase:
         self.session_factory = session_factory
         self.whisper_engine = whisper_engine
 
+    async def _process_final_utterance(
+        self,
+        session_id: str,
+        final_audio: np.ndarray,
+        utt_start: int,
+        utt_end: int,
+        speaker_label: str,
+        utterance_id: str,
+        revision: int = 1,
+    ) -> None:
+        """Transcribe completed utterance and persist to DB asynchronously."""
+        try:
+            final_text, words, conf = await self.whisper_engine.transcribe_samples(
+                final_audio, language="vi", beam_size=1, word_timestamps=True
+            )
+            if not final_text:
+                return
+
+            base_start_ms = int(utt_start * 1000 / 16000)
+            base_end_ms = int(utt_end * 1000 / 16000)
+
+            adjusted_words = []
+            for w in words:
+                adjusted_words.append(
+                    {
+                        "word": w["word"],
+                        "start_ms": base_start_ms + w["start_ms"],
+                        "end_ms": base_end_ms + w["end_ms"],
+                        "score": w["score"],
+                    }
+                )
+
+            segment_id = f"temp_{utt_start}"
+            try:
+                async with self.session_factory() as session:
+                    segment_repo = SqlTranscriptSegmentRepository(session)
+                    saved_segment = await segment_repo.upsert_segment(
+                        session_id=session_id,
+                        utterance_id=utterance_id,
+                        revision=revision,
+                        start_ms=base_start_ms,
+                        end_ms=base_end_ms,
+                        text=final_text,
+                        words=adjusted_words,
+                        speaker_label=speaker_label,
+                        confidence=conf,
+                        is_final=True,
+                    )
+                    await session.commit()
+                    segment_id = saved_segment.id
+            except Exception as db_err:
+                logger.error(f"[Ingestion] Failed to persist segment: {db_err}")
+
+            await event_broadcaster.broadcast(
+                session_id,
+                {
+                    "type": "transcript.final",
+                    "session_id": session_id,
+                    "segment_id": segment_id,
+                    "utterance_id": utterance_id,
+                    "revision": revision,
+                    "start_ms": base_start_ms,
+                    "end_ms": base_end_ms,
+                    "text": final_text,
+                    "words": adjusted_words,
+                    "speaker_label": speaker_label,
+                    "confidence": conf,
+                    "is_final": True,
+                },
+            )
+        except Exception as e:
+            logger.error(f"[Ingestion] Error transcribing final utterance {utterance_id}: {e}")
+
+    async def _process_partial_utterance(
+        self,
+        session_id: str,
+        current_audio: np.ndarray,
+        utt_start: int,
+        utt_end: int,
+        speaker_label: str,
+    ) -> None:
+        """Transcribe in-flight partial audio without blocking frame ingestion."""
+        try:
+            # Cap partial inference window to latest 2.5s (40,000 samples) to ensure sub-second CPU response
+            audio_for_partial = current_audio[-40000:] if len(current_audio) > 40000 else current_audio
+            partial_text, _, _ = await self.whisper_engine.transcribe_samples(
+                audio_for_partial, language="vi", beam_size=1, word_timestamps=False, without_timestamps=True
+            )
+            if partial_text:
+                start_ms = int(utt_start * 1000 / 16000)
+                end_ms = int(utt_end * 1000 / 16000)
+                await event_broadcaster.broadcast(
+                    session_id,
+                    {
+                        "type": "transcript.partial",
+                        "session_id": session_id,
+                        "utterance_id": f"utt_{utt_start}",
+                        "start_ms": start_ms,
+                        "end_ms": end_ms,
+                        "text": partial_text,
+                        "speaker_label": speaker_label,
+                        "is_final": False,
+                    },
+                )
+        except Exception as e:
+            logger.debug(f"[Ingestion] Error during partial transcription: {e}")
+
     async def handle_producer_stream(
         self,
         session_id: str,
@@ -33,6 +141,7 @@ class StreamIngestionUseCase:
         """
         Handle persistent WebSocket connection from Chrome Extension producer.
         Parses binary audio frames with 16-byte fixed header.
+        Decouples frame ingestion from Whisper ASR inference.
         """
         await websocket.accept()
         logger.info(f"[Ingestion] Producer WebSocket connected for session {session_id}")
@@ -52,7 +161,9 @@ class StreamIngestionUseCase:
         )
 
         vad_detector = SileroVADDetector()
-        utterance_buffer = UtteranceBuffer(sample_rate=16000)
+        buffers: dict[int, UtteranceBuffer] = {}
+        active_partial_tasks: dict[int, asyncio.Task] = {}
+        pending_final_tasks: set[asyncio.Task] = set()
 
         last_seq_by_stream: dict[int, int] = {}
         utterance_counter = 0
@@ -88,22 +199,30 @@ class StreamIngestionUseCase:
                             f"[Ingestion] Gap detected on stream {stream_id}: expected {expected_seq}, got {seq} (lost {gap_count} frames)"
                         )
                         # Respond with gap notification so producer can resend if needed
-                        await websocket.send_json(
-                            {
-                                "type": "audio.gap_detected",
-                                "stream_id": stream_id,
-                                "expected_seq": expected_seq,
-                                "received_seq": seq,
-                            }
-                        )
+                        try:
+                            await websocket.send_json(
+                                {
+                                    "type": "audio.gap_detected",
+                                    "stream_id": stream_id,
+                                    "expected_seq": expected_seq,
+                                    "received_seq": seq,
+                                }
+                            )
+                        except Exception:
+                            pass
 
                 last_seq_by_stream[stream_id] = seq
 
                 # Convert payload to int16 PCM array
                 pcm16 = np.frombuffer(payload_bytes, dtype=np.int16)
 
+                # Get or create per-stream utterance buffer
+                if stream_id not in buffers:
+                    buffers[stream_id] = UtteranceBuffer(sample_rate=16000)
+                buf = buffers[stream_id]
+
                 # Feed frame into utterance buffer with VAD gating
-                should_emit_partial, is_endpointed = utterance_buffer.push_frame(
+                should_emit_partial, is_endpointed = buf.push_frame(
                     pcm16, start_sample, vad_detector
                 )
 
@@ -113,164 +232,88 @@ class StreamIngestionUseCase:
                     else SpeakerLabel.REMOTE_SPEAKER.value
                 )
 
-                # 1. Handle Partial Transcription event
-                if should_emit_partial:
-                    current_audio, utt_start, utt_end = utterance_buffer.get_current_audio()
-                    if len(current_audio) >= 4000:  # At least 250ms audio
-                        partial_text, _, _ = await self.whisper_engine.transcribe_samples(
-                            current_audio, language="vi", beam_size=1, word_timestamps=False
-                        )
-                        if partial_text:
-                            start_ms = int(utt_start * 1000 / 16000)
-                            end_ms = int(utt_end * 1000 / 16000)
-                            await event_broadcaster.broadcast(
-                                session_id,
-                                {
-                                    "type": "transcript.partial",
-                                    "session_id": session_id,
-                                    "utterance_id": f"utt_{utt_start}",
-                                    "start_ms": start_ms,
-                                    "end_ms": end_ms,
-                                    "text": partial_text,
-                                    "speaker_label": speaker_label,
-                                    "is_final": False,
-                                },
-                            )
-
-                # 2. Handle Final Utterance Endpointing
+                # 1. Handle Final Utterance Endpointing (Non-blocking background task)
                 if is_endpointed:
-                    final_res = utterance_buffer.finish_utterance()
+                    final_res = buf.finish_utterance()
                     if final_res is not None:
                         final_audio, utt_start, utt_end = final_res
                         if len(final_audio) >= 4000:
                             utterance_counter += 1
-                            final_text, words, conf = await self.whisper_engine.transcribe_samples(
-                                final_audio, language="vi", beam_size=1, word_timestamps=True
-                            )
-                            if final_text:
-                                base_start_ms = int(utt_start * 1000 / 16000)
-                                base_end_ms = int(utt_end * 1000 / 16000)
-
-                                # Adjust word timestamps to absolute media timeline
-                                adjusted_words = []
-                                for w in words:
-                                    adjusted_words.append(
-                                        {
-                                            "word": w["word"],
-                                            "start_ms": base_start_ms + w["start_ms"],
-                                            "end_ms": base_start_ms + w["end_ms"],
-                                            "score": w["score"],
-                                        }
-                                    )
-
-                                utterance_id = f"utt_{utt_start}_{utterance_counter}"
-
-                                # Persist final segment to PostgreSQL
-                                segment_id = f"temp_{utt_start}"
-                                try:
-                                    async with self.session_factory() as session:
-                                        segment_repo = SqlTranscriptSegmentRepository(session)
-                                        saved_segment = await segment_repo.upsert_segment(
-                                            session_id=session_id,
-                                            utterance_id=utterance_id,
-                                            revision=1,
-                                            start_ms=base_start_ms,
-                                            end_ms=base_end_ms,
-                                            text=final_text,
-                                            words=adjusted_words,
-                                            speaker_label=speaker_label,
-                                            confidence=conf,
-                                            is_final=True,
-                                        )
-                                        await session.commit()
-                                        segment_id = saved_segment.id
-                                except Exception as db_err:
-                                    logger.error(f"[Ingestion] Failed to persist segment: {db_err}")
-
-                                # Broadcast final transcript event
-                                await event_broadcaster.broadcast(
-                                    session_id,
-                                    {
-                                        "type": "transcript.final",
-                                        "session_id": session_id,
-                                        "segment_id": segment_id,
-                                        "utterance_id": utterance_id,
-                                        "revision": 1,
-                                        "start_ms": base_start_ms,
-                                        "end_ms": base_end_ms,
-                                        "text": final_text,
-                                        "words": adjusted_words,
-                                        "speaker_label": speaker_label,
-                                        "confidence": conf,
-                                        "is_final": True,
-                                    },
+                            utterance_id = f"utt_{utt_start}_{utterance_counter}"
+                            task = asyncio.create_task(
+                                self._process_final_utterance(
+                                    session_id=session_id,
+                                    final_audio=final_audio,
+                                    utt_start=utt_start,
+                                    utt_end=utt_end,
+                                    speaker_label=speaker_label,
+                                    utterance_id=utterance_id,
                                 )
+                            )
+                            pending_final_tasks.add(task)
+                            pending_final_tasks = {t for t in pending_final_tasks if not t.done()}
+
+                # 2. Handle Partial Transcription event (Only if no partial is currently running)
+                elif should_emit_partial:
+                    prev_task = active_partial_tasks.get(stream_id)
+                    if prev_task is None or prev_task.done():
+                        current_audio, utt_start, utt_end = buf.get_current_audio()
+                        if len(current_audio) >= 4000:
+                            task = asyncio.create_task(
+                                self._process_partial_utterance(
+                                    session_id=session_id,
+                                    current_audio=current_audio,
+                                    utt_start=utt_start,
+                                    utt_end=utt_end,
+                                    speaker_label=speaker_label,
+                                )
+                            )
+                            active_partial_tasks[stream_id] = task
 
                 # Send Ack every 50 frames (~5s)
                 if seq % 50 == 0:
-                    await websocket.send_json(
-                        {
-                            "type": "audio.ack",
-                            "stream_id": stream_id,
-                            "last_seq": seq,
-                            "start_sample": start_sample,
-                        }
-                    )
+                    try:
+                        await websocket.send_json(
+                            {
+                                "type": "audio.ack",
+                                "stream_id": stream_id,
+                                "last_seq": seq,
+                                "start_sample": start_sample,
+                            }
+                        )
+                    except Exception:
+                        pass
 
         except (WebSocketDisconnect, RuntimeError):
             logger.info(f"[Ingestion] Producer WebSocket disconnected for session {session_id}")
         except Exception as e:
             logger.error(f"[Ingestion] Error in producer stream {session_id}: {e}")
         finally:
-            # Endpoint remaining speech if any
-            final_res = utterance_buffer.finish_utterance()
-            if final_res is not None:
-                final_audio, utt_start, utt_end = final_res
-                if len(final_audio) >= 4000:
-                    try:
-                        final_text, words, conf = await self.whisper_engine.transcribe_samples(
-                            final_audio, language="vi", beam_size=1, word_timestamps=True
+            # Endpoint remaining speech across all active stream buffers
+            for sid, buf in buffers.items():
+                final_res = buf.finish_utterance()
+                if final_res is not None:
+                    final_audio, utt_start, utt_end = final_res
+                    if len(final_audio) >= 4000:
+                        utterance_counter += 1
+                        utterance_id = f"utt_{utt_start}_last_{utterance_counter}"
+                        s_label = (
+                            SpeakerLabel.LOCAL_USER.value
+                            if sid == StreamId.MIC
+                            else SpeakerLabel.REMOTE_SPEAKER.value
                         )
-                        if final_text:
-                            base_start_ms = int(utt_start * 1000 / 16000)
-                            base_end_ms = int(utt_end * 1000 / 16000)
-                            utterance_id = f"utt_{utt_start}_last"
-                            saved_id = f"temp_{utt_start}_last"
-                            try:
-                                async with self.session_factory() as session:
-                                    segment_repo = SqlTranscriptSegmentRepository(session)
-                                    saved = await segment_repo.upsert_segment(
-                                        session_id=session_id,
-                                        utterance_id=utterance_id,
-                                        revision=1,
-                                        start_ms=base_start_ms,
-                                        end_ms=base_end_ms,
-                                        text=final_text,
-                                        words=words,
-                                        speaker_label=SpeakerLabel.UNKNOWN.value,
-                                        confidence=conf,
-                                        is_final=True,
-                                    )
-                                    await session.commit()
-                                    saved_id = saved.id
-                            except Exception as db_err:
-                                logger.error(f"[Ingestion] Failed to persist last segment: {db_err}")
-
-                            await event_broadcaster.broadcast(
-                                session_id,
-                                {
-                                    "type": "transcript.final",
-                                    "session_id": session_id,
-                                    "segment_id": saved_id,
-                                    "utterance_id": utterance_id,
-                                    "revision": 1,
-                                    "start_ms": base_start_ms,
-                                    "end_ms": base_end_ms,
-                                    "text": final_text,
-                                    "words": words,
-                                    "speaker_label": SpeakerLabel.UNKNOWN.value,
-                                    "is_final": True,
-                                },
+                        task = asyncio.create_task(
+                            self._process_final_utterance(
+                                session_id=session_id,
+                                final_audio=final_audio,
+                                utt_start=utt_start,
+                                utt_end=utt_end,
+                                speaker_label=s_label,
+                                utterance_id=utterance_id,
                             )
-                    except Exception as err:
-                        logger.error(f"[Ingestion] Error processing remaining utterance on disconnect: {err}")
+                        )
+                        pending_final_tasks.add(task)
+
+            # Await all remaining transcription tasks before exiting
+            if pending_final_tasks:
+                await asyncio.gather(*pending_final_tasks, return_exceptions=True)
