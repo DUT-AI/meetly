@@ -35,4 +35,3 @@ __all__ = [
     "stt_settings",
     "translation_settings",
 ]
-

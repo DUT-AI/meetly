@@ -23,18 +23,25 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   let activeMeetTab = null;
 
+  const btnPresetLocal = document.getElementById('btnPresetLocal');
+  const btnPresetProd = document.getElementById('btnPresetProd');
+
   // 1. Tải cài đặt đã lưu
   const { settings = {} } = await chrome.storage.local.get('settings');
   if (settings.recordMic !== undefined) chkRecordMic.checked = settings.recordMic;
   if (settings.autoDownload !== undefined) chkAutoDownload.checked = settings.autoDownload;
-  if (settings.serverUrl) txtServerUrl.value = settings.serverUrl;
+  if (settings.serverUrl) {
+    txtServerUrl.value = settings.serverUrl;
+  } else {
+    txtServerUrl.value = 'http://localhost:8000';
+  }
   if (settings.workspaceId && txtWorkspaceId) txtWorkspaceId.value = settings.workspaceId;
   if (settings.meetingId && txtMeetingId) txtMeetingId.value = settings.meetingId;
   if (settings.authToken && txtAuthToken) txtAuthToken.value = settings.authToken;
 
   // Kiểm tra trạng thái xác thực
   function checkAuthStatus() {
-    const sUrl = txtServerUrl.value.trim() || 'https://meetly.dutai.io.vn';
+    const sUrl = txtServerUrl.value.trim() || 'http://localhost:8000';
     chrome.runtime.sendMessage({ type: 'CHECK_AUTH', serverUrl: sUrl }, (res) => {
       if (res && res.hasToken) {
         authStatusBadge.textContent = '✓ Đã kết nối token';
@@ -53,7 +60,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       settings: {
         recordMic: chkRecordMic.checked,
         autoDownload: chkAutoDownload.checked,
-        serverUrl: txtServerUrl.value.trim() || 'https://meetly.dutai.io.vn',
+        serverUrl: txtServerUrl.value.trim() || 'http://localhost:8000',
         workspaceId: txtWorkspaceId ? txtWorkspaceId.value.trim() : '',
         meetingId: txtMeetingId ? txtMeetingId.value.trim() : '',
         authToken: txtAuthToken ? txtAuthToken.value.trim() : ''
@@ -61,6 +68,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
     checkAuthStatus();
   }
+
+  if (btnPresetLocal) {
+    btnPresetLocal.addEventListener('click', () => {
+      txtServerUrl.value = 'http://localhost:8000';
+      saveSettings();
+    });
+  }
+
+  if (btnPresetProd) {
+    btnPresetProd.addEventListener('click', () => {
+      txtServerUrl.value = 'https://meetly.dutai.io.vn';
+      saveSettings();
+    });
+  }
+
   chkRecordMic.addEventListener('change', saveSettings);
   chkAutoDownload.addEventListener('change', saveSettings);
   txtServerUrl.addEventListener('input', saveSettings);

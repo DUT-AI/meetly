@@ -40,8 +40,12 @@ async function resolveAuthToken(serverUrl) {
     return settings.authToken.trim();
   }
 
-  // Thử tìm cookie access_token trên domain Meetly
+  // Thử tìm cookie access_token trên các domain phổ biến của Meetly (Local & Production)
   const candidateUrls = [
+    'http://localhost:3000',
+    'http://localhost:8000',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:8000',
     'https://meetly.dutai.io.vn',
     serverUrl,
   ].filter(Boolean);
@@ -71,15 +75,28 @@ class StreamHandler {
     this.producerWs = null;
     this.subscriberWs = null;
     this.sessionId = null;
-    this.serverUrl = 'https://meetly.dutai.io.vn';
+    this.serverUrl = 'http://localhost:8000';
     this.sampleCount = 0;
     this.seq = 0;
     this.pendingControlMessages = [];
   }
 
   async start({ workspaceId, meetingId, serverUrl }) {
-    this.serverUrl = serverUrl || 'https://meetly.dutai.io.vn';
-    console.log(`[Meetly Service Worker] Bắt đầu phiên streaming cho WS: ${workspaceId}, Meet: ${meetingId}`);
+    let cleanServerUrl = (serverUrl || 'http://localhost:8000').trim().replace(/\/+$/, '');
+    if (!cleanServerUrl.startsWith('http://') && !cleanServerUrl.startsWith('https://')) {
+      cleanServerUrl = `http://${cleanServerUrl}`;
+    }
+    this.serverUrl = cleanServerUrl;
+
+    if (!workspaceId || !meetingId) {
+      this.port.postMessage({
+        type: 'ERROR',
+        message: 'Thiếu Workspace ID hoặc Meeting ID. Vui lòng mở Extension Popup để cấu hình.',
+      });
+      return;
+    }
+
+    console.log(`[Meetly Service Worker] Bắt đầu phiên streaming cho WS: ${workspaceId}, Meet: ${meetingId}, Server: ${this.serverUrl}`);
 
     const token = await resolveAuthToken(this.serverUrl);
     const headers = { 'Content-Type': 'application/json' };

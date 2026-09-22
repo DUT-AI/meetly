@@ -65,9 +65,7 @@ class SqlTranscriptSegmentRepository(ITranscriptSegmentRepository):
         await self.session.flush()
         return model.to_entity()
 
-    async def list_by_session(
-        self, session_id: str
-    ) -> list[TranscriptSegmentEntity]:
+    async def list_by_session(self, session_id: str) -> list[TranscriptSegmentEntity]:
         stmt = (
             select(TranscriptSegmentModel)
             .where(TranscriptSegmentModel.session_id == session_id)
@@ -77,9 +75,7 @@ class SqlTranscriptSegmentRepository(ITranscriptSegmentRepository):
         models = result.scalars().all()
         return [m.to_entity() for m in models]
 
-    async def list_by_meeting(
-        self, meeting_id: str
-    ) -> list[TranscriptSegmentEntity]:
+    async def list_by_meeting(self, meeting_id: str) -> list[TranscriptSegmentEntity]:
         stmt = (
             select(TranscriptSegmentModel)
             .join(

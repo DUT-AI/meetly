@@ -1,4 +1,5 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
+
 import pytest
 
 from modules.identity.dtos.manage_dtos import ManageUserDTO
@@ -8,8 +9,8 @@ from modules.notifications.services.zalo_bot_client import ZaloBotClient
 from modules.notifications.services.zalo_sticker_service import (
     get_angry_stickers,
     get_normal_stickers,
-    is_deadline_or_urgent,
     get_sticker_for_notification,
+    is_deadline_or_urgent,
 )
 
 
@@ -24,8 +25,13 @@ def test_sticker_service_categories():
     # Test keyword matching for angry/deadline
     assert is_deadline_or_urgent("task_overdue", "Quá hạn", "Đã trễ 2 ngày") is True
     assert is_deadline_or_urgent("task_due_soon", "Sắp đến hạn", "Còn 2 giờ") is True
-    assert is_deadline_or_urgent("task_assigned", "Giao việc", "Đúng deadline nhe") is True
-    assert is_deadline_or_urgent("task_status_changed", "Đã hoàn thành", "Done việc") is False
+    assert (
+        is_deadline_or_urgent("task_assigned", "Giao việc", "Đúng deadline nhe") is True
+    )
+    assert (
+        is_deadline_or_urgent("task_status_changed", "Đã hoàn thành", "Done việc")
+        is False
+    )
 
     # Selection logic
     angry_stk = get_sticker_for_notification("task_overdue", "Trễ", "Trễ deadline")
@@ -43,9 +49,9 @@ def test_sticker_service_categories():
 
 def test_loto_cluster_drawing():
     from modules.notifications.services.zalo_sticker_service import (
-        get_normal_clusters,
-        get_angry_clusters,
         _loto_picker,
+        get_angry_clusters,
+        get_normal_clusters,
     )
 
     n_clusters = get_normal_clusters()

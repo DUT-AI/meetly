@@ -74,7 +74,6 @@ class CreateWorkspaceUseCase:
         return WorkspaceResponseDTO.from_entity(ws)
 
 
-
 class ListUserWorkspacesUseCase:
     """List all workspaces where current user is a member."""
 
@@ -119,7 +118,6 @@ class GetWorkspaceUseCase:
             raise NotFoundException("Workspace not found.")
 
         return WorkspaceResponseDTO.from_entity(ws)
-
 
 
 class GetWorkspaceInfoUseCase:
@@ -221,7 +219,6 @@ class UpdateWorkspaceUseCase:
         return WorkspaceResponseDTO.from_entity(updated)
 
 
-
 class DeleteWorkspaceUseCase:
     """Delete workspace (ADMIN only)."""
 
@@ -277,7 +274,6 @@ class ResetInviteCodeUseCase:
             workspace_id=workspace_id, invite_code=new_code
         )
         return WorkspaceResponseDTO.from_entity(updated)
-
 
 
 class JoinWorkspaceUseCase:
@@ -350,7 +346,6 @@ class JoinWorkspaceUseCase:
             pass
 
         return WorkspaceResponseDTO.from_entity(ws)
-
 
 
 class GetWorkspaceAnalyticsUseCase:

@@ -30,7 +30,9 @@ class IMeetingRepository(ABC):
         pass
 
     @abstractmethod
-    async def get_upcoming_meetings(self, from_time: datetime, to_time: datetime) -> list[MeetingEntity]:
+    async def get_upcoming_meetings(
+        self, from_time: datetime, to_time: datetime
+    ) -> list[MeetingEntity]:
         pass
 
     @abstractmethod

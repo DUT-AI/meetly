@@ -31,6 +31,7 @@ class MeetingResponseDTO(BaseModel):
     end_time: datetime
     participants: list[str]
     report: dict[str, Any]
+    status: str
     created_by: str
     created_at: datetime
     updated_at: datetime

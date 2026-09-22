@@ -42,9 +42,7 @@ async def test_send_notification_all_channels(mock_recipient: ManageUserDTO) -> 
     channel_zalo.send.return_value = True
 
     channels = [channel_web, channel_discord, channel_zalo]
-    use_case = SendNotificationUseCase(
-        channels=channels, manage_client=manage_client
-    )
+    use_case = SendNotificationUseCase(channels=channels, manage_client=manage_client)
 
     message = NotificationMessage(
         recipient_user_id="user_123",
@@ -84,9 +82,7 @@ async def test_send_notification_channel_filtering(
     channel_zalo.send.return_value = True
 
     channels = [channel_web, channel_discord, channel_zalo]
-    use_case = SendNotificationUseCase(
-        channels=channels, manage_client=manage_client
-    )
+    use_case = SendNotificationUseCase(channels=channels, manage_client=manage_client)
 
     message = NotificationMessage(
         recipient_user_id="user_123",

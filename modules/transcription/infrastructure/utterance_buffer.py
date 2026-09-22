@@ -20,7 +20,9 @@ class UtteranceBuffer:
         self.sample_rate = sample_rate
         self.pre_roll_samples = int(sample_rate * (pre_roll_ms / 1000.0))
         self.partial_cadence_samples = int(sample_rate * (partial_cadence_ms / 1000.0))
-        self.silence_endpoint_samples = int(sample_rate * (silence_endpoint_ms / 1000.0))
+        self.silence_endpoint_samples = int(
+            sample_rate * (silence_endpoint_ms / 1000.0)
+        )
         self.max_utterance_samples = int(sample_rate * max_utterance_s)
 
         # Pre-roll ring buffer
@@ -45,13 +47,19 @@ class UtteranceBuffer:
         Returns: (should_emit_partial, is_endpointed)
         """
         # Energy floor check: if frame energy is very low (room noise/mic static), force silence
-        frame_rms = float(np.sqrt(np.mean(frame_pcm16.astype(np.float32) ** 2))) if len(frame_pcm16) > 0 else 0.0
+        frame_rms = (
+            float(np.sqrt(np.mean(frame_pcm16.astype(np.float32) ** 2)))
+            if len(frame_pcm16) > 0
+            else 0.0
+        )
 
         # Run VAD across 32ms sub-chunks (512 samples)
         sub_chunk_size = 512
         frame_has_speech = False
 
-        if frame_rms >= 50.0:  # ~ -56 dBFS: sensitive enough to capture soft speech
+        if (
+            frame_rms >= 20.0
+        ):  # Sensitive enough to capture soft and remote participant speech
             for i in range(0, len(frame_pcm16), sub_chunk_size):
                 sub_chunk = frame_pcm16[i : i + sub_chunk_size]
                 if len(sub_chunk) == sub_chunk_size:
@@ -80,7 +88,9 @@ class UtteranceBuffer:
                 self._utterance_sample_count += len(frame_pcm16)
 
                 # Check partial cadence (e.g. every 800ms)
-                if (self._utterance_sample_count - self._last_partial_sample_count) >= self.partial_cadence_samples:
+                if (
+                    self._utterance_sample_count - self._last_partial_sample_count
+                ) >= self.partial_cadence_samples:
                     should_emit_partial = True
                     self._last_partial_sample_count = self._utterance_sample_count
 
@@ -109,7 +119,11 @@ class UtteranceBuffer:
     def get_current_audio(self) -> tuple[np.ndarray, int, int]:
         """Return full audio array accumulated for current utterance so far."""
         if not self._utterance_chunks:
-            return np.array([], dtype=np.int16), self.utterance_start_sample, self.utterance_start_sample
+            return (
+                np.array([], dtype=np.int16),
+                self.utterance_start_sample,
+                self.utterance_start_sample,
+            )
         audio = np.concatenate(self._utterance_chunks)
         end_sample = self.utterance_start_sample + len(audio)
         return audio, self.utterance_start_sample, end_sample

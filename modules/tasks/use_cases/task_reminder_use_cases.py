@@ -98,13 +98,13 @@ class CheckTaskDeadlinesUseCase:
 
                 # 2. Due soon checks (Due today, Due in 24 hours)
                 elif delta_seconds <= 86400:
-                    cache_key = f"meetly:notif:task:{task.id}:{a_id}:due_soon:{today_str}"
+                    cache_key = (
+                        f"meetly:notif:task:{task.id}:{a_id}:due_soon:{today_str}"
+                    )
                     already_sent = await redis_client.get(cache_key)
                     if not already_sent:
                         hours_left = max(1, int(delta_seconds // 3600))
-                        title = (
-                            f"⏰ Công việc '{task.name}' sắp đến hạn (còn {hours_left} giờ)"
-                        )
+                        title = f"⏰ Công việc '{task.name}' sắp đến hạn (còn {hours_left} giờ)"
                         msg = NotificationMessage(
                             recipient_user_id=str(assignee_member.user_id),
                             event_type="task_due_soon",

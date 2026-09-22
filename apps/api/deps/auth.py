@@ -69,4 +69,3 @@ CurrentUser = Annotated[AuthUser, Depends(get_current_user)]
 
 async def get_current_user_id(user: AuthUser = Depends(get_current_user)) -> str:
     return str(user.id)
-

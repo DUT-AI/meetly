@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import JSON, DateTime, ForeignKey, String
@@ -7,6 +7,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from core.database.base import Base, TimestampMixin, ULIDPrimaryKeyMixin
 from modules.meetings.domain.entities import MeetingEntity
+from modules.meetings.domain.enums import MeetingStatus
 
 
 class MeetingModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
@@ -24,9 +25,7 @@ class MeetingModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
     start_time: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
-    end_time: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     participants: Mapped[list[str]] = mapped_column(
         JSON().with_variant(JSONB, "postgresql"), default=list, nullable=False
     )
@@ -34,6 +33,26 @@ class MeetingModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
         JSON().with_variant(JSONB, "postgresql"), default=dict, nullable=False
     )
     created_by: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    @property
+    def status(self) -> str:
+        now = datetime.now(UTC)
+        st = (
+            self.start_time.astimezone(UTC)
+            if self.start_time.tzinfo
+            else self.start_time.replace(tzinfo=UTC)
+        )
+        et = (
+            self.end_time.astimezone(UTC)
+            if self.end_time.tzinfo
+            else self.end_time.replace(tzinfo=UTC)
+        )
+        if now < st:
+            return MeetingStatus.SCHEDULED.value
+        elif now <= et:
+            return MeetingStatus.IN_PROGRESS.value
+        else:
+            return MeetingStatus.COMPLETED.value
 
     def to_entity(self) -> MeetingEntity:
         return MeetingEntity(

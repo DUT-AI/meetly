@@ -2,6 +2,8 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from core.config.auth import auth_settings
+
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
 
@@ -30,7 +32,6 @@ class ManageSettings(BaseSettings):
     def users_url(self) -> str:
         if self.user_endpoint:
             return self.user_endpoint
-        from core.config.auth import auth_settings
 
         base = auth_settings.auth_server_url.rstrip("/")
         if "/auth" in base:

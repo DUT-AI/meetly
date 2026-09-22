@@ -7,6 +7,7 @@ from modules.notifications.domain.interfaces import (
     INotificationRepository,
 )
 
+
 class WebsiteInAppChannel(INotificationChannel):
     """Channel for storing notification in DB and pushing to Web client."""
 

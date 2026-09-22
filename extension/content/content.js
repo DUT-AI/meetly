@@ -45,6 +45,39 @@
   let activeWorkspaceId = '';
   let activeMeetingId = '';
 
+  function isExtensionValid() {
+    try {
+      return typeof chrome !== 'undefined' && !!chrome.runtime && !!chrome.runtime.id;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function safeSendMessage(msg, callback) {
+    if (!isExtensionValid()) {
+      stopTimer();
+      stopSpeakerTracking();
+      return;
+    }
+    try {
+      chrome.runtime.sendMessage(msg, (response) => {
+        if (chrome.runtime.lastError) {
+          if (chrome.runtime.lastError.message?.includes('Extension context invalidated')) {
+            stopTimer();
+            stopSpeakerTracking();
+          }
+        } else if (callback) {
+          callback(response);
+        }
+      });
+    } catch (err) {
+      if (err.message?.includes('Extension context invalidated')) {
+        stopTimer();
+        stopSpeakerTracking();
+      }
+    }
+  }
+
   function downsampleTo16k(inputBuffer, inputSampleRate) {
     if (inputSampleRate === 16000) return inputBuffer;
     const ratio = inputSampleRate / 16000;
@@ -730,23 +763,23 @@
         displaySurface: 'browser'
       },
       audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
       },
       preferCurrentTab: true,
       selfBrowserSurface: 'include',
       systemAudio: 'include'
     });
 
-    // Tắt ngay video track để tiết kiệm RAM/CPU (vì chúng ta chỉ cần âm thanh)
-    displayStream.getVideoTracks().forEach((track) => track.stop());
-
-    const tabAudioTracks = displayStream.getAudioTracks();
-    const hasTabAudio = tabAudioTracks.length > 0;
+    const tabAudioTracks = displayStream ? displayStream.getAudioTracks() : [];
+    let hasTabAudio = tabAudioTracks.length > 0;
 
     if (!hasTabAudio) {
-      console.warn('[Meetly] Không tìm thấy luồng âm thanh tab trong DisplayMedia');
+      console.warn('[Meetly] Không tìm thấy luồng âm thanh tab trong getDisplayMedia. Người dùng có thể chưa tích "Chia sẻ âm thanh thẻ".');
+      showToast('⚠️ Bạn chưa bật "Chia sẻ âm thanh của thẻ" (Share tab audio). Hãy bật để thu âm được giọng người khác!', true);
+    } else {
+      console.log('[Meetly] Đã bắt thành công Tab Audio từ Google Meet!');
     }
 
     // 2. Yêu cầu âm thanh Micro của người dùng
@@ -763,13 +796,9 @@
       console.warn('[Meetly] Không thể truy cập Micro, chỉ thu âm thanh phòng họp:', micErr);
     }
 
-    // 3. Khởi tạo Web Audio API để gộp các luồng (ưu tiên 16kHz native để âm thanh trong trẻo, không bị méo tiếng)
+    // 3. Khởi tạo Web Audio API để gộp các luồng
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    try {
-      audioCtx = new AudioContextClass({ sampleRate: 16000 });
-    } catch (e) {
-      audioCtx = new AudioContextClass();
-    }
+    audioCtx = new AudioContextClass();
     if (audioCtx.state === 'suspended') {
       await audioCtx.resume();
     }
@@ -777,18 +806,45 @@
     const mixedDestination = audioCtx.createMediaStreamDestination();
     mixerNode.connect(mixedDestination);
 
-    // Đưa âm thanh tab vào luồng ghi âm (Âm thanh tab đã được trình duyệt phát ra loa tự nhiên)
+    const tabGain = audioCtx.createGain();
+    tabGain.gain.value = 1.0;
+    tabGain.connect(mixerNode);
+
+    // Đưa âm thanh tab vào luồng ghi âm
     let tabSource = null;
     if (hasTabAudio) {
-      tabSource = audioCtx.createMediaStreamSource(new MediaStream([tabAudioTracks[0]]));
-      tabSource.connect(mixerNode);
+      try {
+        tabSource = audioCtx.createMediaStreamSource(new MediaStream([tabAudioTracks[0]]));
+        tabSource.connect(tabGain);
 
-      // Tự động dừng và lưu khi người dùng bấm nút "Dừng chia sẻ" trên thanh trình duyệt
-      tabAudioTracks[0].onended = () => {
-        if (currentStatus !== 'IDLE') {
-          stopMeetingRecording();
+        tabAudioTracks[0].onended = () => {
+          if (currentStatus !== 'IDLE') {
+            stopMeetingRecording();
+          }
+        };
+      } catch (e) {
+        console.warn('[Meetly] Lỗi gắn tab audio source:', e);
+      }
+    }
+
+    // Quét thêm các luồng audio của người khác trong Google Meet DOM (WebRTC Streams)
+    try {
+      const meetAudioEls = document.querySelectorAll('audio');
+      for (const aEl of meetAudioEls) {
+        if (aEl.srcObject && aEl.srcObject instanceof MediaStream && aEl.srcObject.getAudioTracks().length > 0) {
+          const domSource = audioCtx.createMediaStreamSource(aEl.srcObject);
+          domSource.connect(tabGain);
+          if (!tabSource) tabSource = tabGain;
+          hasTabAudio = true;
+          console.log('[Meetly] Đã kết nối thêm Remote Audio từ Google Meet DOM element.');
         }
-      };
+      }
+    } catch (domErr) {
+      console.warn('[Meetly] Lỗi quét audio elements:', domErr);
+    }
+
+    if (tabGain && !tabSource && hasTabAudio) {
+      tabSource = tabGain;
     }
 
     // Đưa âm thanh micro vào luồng ghi âm
@@ -922,8 +978,8 @@
       muteGain.gain.value = 0;
       muteGain.connect(audioCtx.destination);
 
-      // Kênh 1: Âm thanh tab Google Meet (StreamId = 1, gán nhãn REMOTE_SPEAKER / tên người trong Meet)
-      if (tabSource) {
+      // Kênh 1: Âm thanh phòng họp Google Meet (StreamId = 1, gán nhãn REMOTE_SPEAKER / tên người trong Meet)
+      if (tabGain) {
         if (workletLoaded) {
           tabPcmNode = new AudioWorkletNode(audioCtx, 'pcm-processor');
           tabPcmNode.port.onmessage = (e) => {
@@ -935,9 +991,28 @@
             handleStreamAudioData(1, e.inputBuffer.getChannelData(0));
           };
         }
-        tabSource.connect(tabPcmNode);
+        tabGain.connect(tabPcmNode);
         tabPcmNode.connect(muteGain);
       }
+
+      // Lắng nghe thêm các thành viên mới phát biểu (thẻ <audio> mới được Google Meet thêm vào DOM)
+      try {
+        const audioObserver = new MutationObserver((mutations) => {
+          if (currentStatus !== 'RECORDING') return;
+          for (const m of mutations) {
+            for (const node of m.addedNodes) {
+              if (node && node.nodeName === 'AUDIO' && node.srcObject instanceof MediaStream) {
+                try {
+                  const domSource = audioCtx.createMediaStreamSource(node.srcObject);
+                  domSource.connect(tabGain);
+                  console.log('[Meetly] Đã tự động kết nối luồng âm thanh người tham gia mới vào hệ thống.');
+                } catch (e) {}
+              }
+            }
+          }
+        });
+        audioObserver.observe(document.body, { childList: true, subtree: true });
+      } catch (obsErr) {}
 
       // Kênh 2: Âm thanh Micro của bạn (StreamId = 2, gán nhãn LOCAL_USER / Bạn)
       if (micSource) {
@@ -969,7 +1044,7 @@
     startTimer();
 
     // Đồng bộ trạng thái về Service Worker và Popup
-    chrome.runtime.sendMessage({
+    safeSendMessage({
       type: 'STATE_CHANGED',
       state: {
         status: 'RECORDING',
@@ -990,7 +1065,7 @@
       currentStatus = 'PAUSED';
       updateUIState();
       stopTimer();
-      chrome.runtime.sendMessage({
+      safeSendMessage({
         type: 'STATE_CHANGED',
         state: { status: 'PAUSED', durationSeconds: secondsElapsed }
       });
@@ -1006,7 +1081,7 @@
       currentStatus = 'RECORDING';
       updateUIState();
       startTimer();
-      chrome.runtime.sendMessage({
+      safeSendMessage({
         type: 'STATE_CHANGED',
         state: { status: 'RECORDING', durationSeconds: secondsElapsed }
       });
@@ -1079,7 +1154,7 @@
         stopTimer();
         secondsElapsed = 0;
 
-        chrome.runtime.sendMessage({
+        safeSendMessage({
           type: 'RECORDING_SAVED',
           filename: filename,
           durationSeconds: secondsElapsed
@@ -1188,14 +1263,18 @@
   function startTimer() {
     stopTimer();
     timerInterval = setInterval(() => {
+      if (!isExtensionValid()) {
+        stopTimer();
+        return;
+      }
       secondsElapsed += 1;
       const timeStr = formatTime(secondsElapsed);
-      const timerDisplay = shadowRoot.getElementById('timerDisplay');
-      const miniTimer = shadowRoot.getElementById('miniTimer');
+      const timerDisplay = shadowRoot?.getElementById('timerDisplay');
+      const miniTimer = shadowRoot?.getElementById('miniTimer');
       if (timerDisplay) timerDisplay.textContent = timeStr;
       if (miniTimer) miniTimer.textContent = timeStr;
 
-      chrome.runtime.sendMessage({
+      safeSendMessage({
         type: 'TIMER_TICK',
         durationSeconds: secondsElapsed
       });

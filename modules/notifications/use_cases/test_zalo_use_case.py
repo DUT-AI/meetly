@@ -1,7 +1,9 @@
 from dataclasses import dataclass
-from modules.notifications.domain.entities import NotificationMessage
-from modules.notifications.channels.zalo_channel import ZaloBotChannel
+
 from modules.identity.dtos.manage_dtos import ManageUserDTO
+from modules.notifications.channels.zalo_channel import ZaloBotChannel
+from modules.notifications.domain.entities import NotificationMessage
+
 
 @dataclass
 class TestZaloUseCase:
@@ -11,7 +13,9 @@ class TestZaloUseCase:
 
     zalo_channel: ZaloBotChannel
 
-    async def execute(self, user_id: str, zalo_bot_id: str, payload_type: str, payload_value: str) -> bool:
+    async def execute(
+        self, user_id: str, zalo_bot_id: str, payload_type: str, payload_value: str
+    ) -> bool:
         """
         payload_type: 'text', 'photo', 'sticker'
         payload_value: text content, image URL, or sticker ID
@@ -23,7 +27,7 @@ class TestZaloUseCase:
             name="Test User",
             status="ACTIVE",
             roles=[],
-            zalo_bot_id=zalo_bot_id
+            zalo_bot_id=zalo_bot_id,
         )
 
         message = NotificationMessage(
@@ -31,7 +35,7 @@ class TestZaloUseCase:
             event_type="test_zalo",
             title="Tin nhắn thử nghiệm từ hệ thống",
             content="Đây là một tin nhắn kiểm tra tính năng Zalo Bot.",
-            action_url="/tasks"
+            action_url="/tasks",
         )
 
         if payload_type == "photo":

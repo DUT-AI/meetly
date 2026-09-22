@@ -1,4 +1,5 @@
 from collections import defaultdict
+
 from fastapi import WebSocket
 from loguru import logger
 
@@ -11,7 +12,9 @@ class EventBroadcaster:
 
     async def connect(self, session_id: str, websocket: WebSocket) -> None:
         self._subscribers[session_id].add(websocket)
-        logger.debug(f"[Broadcaster] Subscriber joined session {session_id}. Total: {len(self._subscribers[session_id])}")
+        logger.debug(
+            f"[Broadcaster] Subscriber joined session {session_id}. Total: {len(self._subscribers[session_id])}"
+        )
 
     async def disconnect(self, session_id: str, websocket: WebSocket) -> None:
         self._subscribers[session_id].discard(websocket)
@@ -29,7 +32,9 @@ class EventBroadcaster:
             try:
                 await ws.send_json(event_data)
             except Exception as e:
-                logger.debug(f"[Broadcaster] Failed to send event to subscriber ({e}); marking dead.")
+                logger.debug(
+                    f"[Broadcaster] Failed to send event to subscriber ({e}); marking dead."
+                )
                 dead_sockets.append(ws)
 
         for ws in dead_sockets:

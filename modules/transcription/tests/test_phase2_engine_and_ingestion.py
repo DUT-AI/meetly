@@ -1,5 +1,6 @@
 import struct
 from unittest.mock import AsyncMock, MagicMock
+
 import numpy as np
 import pytest
 
@@ -39,9 +40,9 @@ def test_utterance_buffer_preroll_and_endpointing():
     """Verify UtteranceBuffer correctly accumulates pre-roll, detects speech, and endpoints."""
     buffer = UtteranceBuffer(
         sample_rate=16000,
-        pre_roll_ms=250,      # 4000 samples
-        partial_cadence_ms=800, # 12800 samples
-        silence_endpoint_ms=600 # 9600 samples
+        pre_roll_ms=250,  # 4000 samples
+        partial_cadence_ms=800,  # 12800 samples
+        silence_endpoint_ms=600,  # 9600 samples
     )
 
     vad_mock = MagicMock(spec=SileroVADDetector)

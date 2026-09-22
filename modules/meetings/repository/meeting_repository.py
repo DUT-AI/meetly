@@ -54,7 +54,9 @@ class SqlMeetingRepository(IMeetingRepository):
         models = result.scalars().all()
         return [m.to_entity() for m in models]
 
-    async def get_upcoming_meetings(self, from_time: datetime, to_time: datetime) -> list[MeetingEntity]:
+    async def get_upcoming_meetings(
+        self, from_time: datetime, to_time: datetime
+    ) -> list[MeetingEntity]:
         stmt = (
             select(MeetingModel)
             .where(MeetingModel.start_time >= from_time)

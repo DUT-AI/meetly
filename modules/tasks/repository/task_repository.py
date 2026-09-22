@@ -129,9 +129,7 @@ class SqlTaskRepository(ITaskRepository):
         )
 
         if assignee_ids is not None:
-            assignee_filters = [
-                self._assignee_contains(a_id) for a_id in assignee_ids
-            ]
+            assignee_filters = [self._assignee_contains(a_id) for a_id in assignee_ids]
             if assignee_filters:
                 stmt = stmt.where(or_(*assignee_filters))
             else:

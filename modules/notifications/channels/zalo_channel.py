@@ -31,9 +31,7 @@ class ZaloBotChannel(INotificationChannel):
                 path = message.action_url.lstrip("/")
                 action_link = f"\n👉 Xem chi tiết: {base_url}/{path}"
 
-            text = (
-                f"🔔 [Meetly] **{message.title}**\nNội dung: {message.content}{action_link}"
-            )
+            text = f"🔔 [Meetly] **{message.title}**\nNội dung: {message.content}{action_link}"
 
             # 1. Gửi tin nhắn nội dung (hoặc ảnh đính kèm nếu có)
             main_sent = False

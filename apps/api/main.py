@@ -9,14 +9,14 @@ from apps.api.health import check_database, check_minio, check_redis
 from apps.api.routers import (
     assets_router,
     identity_router,
+    meetings_router,
     members_router,
     notifications_router,
     projects_router,
     tasks_router,
+    transcription_router,
     users_router,
     workspaces_router,
-    meetings_router,
-    transcription_router,
 )
 from core.config import settings
 from core.exceptions import setup_exception_handlers
@@ -39,7 +39,7 @@ setup_di(app)
 
 
 class AppCORSMiddleware(CORSMiddleware):
-    """Enhanced CORS Middleware supporting all local development ports."""
+    """Enhanced CORS Middleware supporting all local development ports and Chrome extensions."""
 
     def is_allowed_origin(self, origin: str) -> bool:
         if super().is_allowed_origin(origin):
@@ -53,6 +53,7 @@ class AppCORSMiddleware(CORSMiddleware):
                 "http://100.",
                 "http://10.",
                 "http://172.",
+                "chrome-extension://",
             )
         ) or origin in ("http://localhost", "http://127.0.0.1", "http://[::1]")
 

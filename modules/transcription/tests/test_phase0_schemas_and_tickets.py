@@ -1,5 +1,4 @@
 import time
-import pytest
 
 from modules.transcription.domain.entities import (
     TranscriptionSessionEntity,
@@ -29,8 +28,12 @@ def test_ticket_store_lifecycle():
     store = TicketStore()
 
     # 1. Create producer and subscriber tickets
-    prod_ticket = store.create_ticket("session_123", "user_abc", role="producer", ttl_seconds=60)
-    sub_ticket = store.create_ticket("session_123", "user_xyz", role="subscriber", ttl_seconds=60)
+    prod_ticket = store.create_ticket(
+        "session_123", "user_abc", role="producer", ttl_seconds=60
+    )
+    sub_ticket = store.create_ticket(
+        "session_123", "user_xyz", role="subscriber", ttl_seconds=60
+    )
 
     assert prod_ticket.startswith("tkt_prod_")
     assert sub_ticket.startswith("tkt_sub_")
@@ -46,7 +49,9 @@ def test_ticket_store_lifecycle():
     assert store.consume_ticket(prod_ticket) is None
 
     # 4. Expired ticket fails
-    expired_ticket = store.create_ticket("session_123", "user_abc", role="producer", ttl_seconds=0)
+    expired_ticket = store.create_ticket(
+        "session_123", "user_abc", role="producer", ttl_seconds=0
+    )
     time.sleep(0.01)
     assert store.consume_ticket(expired_ticket) is None
 

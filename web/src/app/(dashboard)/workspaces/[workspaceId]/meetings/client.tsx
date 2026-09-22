@@ -175,7 +175,7 @@ export const MeetingsClient = () => {
   const dayOverviewMeetings = selectedDayOverview ? getMeetingsForDay(selectedDayOverview) : [];
 
   return (
-    <div className="flex flex-col h-full bg-slate-50/70 p-4 gap-4 overflow-hidden">
+    <div className="flex flex-col h-full gap-4 w-full">
       {/* ── Bright Header Controls ── */}
       <div className="flex flex-wrap items-center justify-between bg-white px-5 py-3.5 rounded-2xl border border-slate-200/90 shadow-xs gap-3">
         <div className="flex items-center gap-3">

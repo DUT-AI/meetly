@@ -14,7 +14,7 @@ from modules.tasks.dtos.task_dtos import (
     TaskCreateDTO,
     TaskUpdateDTO,
 )
-from modules.tasks.models.task import TaskModel  # noqa: F401
+from modules.tasks.models.task import TaskModel
 from modules.tasks.repository.task_repository import SqlTaskRepository
 from modules.tasks.use_cases.task_use_cases import (
     CreateTaskUseCase,
@@ -151,24 +151,18 @@ class TestSqlTaskRepositoryMultiAssignees:
         await async_session.commit()
 
         # mem_1 should see t1
-        tasks_mem_1 = await repo.list_tasks(
-            workspace_id="ws_1", assignee_id="mem_1"
-        )
+        tasks_mem_1 = await repo.list_tasks(workspace_id="ws_1", assignee_id="mem_1")
         assert len(tasks_mem_1) == 1
         assert tasks_mem_1[0].id == t1.id
 
         # mem_2 should see both t1 and t2
-        tasks_mem_2 = await repo.list_tasks(
-            workspace_id="ws_1", assignee_id="mem_2"
-        )
+        tasks_mem_2 = await repo.list_tasks(workspace_id="ws_1", assignee_id="mem_2")
         assert len(tasks_mem_2) == 2
         task_ids = {t.id for t in tasks_mem_2}
         assert task_ids == {t1.id, t2.id}
 
         # mem_3 should see nothing
-        tasks_mem_3 = await repo.list_tasks(
-            workspace_id="ws_1", assignee_id="mem_3"
-        )
+        tasks_mem_3 = await repo.list_tasks(workspace_id="ws_1", assignee_id="mem_3")
         assert len(tasks_mem_3) == 0
 
     @pytest.mark.asyncio
@@ -419,8 +413,7 @@ class TestUpdateTaskUseCase:
         assert notification_dispatcher.dispatch.call_count == 2
         calls = notification_dispatcher.dispatch.call_args_list
         event_map = {
-            call[0][0].recipient_user_id: call[0][0].event_type
-            for call in calls
+            call[0][0].recipient_user_id: call[0][0].event_type for call in calls
         }
         assert event_map == {
             "user_mem_1": "task_unassigned",
@@ -572,4 +565,3 @@ class TestTaskReminderUseCases:
             for call in notification_dispatcher.dispatch.call_args_list
         }
         assert recipients == {"user_mem_1", "user_mem_2"}
-

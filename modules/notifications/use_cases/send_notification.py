@@ -27,7 +27,9 @@ class SendNotificationUseCase:
         target_channels = self.channels
         if message.channels is not None:
             target_channels = [
-                c for c in self.channels if getattr(c, "channel_name", "") in message.channels
+                c
+                for c in self.channels
+                if getattr(c, "channel_name", "") in message.channels
             ]
 
         tasks = [channel.send(recipient, message) for channel in target_channels]

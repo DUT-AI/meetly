@@ -1,7 +1,7 @@
 import asyncio
+import secrets
 import sys
 from datetime import UTC, datetime, timedelta
-import secrets
 
 from sqlalchemy import select
 
@@ -42,11 +42,15 @@ async def seed_data():
     if member_user:
         print(f"-> Member User (quetu0710@gmail.com): ID = {member_user_id}")
     else:
-        print(f"-> Member User (quetu0710@gmail.com) chưa có trên manage.dutai.io.vn, dùng tạm user_id = '{member_user_id}'")
+        print(
+            f"-> Member User (quetu0710@gmail.com) chưa có trên manage.dutai.io.vn, dùng tạm user_id = '{member_user_id}'"
+        )
 
     async with AsyncSessionLocal() as session:
         # 2. Tạo Workspace "Phòng ban test thông báo"
-        ws_stmt = select(WorkspaceModel).where(WorkspaceModel.name == "Phòng ban test thông báo")
+        ws_stmt = select(WorkspaceModel).where(
+            WorkspaceModel.name == "Phòng ban test thông báo"
+        )
         existing_ws = (await session.execute(ws_stmt)).scalar_one_or_none()
 
         if not existing_ws:
@@ -104,7 +108,8 @@ async def seed_data():
 
         # 4. Tạo Project
         proj_stmt = select(ProjectModel).where(
-            ProjectModel.workspace_id == ws.id, ProjectModel.name == "Dự án Test Thông Báo"
+            ProjectModel.workspace_id == ws.id,
+            ProjectModel.name == "Dự án Test Thông Báo",
         )
         proj = (await session.execute(proj_stmt)).scalar_one_or_none()
         if not proj:
@@ -139,11 +144,15 @@ async def seed_data():
             )
             session.add(task)
             await session.flush()
-            print(f"-> Đã tạo Task: [{task.id}] '{task.name}' giao cho assignees: {task.assignee_ids}")
+            print(
+                f"-> Đã tạo Task: [{task.id}] '{task.name}' giao cho assignees: {task.assignee_ids}"
+            )
         else:
             task.assignee_ids = [member_mem.id, admin_mem.id]
             task.due_date = due
-            print(f"-> Task 'test' đã tồn tại, đã cập nhật assignees: {task.assignee_ids}")
+            print(
+                f"-> Task 'test' đã tồn tại, đã cập nhật assignees: {task.assignee_ids}"
+            )
 
         await session.commit()
         print("\n=== HOÀN TẤT SEED DATA THÀNH CÔNG ===")
@@ -170,11 +179,17 @@ async def seed_data():
                     break
 
             target_user = admin_user or member_user
-            if not chat_id and target_user and getattr(target_user, "zalo_bot_id", None):
+            if (
+                not chat_id
+                and target_user
+                and getattr(target_user, "zalo_bot_id", None)
+            ):
                 chat_id = target_user.zalo_bot_id
 
             if not chat_id:
-                print("-> Chú ý: Chưa tìm thấy zalo_bot_id. Hãy truyền thêm tham số: --chat-id <zalo_chat_id>")
+                print(
+                    "-> Chú ý: Chưa tìm thấy zalo_bot_id. Hãy truyền thêm tham số: --chat-id <zalo_chat_id>"
+                )
             else:
                 if target_user:
                     target_user.zalo_bot_id = chat_id
@@ -182,7 +197,9 @@ async def seed_data():
 
                 # Test 1: Thông báo bình thường (sẽ tự động đính kèm sticker bình thường)
                 msg_normal = NotificationMessage(
-                    recipient_user_id=str(target_user.id if target_user else "test_user"),
+                    recipient_user_id=str(
+                        target_user.id if target_user else "test_user"
+                    ),
                     event_type="task_status_changed",
                     title="Công việc 'test' đã chuyển trạng thái sang 'Đang làm'",
                     content="Công việc test được cập nhật bởi hệ thống kiểm thử.",
@@ -190,11 +207,15 @@ async def seed_data():
                 )
                 print("-> Đang gửi thông báo bình thường kèm sticker...")
                 ok_normal = await zalo_channel.send(target_user, msg_normal)
-                print(f"   Kết quả thông báo bình thường: {'Thành công' if ok_normal else 'Thất bại'}")
+                print(
+                    f"   Kết quả thông báo bình thường: {'Thành công' if ok_normal else 'Thất bại'}"
+                )
 
                 # Test 2: Thông báo trễ hạn / deadline (sẽ tự động đính kèm sticker giận dỗi / tức giận)
                 msg_angry = NotificationMessage(
-                    recipient_user_id=str(target_user.id if target_user else "test_user"),
+                    recipient_user_id=str(
+                        target_user.id if target_user else "test_user"
+                    ),
                     event_type="task_overdue",
                     title="⚠️ Công việc 'test' đã quá hạn 1 ngày!",
                     content="Hạn chót đã qua, vui lòng cập nhật tiến độ công việc ngay!",
@@ -202,7 +223,9 @@ async def seed_data():
                 )
                 print("-> Đang gửi thông báo trễ hạn/deadline kèm sticker tức giận...")
                 ok_angry = await zalo_channel.send(target_user, msg_angry)
-                print(f"   Kết quả thông báo quá hạn: {'Thành công' if ok_angry else 'Thất bại'}")
+                print(
+                    f"   Kết quả thông báo quá hạn: {'Thành công' if ok_angry else 'Thất bại'}"
+                )
 
 
 if __name__ == "__main__":

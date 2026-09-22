@@ -38,15 +38,21 @@ def upgrade() -> None:
         sa.Column("status", sa.String(length=50), nullable=False),
         sa.Column("workspace_id", sa.String(length=26), nullable=False),
         sa.Column("project_id", sa.String(length=26), nullable=False),
-        sa.Column("assignee_ids", assignee_ids_type, server_default="[]", nullable=False),
+        sa.Column(
+            "assignee_ids", assignee_ids_type, server_default="[]", nullable=False
+        ),
         sa.Column("due_date", sa.DateTime(timezone=True), nullable=True),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("priority", sa.String(length=20), server_default="MEDIUM", nullable=False),
+        sa.Column(
+            "priority", sa.String(length=20), server_default="MEDIUM", nullable=False
+        ),
         sa.Column("labels", sa.JSON(), server_default="[]", nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
     )
@@ -110,7 +116,9 @@ def upgrade() -> None:
 
     # 5. Swap tables: drop old tasks table and rename tasks_new to tasks
     if is_postgres:
-        op.execute("ALTER TABLE task_comments DROP CONSTRAINT IF EXISTS task_comments_task_id_fkey;")
+        op.execute(
+            "ALTER TABLE task_comments DROP CONSTRAINT IF EXISTS task_comments_task_id_fkey;"
+        )
         op.execute("DROP TABLE tasks CASCADE;")
         op.execute("ALTER TABLE tasks_new RENAME TO tasks;")
         op.execute("ALTER TABLE tasks RENAME CONSTRAINT tasks_new_pkey TO tasks_pkey;")
@@ -126,7 +134,9 @@ def upgrade() -> None:
         op.execute("ALTER TABLE tasks_new RENAME TO tasks;")
 
     # 6. Recreate indexes on tasks
-    op.create_index(op.f("ix_tasks_workspace_id"), "tasks", ["workspace_id"], unique=False)
+    op.create_index(
+        op.f("ix_tasks_workspace_id"), "tasks", ["workspace_id"], unique=False
+    )
     op.create_index(op.f("ix_tasks_project_id"), "tasks", ["project_id"], unique=False)
     op.create_index(op.f("ix_tasks_status"), "tasks", ["status"], unique=False)
     op.create_index(op.f("ix_tasks_priority"), "tasks", ["priority"], unique=False)
@@ -156,11 +166,15 @@ def downgrade() -> None:
         sa.Column("due_date", sa.DateTime(timezone=True), nullable=True),
         sa.Column("position", sa.Integer(), nullable=False),
         sa.Column("description", sa.Text(), nullable=True),
-        sa.Column("priority", sa.String(length=20), server_default="MEDIUM", nullable=False),
+        sa.Column(
+            "priority", sa.String(length=20), server_default="MEDIUM", nullable=False
+        ),
         sa.Column("labels", sa.JSON(), server_default="[]", nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
-        sa.ForeignKeyConstraint(["workspace_id"], ["workspaces.id"], ondelete="CASCADE"),
+        sa.ForeignKeyConstraint(
+            ["workspace_id"], ["workspaces.id"], ondelete="CASCADE"
+        ),
         sa.ForeignKeyConstraint(["project_id"], ["projects.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["assignee_id"], ["members.id"], ondelete="SET NULL"),
         sa.PrimaryKeyConstraint("id"),
@@ -202,7 +216,9 @@ def downgrade() -> None:
 
     # 3. Swap tables back
     if is_postgres:
-        op.execute("ALTER TABLE task_comments DROP CONSTRAINT IF EXISTS task_comments_task_id_fkey;")
+        op.execute(
+            "ALTER TABLE task_comments DROP CONSTRAINT IF EXISTS task_comments_task_id_fkey;"
+        )
         op.execute("DROP TABLE tasks CASCADE;")
         op.execute("ALTER TABLE tasks_old RENAME TO tasks;")
         op.execute("ALTER TABLE tasks RENAME CONSTRAINT tasks_old_pkey TO tasks_pkey;")
@@ -218,8 +234,12 @@ def downgrade() -> None:
         op.execute("ALTER TABLE tasks_old RENAME TO tasks;")
 
     # 4. Recreate legacy indexes
-    op.create_index(op.f("ix_tasks_workspace_id"), "tasks", ["workspace_id"], unique=False)
+    op.create_index(
+        op.f("ix_tasks_workspace_id"), "tasks", ["workspace_id"], unique=False
+    )
     op.create_index(op.f("ix_tasks_project_id"), "tasks", ["project_id"], unique=False)
     op.create_index(op.f("ix_tasks_status"), "tasks", ["status"], unique=False)
     op.create_index(op.f("ix_tasks_priority"), "tasks", ["priority"], unique=False)
-    op.create_index(op.f("ix_tasks_assignee_id"), "tasks", ["assignee_id"], unique=False)
+    op.create_index(
+        op.f("ix_tasks_assignee_id"), "tasks", ["assignee_id"], unique=False
+    )

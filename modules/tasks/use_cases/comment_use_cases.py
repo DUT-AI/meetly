@@ -155,7 +155,7 @@ class CreateTaskCommentUseCase:
             await self.notification_dispatcher.dispatch(msg)
 
         # Notify task assignees about new comment if not already notified
-        for a_id in (task.assignee_ids or []):
+        for a_id in task.assignee_ids or []:
             assignee_member = await self.member_repo.get_by_id(a_id)
             if (
                 assignee_member

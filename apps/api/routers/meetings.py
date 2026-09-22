@@ -8,7 +8,9 @@ from modules.meetings.dtos.meeting_dtos import (
 )
 from modules.meetings.use_cases.meeting_use_cases import MeetingUseCases
 
-router = APIRouter(prefix="/api/v1/workspaces/{workspace_id}/meetings", tags=["Meetings"])
+router = APIRouter(
+    prefix="/api/v1/workspaces/{workspace_id}/meetings", tags=["Meetings"]
+)
 
 
 @router.post("", status_code=status.HTTP_201_CREATED)
@@ -38,7 +40,9 @@ async def list_meetings(
     current_user: CurrentUser,
     use_cases: FromDishka[MeetingUseCases],
 ) -> dict:
-    entities = await use_cases.list_meetings(workspace_id=workspace_id, actor_id=str(current_user.id))
+    entities = await use_cases.list_meetings(
+        workspace_id=workspace_id, actor_id=str(current_user.id)
+    )
     return {"data": {"documents": entities, "total": len(entities)}}
 
 
@@ -50,7 +54,9 @@ async def get_meeting(
     current_user: CurrentUser,
     use_cases: FromDishka[MeetingUseCases],
 ) -> dict:
-    entity = await use_cases.get_meeting(meeting_id=meeting_id, actor_id=str(current_user.id))
+    entity = await use_cases.get_meeting(
+        meeting_id=meeting_id, actor_id=str(current_user.id)
+    )
     return {"data": entity}
 
 

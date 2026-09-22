@@ -43,7 +43,6 @@ class WorkspaceResponseDTO(BaseModel):
         )
 
 
-
 class WorkspaceInfoResponseDTO(BaseModel):
     """Public info of workspace for join preview."""
 

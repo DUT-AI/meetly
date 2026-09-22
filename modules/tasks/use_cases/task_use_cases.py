@@ -52,7 +52,11 @@ async def _send_task_status_discord_notification(
     """Send a rich Discord embed to workspace's discord_room_id channel on status change."""
     try:
         workspace = await workspace_repo.get_by_id(workspace_id)
-        if not workspace or not workspace.notify_task_status_discord or not workspace.discord_room_id:
+        if (
+            not workspace
+            or not workspace.notify_task_status_discord
+            or not workspace.discord_room_id
+        ):
             return
 
         status_names = {
@@ -133,7 +137,11 @@ async def _send_task_status_zalo_notification(
     """Send status change text to workspace's zalo_room_id group."""
     try:
         workspace = await workspace_repo.get_by_id(workspace_id)
-        if not workspace or not workspace.notify_task_status_zalo or not workspace.zalo_room_id:
+        if (
+            not workspace
+            or not workspace.notify_task_status_zalo
+            or not workspace.zalo_room_id
+        ):
             return
 
         status_names = {
@@ -180,7 +188,9 @@ async def _send_task_status_zalo_notification(
             content=task_name,
         )
         if sticker_id:
-            await zalo_client.send_sticker(chat_id=workspace.zalo_room_id, sticker=sticker_id)
+            await zalo_client.send_sticker(
+                chat_id=workspace.zalo_room_id, sticker=sticker_id
+            )
     except Exception as e:
         logger.warning(f"Failed to send Zalo room notification: {e}")
 
@@ -237,10 +247,7 @@ async def _dispatch_task_status_notifications(
             for assignee_id in target_ids:
                 assignee_member = await member_repo.get_by_id(assignee_id)
 
-                if (
-                    assignee_member
-                    and str(assignee_member.user_id) != actor_id
-                ):
+                if assignee_member and str(assignee_member.user_id) != actor_id:
                     await notification_dispatcher.dispatch(
                         NotificationMessage(
                             recipient_user_id=str(assignee_member.user_id),
@@ -300,11 +307,7 @@ async def _dispatch_task_status_notifications(
             )
 
         # 4. Notify Zalo Room of workspace if configured & enabled
-        if (
-            zalo_client
-            and workspace.notify_task_status_zalo
-            and workspace.zalo_room_id
-        ):
+        if zalo_client and workspace.notify_task_status_zalo and workspace.zalo_room_id:
             await _send_task_status_zalo_notification(
                 zalo_client=zalo_client,
                 workspace_repo=workspace_repo,
@@ -365,7 +368,9 @@ class CreateTaskUseCase:
         for a_id in resolved_assignee_ids:
             a_member = await self.member_repo.get_by_id(a_id)
             if not a_member or a_member.workspace_id != workspace_id:
-                raise ForbiddenException(f"Assignee {a_id} does not belong to this workspace.")
+                raise ForbiddenException(
+                    f"Assignee {a_id} does not belong to this workspace."
+                )
 
         highest = await self.task_repo.get_highest_position(workspace_id, status)
         new_position = (highest + 1000) if highest is not None else 1000
@@ -688,7 +693,9 @@ class UpdateTaskUseCase:
             for a_id in new_assignee_ids_list:
                 m = await self.member_repo.get_by_id(a_id)
                 if not m or m.workspace_id != task.workspace_id:
-                    raise ForbiddenException(f"Assignee {a_id} does not belong to this workspace.")
+                    raise ForbiddenException(
+                        f"Assignee {a_id} does not belong to this workspace."
+                    )
 
         updated = await self.task_repo.update(
             task_id=task_id,
@@ -840,7 +847,9 @@ class BulkUpdateTasksUseCase:
                 if not member:
                     raise ForbiddenException("Unauthorized.")
             elif t.workspace_id != workspace_id:
-                raise BadRequestException("All tasks must belong to the same workspace.")
+                raise BadRequestException(
+                    "All tasks must belong to the same workspace."
+                )
             if t.status != item.status:
                 status_changed_tasks.append((t, item.status))
             updates.append((item.id, item.status, item.position))
@@ -993,11 +1002,7 @@ class ListMyGlobalTasksUseCase:
 
         # Assignee profiles
         member_map = {m.id: m for m in user_memberships}
-        all_assignee_ids = {
-            a_id
-            for t in tasks
-            for a_id in (t.assignee_ids or [])
-        }
+        all_assignee_ids = {a_id for t in tasks for a_id in (t.assignee_ids or [])}
         missing_ids = all_assignee_ids - set(member_map.keys())
         for m_id in missing_ids:
             m = await self.member_repo.get_by_id(m_id)

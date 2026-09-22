@@ -12,7 +12,9 @@ class SeamlessTranslationClient:
         base_url: str | None = None,
         timeout: float | None = None,
     ) -> None:
-        self.base_url = (base_url or translation_settings.translation_service_url).rstrip("/")
+        self.base_url = (
+            base_url or translation_settings.translation_service_url
+        ).rstrip("/")
         self.timeout = timeout or translation_settings.translation_timeout_s
         self._client: httpx.AsyncClient | None = None
 
@@ -55,13 +57,19 @@ class SeamlessTranslationClient:
                 data = res.json()
                 return data.get("translation")
             else:
-                logger.debug(f"[TranslationClient] Service responded with HTTP {res.status_code}: {res.text}")
+                logger.debug(
+                    f"[TranslationClient] Service responded with HTTP {res.status_code}: {res.text}"
+                )
                 return None
         except httpx.ConnectError:
-            logger.debug(f"[TranslationClient] Cannot connect to translation service at {self.base_url}")
+            logger.debug(
+                f"[TranslationClient] Cannot connect to translation service at {self.base_url}"
+            )
             return None
         except httpx.TimeoutException:
-            logger.debug(f"[TranslationClient] Translation timed out after {self.timeout}s for text: {clean_text[:20]}...")
+            logger.debug(
+                f"[TranslationClient] Translation timed out after {self.timeout}s for text: {clean_text[:20]}..."
+            )
             return None
         except Exception as e:
             logger.debug(f"[TranslationClient] Unexpected translation error: {e}")

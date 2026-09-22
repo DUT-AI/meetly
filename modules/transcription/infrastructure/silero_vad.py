@@ -20,20 +20,27 @@ class SileroVADDetector:
         if get_vad_model is not None:
             try:
                 self._model = get_vad_model()
-                logger.info("[VAD] Successfully initialized Silero VAD ONNX model from faster-whisper")
+                logger.info(
+                    "[VAD] Successfully initialized Silero VAD ONNX model from faster-whisper"
+                )
                 return
             except Exception as e:
-                logger.warning(f"[VAD] Could not load Silero VAD from faster-whisper ({e}); using energy fallback.")
+                logger.warning(
+                    f"[VAD] Could not load Silero VAD from faster-whisper ({e}); using energy fallback."
+                )
                 self._model = None
         else:
-            logger.warning("[VAD] faster-whisper vad module not found, using energy fallback")
+            logger.warning(
+                "[VAD] faster-whisper vad module not found, using energy fallback"
+            )
             self._model = None
 
     def reset_states(self) -> None:
         """Reset recurrent states for a new audio stream."""
-        pass
 
-    def is_speech(self, frame_pcm16: np.ndarray, sample_rate: int = 16000) -> tuple[bool, float]:
+    def is_speech(
+        self, frame_pcm16: np.ndarray, sample_rate: int = 16000
+    ) -> tuple[bool, float]:
         """
         Evaluate whether a 32ms frame (512 samples at 16kHz) contains speech.
         Returns (is_speech_bool, speech_probability).
@@ -45,7 +52,7 @@ class SileroVADDetector:
             frame_float = frame_pcm16
 
         # Calculate RMS energy for fallback and validation
-        rms = float(np.sqrt(np.mean(frame_float ** 2))) if len(frame_float) > 0 else 0.0
+        rms = float(np.sqrt(np.mean(frame_float**2))) if len(frame_float) > 0 else 0.0
 
         if self._model is not None and len(frame_float) == 512:
             try:

@@ -104,7 +104,5 @@ class NotificationProvider(Provider):
         return MarkAllNotificationsReadUseCase(repo)
 
     @provide(scope=Scope.REQUEST)
-    def get_test_zalo_use_case(
-        self, zalo_channel: ZaloBotChannel
-    ) -> TestZaloUseCase:
+    def get_test_zalo_use_case(self, zalo_channel: ZaloBotChannel) -> TestZaloUseCase:
         return TestZaloUseCase(zalo_channel)

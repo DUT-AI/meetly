@@ -6,6 +6,7 @@ from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.domain.interfaces import INotificationChannel
 from modules.notifications.services.discord_service import DiscordService
 
+
 class DiscordChannel(INotificationChannel):
     """Channel for sending Discord DM notifications."""
 

@@ -59,8 +59,14 @@
       </label>
 
       <div class="server-config">
-        <label for="txtServerUrl">Máy chủ Meetly (API):</label>
-        <input type="text" id="txtServerUrl" value="https://meetly.dutai.io.vn" placeholder="https://meetly.dutai.io.vn">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <label for="txtServerUrl" style="margin-bottom: 0;">Máy chủ Meetly (API):</label>
+          <div style="display: flex; gap: 4px;">
+            <button type="button" id="btnPresetLocal" style="font-size: 10px; padding: 2px 6px; background: #334155; border: 1px solid #475569; border-radius: 4px; color: #cbd5e1; cursor: pointer;">Local (8000)</button>
+            <button type="button" id="btnPresetProd" style="font-size: 10px; padding: 2px 6px; background: #334155; border: 1px solid #475569; border-radius: 4px; color: #cbd5e1; cursor: pointer;">Production</button>
+          </div>
+        </div>
+        <input type="text" id="txtServerUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
       </div>
 
       <div class="server-config" style="margin-top: 8px;">

@@ -342,7 +342,9 @@ async def test_bulk_update_tasks_mixed_workspaces_rejected() -> None:
         TaskBulkItemDTO(id="t2", status=TaskStatus.IN_PROGRESS, position=2000),
     ]
 
-    with pytest.raises(BadRequestException, match="All tasks must belong to the same workspace"):
+    with pytest.raises(
+        BadRequestException, match="All tasks must belong to the same workspace"
+    ):
         await use_case.execute(items=items, user_id="user_1")
 
 

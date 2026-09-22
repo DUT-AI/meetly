@@ -1,14 +1,19 @@
-import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import httpx
-from unittest.mock import AsyncMock, patch, MagicMock
-from modules.transcription.infrastructure.seamless_client import SeamlessTranslationClient
+import pytest
+
 from modules.transcription.domain.entities import TranscriptSegmentEntity
 from modules.transcription.dtos.session_dtos import TranscriptSegmentDTO
+from modules.transcription.infrastructure.seamless_client import (
+    SeamlessTranslationClient,
+)
+
 
 @pytest.mark.asyncio
 async def test_seamless_client_translate_success():
     client = SeamlessTranslationClient(base_url="http://mock-service:8005", timeout=2.0)
-    
+
     # Mock httpx AsyncClient post
     mock_resp = MagicMock()
     mock_resp.status_code = 200
@@ -17,21 +22,29 @@ async def test_seamless_client_translate_success():
         "src_lang": "vie",
         "tgt_lang": "eng",
     }
-    
+
     with patch.object(httpx.AsyncClient, "post", new=AsyncMock(return_value=mock_resp)):
-        result = await client.translate("Chào buổi sáng mọi người", src_lang="vie", tgt_lang="eng")
+        result = await client.translate(
+            "Chào buổi sáng mọi người", src_lang="vie", tgt_lang="eng"
+        )
         assert result == "Good morning everyone"
     await client.close()
 
+
 @pytest.mark.asyncio
 async def test_seamless_client_graceful_fallback_on_network_error():
-    client = SeamlessTranslationClient(base_url="http://invalid-host-unreachable:9999", timeout=0.5)
-    
-    with patch.object(httpx.AsyncClient, "post", side_effect=httpx.ConnectError("Connection refused")):
+    client = SeamlessTranslationClient(
+        base_url="http://invalid-host-unreachable:9999", timeout=0.5
+    )
+
+    with patch.object(
+        httpx.AsyncClient, "post", side_effect=httpx.ConnectError("Connection refused")
+    ):
         # Should not raise exception, but return None gracefully
         result = await client.translate("Xin chào")
         assert result is None
     await client.close()
+
 
 @pytest.mark.asyncio
 async def test_seamless_client_empty_text():
@@ -39,6 +52,7 @@ async def test_seamless_client_empty_text():
     result = await client.translate("   ")
     assert result is None
     await client.close()
+
 
 def test_transcript_segment_entity_and_dto_translation_field():
     entity = TranscriptSegmentEntity(
@@ -74,8 +88,11 @@ def test_transcript_segment_entity_and_dto_translation_field():
 
 @pytest.mark.asyncio
 async def test_remote_gpu_asr_success():
-    from modules.transcription.infrastructure.faster_whisper_engine import FasterWhisperEngine
     import numpy as np
+
+    from modules.transcription.infrastructure.faster_whisper_engine import (
+        FasterWhisperEngine,
+    )
 
     engine = FasterWhisperEngine(model_size_or_path="small")
 
@@ -98,14 +115,24 @@ async def test_remote_gpu_asr_success():
 
 @pytest.mark.asyncio
 async def test_remote_gpu_asr_fallback_to_local():
-    from modules.transcription.infrastructure.faster_whisper_engine import FasterWhisperEngine
     import numpy as np
+
+    from modules.transcription.infrastructure.faster_whisper_engine import (
+        FasterWhisperEngine,
+    )
 
     engine = FasterWhisperEngine(model_size_or_path="small")
 
     dummy_audio = np.zeros(16000, dtype=np.int16)
-    with patch.object(httpx.AsyncClient, "post", side_effect=httpx.ConnectError("Connection refused")):
-        with patch.object(engine, "_sync_transcribe", return_value=("Local fallback text", [], 0.9)):
-            text, words, conf = await engine.transcribe_samples(dummy_audio, language="vi")
-            assert text == "Local fallback text"
-
+    with (
+        patch.object(
+            httpx.AsyncClient,
+            "post",
+            side_effect=httpx.ConnectError("Connection refused"),
+        ),
+        patch.object(
+            engine, "_sync_transcribe", return_value=("Local fallback text", [], 0.9)
+        ),
+    ):
+        text, words, conf = await engine.transcribe_samples(dummy_audio, language="vi")
+        assert text == "Local fallback text"

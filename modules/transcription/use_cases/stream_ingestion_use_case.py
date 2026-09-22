@@ -1,20 +1,26 @@
 import asyncio
 import json
 import struct
-from typing import Any
+
+import numpy as np
 from fastapi import WebSocket, WebSocketDisconnect
 from loguru import logger
-import numpy as np
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from modules.transcription.domain.enums import SessionStatus, SpeakerLabel, StreamId
 from modules.transcription.infrastructure.event_broadcaster import event_broadcaster
-from modules.transcription.infrastructure.faster_whisper_engine import FasterWhisperEngine
+from modules.transcription.infrastructure.faster_whisper_engine import (
+    FasterWhisperEngine,
+)
 from modules.transcription.infrastructure.seamless_client import seamless_client
 from modules.transcription.infrastructure.silero_vad import SileroVADDetector
 from modules.transcription.infrastructure.utterance_buffer import UtteranceBuffer
-from modules.transcription.repository.segment_repository import SqlTranscriptSegmentRepository
-from modules.transcription.repository.session_repository import SqlTranscriptionSessionRepository
+from modules.transcription.repository.segment_repository import (
+    SqlTranscriptSegmentRepository,
+)
+from modules.transcription.repository.session_repository import (
+    SqlTranscriptionSessionRepository,
+)
 
 
 class StreamIngestionUseCase:
@@ -45,12 +51,18 @@ class StreamIngestionUseCase:
                 final_audio, language="vi", beam_size=5, word_timestamps=True
             )
             if not final_text:
-                logger.debug(f"[Ingestion] Utterance {utterance_id} produced empty text")
+                logger.debug(
+                    f"[Ingestion] Utterance {utterance_id} produced empty text"
+                )
                 return
 
-            logger.info(f"[Ingestion] Finalized {utterance_id}: {final_text!r} (conf={conf})")
+            logger.info(
+                f"[Ingestion] Finalized {utterance_id}: {final_text!r} (conf={conf})"
+            )
             # Cascaded Streaming Translation (Vietnamese -> English via SeamlessStreaming)
-            translation = await seamless_client.translate(final_text, src_lang="vie", tgt_lang="eng")
+            translation = await seamless_client.translate(
+                final_text, src_lang="vie", tgt_lang="eng"
+            )
 
             base_start_ms = int(utt_start * 1000 / 16000)
             base_end_ms = int(utt_end * 1000 / 16000)
@@ -124,7 +136,9 @@ class StreamIngestionUseCase:
                 },
             )
         except Exception as e:
-            logger.error(f"[Ingestion] Error transcribing final utterance {utterance_id}: {e}")
+            logger.error(
+                f"[Ingestion] Error transcribing final utterance {utterance_id}: {e}"
+            )
 
     async def _process_partial_utterance(
         self,
@@ -141,13 +155,17 @@ class StreamIngestionUseCase:
 
         try:
             # Cap partial inference window to latest 5.0s (80,000 samples) to ensure coherent context and sub-second response
-            audio_for_partial = current_audio[-80000:] if len(current_audio) > 80000 else current_audio
+            audio_for_partial = (
+                current_audio[-80000:] if len(current_audio) > 80000 else current_audio
+            )
             partial_text, _, _ = await self.whisper_engine.transcribe_samples(
-                audio_for_partial, language="vi", beam_size=1, word_timestamps=False, without_timestamps=True
+                audio_for_partial, language="vi", beam_size=1, word_timestamps=False
             )
             if partial_text:
                 # Fast translation for partial utterance
-                partial_translation = await seamless_client.translate(partial_text, src_lang="vie", tgt_lang="eng")
+                partial_translation = await seamless_client.translate(
+                    partial_text, src_lang="vie", tgt_lang="eng"
+                )
                 start_ms = int(utt_start * 1000 / 16000)
                 end_ms = int(utt_end * 1000 / 16000)
                 await event_broadcaster.broadcast(
@@ -178,20 +196,30 @@ class StreamIngestionUseCase:
         Decouples frame ingestion from Whisper ASR inference.
         """
         await websocket.accept()
-        logger.info(f"[Ingestion] Producer WebSocket connected for session {session_id}")
+        logger.info(
+            f"[Ingestion] Producer WebSocket connected for session {session_id}"
+        )
 
         # Update session status to STREAMING
         try:
             async with self.session_factory() as session:
                 session_repo = SqlTranscriptionSessionRepository(session)
-                await session_repo.update_status(session_id, SessionStatus.STREAMING.value)
+                await session_repo.update_status(
+                    session_id, SessionStatus.STREAMING.value
+                )
                 await session.commit()
         except Exception as e:
-            logger.warning(f"[Ingestion] Could not update session {session_id} to STREAMING: {e}")
+            logger.warning(
+                f"[Ingestion] Could not update session {session_id} to STREAMING: {e}"
+            )
 
         await event_broadcaster.broadcast(
             session_id,
-            {"type": "session.status_changed", "session_id": session_id, "status": SessionStatus.STREAMING.value},
+            {
+                "type": "session.status_changed",
+                "session_id": session_id,
+                "status": SessionStatus.STREAMING.value,
+            },
         )
 
         vad_detector = SileroVADDetector()
@@ -226,7 +254,9 @@ class StreamIngestionUseCase:
                                     f"[Ingestion] Session {session_id} stream {s_id} speaker updated -> '{speaker_by_stream[s_id]}'"
                                 )
                     except Exception as e:
-                        logger.debug(f"[Ingestion] Failed to parse text control message: {e}")
+                        logger.debug(
+                            f"[Ingestion] Failed to parse text control message: {e}"
+                        )
                     continue
 
                 if "bytes" not in message:
@@ -238,11 +268,15 @@ class StreamIngestionUseCase:
 
                 # Unpack 16-byte fixed header:
                 # version (uint8), stream_id (uint8), flags (uint16), seq (uint32), start_sample (uint64)
-                version, stream_id, flags, seq, start_sample = struct.unpack_from("<BBHIQ", raw_bytes, 0)
+                version, stream_id, flags, seq, start_sample = struct.unpack_from(
+                    "<BBHIQ", raw_bytes, 0
+                )
                 payload_bytes = raw_bytes[16:]
 
                 if flags & 0x01:
-                    logger.info(f"[Ingestion] Received EOS frame for stream {stream_id} on session {session_id}")
+                    logger.info(
+                        f"[Ingestion] Received EOS frame for stream {stream_id} on session {session_id}"
+                    )
                     break
 
                 if len(payload_bytes) == 0:
@@ -315,7 +349,9 @@ class StreamIngestionUseCase:
                                 )
                             )
                             pending_final_tasks.add(task)
-                            pending_final_tasks = {t for t in pending_final_tasks if not t.done()}
+                            pending_final_tasks = {
+                                t for t in pending_final_tasks if not t.done()
+                            }
 
                 # 2. Handle Partial Transcription event (Only if no partial is currently running and engine is idle)
                 elif should_emit_partial:
@@ -350,7 +386,9 @@ class StreamIngestionUseCase:
                         pass
 
         except (WebSocketDisconnect, RuntimeError):
-            logger.info(f"[Ingestion] Producer WebSocket disconnected for session {session_id}")
+            logger.info(
+                f"[Ingestion] Producer WebSocket disconnected for session {session_id}"
+            )
         except Exception as e:
             logger.error(f"[Ingestion] Error in producer stream {session_id}: {e}")
         finally:

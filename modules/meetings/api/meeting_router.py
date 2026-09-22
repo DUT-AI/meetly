@@ -43,10 +43,12 @@ async def list_meetings(
     user_id: str = Depends(get_current_user_id),
 ):
     """Lấy danh sách cuộc họp trong workspace."""
-    entities = await use_cases.list_meetings(workspace_id=workspace_id, actor_id=user_id)
+    entities = await use_cases.list_meetings(
+        workspace_id=workspace_id, actor_id=user_id
+    )
     return MeetingListResponseDTO(
         documents=[MeetingResponseDTO.model_validate(e) for e in entities],
-        total=len(entities)
+        total=len(entities),
     )
 
 

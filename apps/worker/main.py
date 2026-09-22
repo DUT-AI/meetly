@@ -6,6 +6,9 @@ from loguru import logger
 
 from apps.api.di import create_container
 from core.config import redis_settings
+from modules.meetings.use_cases.meeting_reminder_use_cases import (
+    CheckUpcomingMeetingsUseCase,
+)
 from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.queue import (
     NOTIFICATION_QUEUE_KEY,
@@ -15,9 +18,6 @@ from modules.notifications.use_cases import (
 )
 from modules.tasks.use_cases.task_reminder_use_cases import (
     CheckTaskDeadlinesUseCase,
-)
-from modules.meetings.use_cases.meeting_reminder_use_cases import (
-    CheckUpcomingMeetingsUseCase,
 )
 
 

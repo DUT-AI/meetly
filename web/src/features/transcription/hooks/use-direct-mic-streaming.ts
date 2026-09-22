@@ -186,7 +186,7 @@ export const useDirectMicStreaming = ({
           int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
         }
 
-        const pcmBytes = new Uint8Array(int16.buffer);
+        const pcmBytes = new Uint8Array(int16.buffer, int16.byteOffset, int16.byteLength);
         // 16-byte fixed header: version (u8), stream_id (u8), flags (u16 LE), seq (u32 LE), start_sample (u64 LE)
         const header = new ArrayBuffer(16);
         const view = new DataView(header);
@@ -199,6 +199,7 @@ export const useDirectMicStreaming = ({
 
         const packet = new Uint8Array(16 + pcmBytes.byteLength);
         packet.set(new Uint8Array(header), 0);
+        packet.set(pcmBytes, 16);
         wsRef.current.send(packet);
       };
 

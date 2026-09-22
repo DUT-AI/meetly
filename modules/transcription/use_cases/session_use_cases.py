@@ -6,8 +6,8 @@ from modules.meetings.domain.interfaces import IMeetingRepository
 from modules.members.domain.interfaces import IMemberRepository
 from modules.transcription.domain.enums import SessionStatus
 from modules.transcription.domain.interfaces import (
-    ITranscriptSegmentRepository,
     ITranscriptionSessionRepository,
+    ITranscriptSegmentRepository,
 )
 from modules.transcription.dtos.session_dtos import (
     MeetingTranscriptsResponse,
@@ -62,11 +62,17 @@ class TranscriptionSessionUseCases:
             )
 
         # Check if an active session already exists
-        existing_session = await self.session_repo.get_active_session_by_meeting(meeting_id)
+        existing_session = await self.session_repo.get_active_session_by_meeting(
+            meeting_id
+        )
         if existing_session:
             # Generate new tickets for the existing active session
-            prod_ticket = ticket_store.create_ticket(existing_session.id, actor_id, role="producer")
-            sub_ticket = ticket_store.create_ticket(existing_session.id, actor_id, role="subscriber")
+            prod_ticket = ticket_store.create_ticket(
+                existing_session.id, actor_id, role="producer"
+            )
+            sub_ticket = ticket_store.create_ticket(
+                existing_session.id, actor_id, role="subscriber"
+            )
             return SessionResponse(
                 session_id=existing_session.id,
                 meeting_id=existing_session.meeting_id,
@@ -91,7 +97,9 @@ class TranscriptionSessionUseCases:
         prod_ticket = ticket_store.create_ticket(session.id, actor_id, role="producer")
         sub_ticket = ticket_store.create_ticket(session.id, actor_id, role="subscriber")
 
-        logger.info(f"[Session] Created transcription session {session.id} for meeting {meeting_id}")
+        logger.info(
+            f"[Session] Created transcription session {session.id} for meeting {meeting_id}"
+        )
 
         return SessionResponse(
             session_id=session.id,
@@ -133,7 +141,9 @@ class TranscriptionSessionUseCases:
     ) -> SessionResponse:
         session = await self.session_repo.get_by_id(session_id)
         if not session:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session không tồn tại.")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Session không tồn tại."
+            )
 
         await self._check_member(session.workspace_id, actor_id)
 
@@ -190,7 +200,9 @@ class TranscriptionSessionUseCases:
             for s in segments
         ]
 
-        active_session = await self.session_repo.get_active_session_by_meeting(meeting_id)
+        active_session = await self.session_repo.get_active_session_by_meeting(
+            meeting_id
+        )
         session_dto = None
         if active_session:
             session_dto = SessionResponse(

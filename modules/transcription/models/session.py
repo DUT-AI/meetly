@@ -29,9 +29,7 @@ class TranscriptionSessionModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
         String(30), default="GOOGLE_MEET", nullable=False
     )
     sample_rate: Mapped[int] = mapped_column(Integer, default=16000, nullable=False)
-    duration_samples: Mapped[int] = mapped_column(
-        BigInteger, default=0, nullable=False
-    )
+    duration_samples: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     stt_model: Mapped[str] = mapped_column(
         String(100), default="openai/whisper-small", nullable=False
     )

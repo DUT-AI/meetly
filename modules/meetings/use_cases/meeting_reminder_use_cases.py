@@ -1,10 +1,9 @@
 import logging
 from datetime import UTC, datetime, timedelta, timezone
 
-from modules.notifications.dispatcher import NotificationDispatcher
-
 from modules.meetings.domain.interfaces import IMeetingRepository
 from modules.members.domain.interfaces import IMemberRepository
+from modules.notifications.dispatcher import NotificationDispatcher
 from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.services.discord_service import DiscordService
 from modules.notifications.services.zalo_bot_client import ZaloBotClient
@@ -52,7 +51,11 @@ class CheckUpcomingMeetingsUseCase:
                 continue
 
             vn_tz = timezone(timedelta(hours=7))
-            local_start = meeting.start_time.astimezone(vn_tz) if meeting.start_time.tzinfo else meeting.start_time.replace(tzinfo=timezone.utc).astimezone(vn_tz)
+            local_start = (
+                meeting.start_time.astimezone(vn_tz)
+                if meeting.start_time.tzinfo
+                else meeting.start_time.replace(tzinfo=UTC).astimezone(vn_tz)
+            )
             time_str = local_start.strftime("%d/%m/%Y %H:%M")
             message_content = f"Cuộc họp {meeting.title} sẽ bắt đầu lúc {local_start.strftime('%H:%M')}."
 
@@ -81,7 +84,7 @@ class CheckUpcomingMeetingsUseCase:
                 try:
                     await self.discord_service.send_message_to_channel(
                         channel_id=workspace.discord_room_id,
-                        content=f"🔔 Nhắc nhở: {message_content}"
+                        content=f"🔔 Nhắc nhở: {message_content}",
                     )
                 except Exception as e:
                     logger.warning(f"Discord reminder failed for {meeting.id}: {e}")
@@ -90,7 +93,7 @@ class CheckUpcomingMeetingsUseCase:
                 try:
                     await self.zalo_service.send_message(
                         chat_id=workspace.zalo_room_id,
-                        text=f"🔔 Nhắc nhở: {message_content}"
+                        text=f"🔔 Nhắc nhở: {message_content}",
                     )
                 except Exception as e:
                     logger.warning(f"Zalo reminder failed for {meeting.id}: {e}")

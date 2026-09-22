@@ -57,9 +57,7 @@ async def test_mark_notification_read_not_found() -> None:
 
     use_case = MarkNotificationReadUseCase(repo=mock_repo)
 
-    result = await use_case.execute(
-        notification_id="nonexistent", user_id="user_123"
-    )
+    result = await use_case.execute(notification_id="nonexistent", user_id="user_123")
 
     assert result is None
     mock_repo.mark_as_read.assert_awaited_once_with(

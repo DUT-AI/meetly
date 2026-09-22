@@ -2,15 +2,25 @@ from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from modules.transcription.domain.interfaces import (
-    ITranscriptSegmentRepository,
     ITranscriptionSessionRepository,
+    ITranscriptSegmentRepository,
 )
-from modules.transcription.infrastructure.faster_whisper_engine import FasterWhisperEngine
+from modules.transcription.infrastructure.faster_whisper_engine import (
+    FasterWhisperEngine,
+)
 from modules.transcription.infrastructure.silero_vad import SileroVADDetector
-from modules.transcription.repository.segment_repository import SqlTranscriptSegmentRepository
-from modules.transcription.repository.session_repository import SqlTranscriptionSessionRepository
-from modules.transcription.use_cases.session_use_cases import TranscriptionSessionUseCases
-from modules.transcription.use_cases.stream_ingestion_use_case import StreamIngestionUseCase
+from modules.transcription.repository.segment_repository import (
+    SqlTranscriptSegmentRepository,
+)
+from modules.transcription.repository.session_repository import (
+    SqlTranscriptionSessionRepository,
+)
+from modules.transcription.use_cases.session_use_cases import (
+    TranscriptionSessionUseCases,
+)
+from modules.transcription.use_cases.stream_ingestion_use_case import (
+    StreamIngestionUseCase,
+)
 
 
 class TranscriptionProvider(Provider):

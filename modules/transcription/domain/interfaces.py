@@ -2,8 +2,8 @@ from abc import ABC, abstractmethod
 from typing import Any
 
 from modules.transcription.domain.entities import (
-    TranscriptSegmentEntity,
     TranscriptionSessionEntity,
+    TranscriptSegmentEntity,
 )
 
 
@@ -64,13 +64,9 @@ class ITranscriptSegmentRepository(ABC):
         pass
 
     @abstractmethod
-    async def list_by_session(
-        self, session_id: str
-    ) -> list[TranscriptSegmentEntity]:
+    async def list_by_session(self, session_id: str) -> list[TranscriptSegmentEntity]:
         pass
 
     @abstractmethod
-    async def list_by_meeting(
-        self, meeting_id: str
-    ) -> list[TranscriptSegmentEntity]:
+    async def list_by_meeting(self, meeting_id: str) -> list[TranscriptSegmentEntity]:
         pass

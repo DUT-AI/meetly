@@ -1,17 +1,25 @@
 from dishka.integrations.fastapi import FromDishka, inject
-from fastapi import APIRouter, HTTPException, Query, WebSocket, WebSocketDisconnect, status
+from fastapi import (
+    APIRouter,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+    status,
+)
 
 from apps.api.deps.auth import CurrentUser
 from modules.transcription.dtos.session_dtos import (
     CreateSessionRequest,
-    MeetingTranscriptsResponse,
-    SessionResponse,
     StopSessionRequest,
 )
 from modules.transcription.infrastructure.event_broadcaster import event_broadcaster
 from modules.transcription.infrastructure.ticket_store import ticket_store
-from modules.transcription.use_cases.session_use_cases import TranscriptionSessionUseCases
-from modules.transcription.use_cases.stream_ingestion_use_case import StreamIngestionUseCase
+from modules.transcription.use_cases.session_use_cases import (
+    TranscriptionSessionUseCases,
+)
+from modules.transcription.use_cases.stream_ingestion_use_case import (
+    StreamIngestionUseCase,
+)
 
 router = APIRouter(tags=["Transcription"])
 
@@ -110,14 +118,21 @@ async def get_meeting_transcripts(
 async def ws_producer_audio(
     websocket: WebSocket,
     session_id: str,
+    use_case: FromDishka[StreamIngestionUseCase],
     ticket: str = Query(...),
-    use_case: FromDishka[StreamIngestionUseCase] = None,
 ) -> None:
     """Producer WebSocket: Receives binary PCM audio chunks from Chrome Extension."""
     # Verify short-lived one-time ticket
     ticket_data = ticket_store.consume_ticket(ticket)
-    if not ticket_data or ticket_data["session_id"] != session_id or ticket_data["role"] != "producer":
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Ticket không hợp lệ hoặc đã hết hạn")
+    if (
+        not ticket_data
+        or ticket_data["session_id"] != session_id
+        or ticket_data["role"] != "producer"
+    ):
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Ticket không hợp lệ hoặc đã hết hạn",
+        )
         return
 
     await use_case.handle_producer_stream(session_id=session_id, websocket=websocket)
@@ -132,8 +147,15 @@ async def ws_subscriber_events(
     """Subscriber WebSocket: Streams real-time JSON transcript events to Web & Extension UI."""
     # Verify short-lived one-time ticket
     ticket_data = ticket_store.consume_ticket(ticket)
-    if not ticket_data or ticket_data["session_id"] != session_id or ticket_data["role"] != "subscriber":
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Ticket không hợp lệ hoặc đã hết hạn")
+    if (
+        not ticket_data
+        or ticket_data["session_id"] != session_id
+        or ticket_data["role"] != "subscriber"
+    ):
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Ticket không hợp lệ hoặc đã hết hạn",
+        )
         return
 
     await websocket.accept()
