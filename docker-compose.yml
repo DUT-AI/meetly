@@ -111,6 +111,33 @@ services:
       - "traefik.http.routers.web.service=web"
       - "traefik.http.services.web.loadbalancer.server.port=3000"
 
+  ai-service:
+    build:
+      context: .
+      dockerfile: apps/ai-service/Dockerfile
+    container_name: meetly-ai-service
+    restart: always
+    ports:
+      - "8005:8005"
+    environment:
+      - SEAMLESS_MODEL_ID=JustFrederik/nllb-200-distilled-600M-ct2-float16
+      - SEAMLESS_DEVICE=cuda
+      - SEAMLESS_DTYPE=float16
+      - WHISPER_DEVICE=cuda
+      - WHISPER_COMPUTE_TYPE=float16
+      - HF_HOME=/root/.cache/huggingface
+    volumes:
+      - /mnt/data/dutai/hf_cache:/root/.cache/huggingface
+    networks:
+      - meetly-net
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
   traefik:
     image: traefik:latest
     container_name: meetly-traefik

@@ -1,6 +1,20 @@
+import ctypes
 import os
+import sys
 import time
+from pathlib import Path
 from typing import Any
+
+# Preload NVIDIA CUDA libraries from venv if present
+_site_packages = [p for p in sys.path if "site-packages" in p]
+for sp in _site_packages:
+    nvidia_dir = Path(sp) / "nvidia"
+    if nvidia_dir.exists():
+        for so in sorted(nvidia_dir.glob("**/*.so*")):
+            try:
+                ctypes.CDLL(str(so), mode=ctypes.RTLD_GLOBAL)
+            except Exception:
+                pass
 
 import numpy as np
 import torch

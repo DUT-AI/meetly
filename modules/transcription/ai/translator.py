@@ -1,5 +1,19 @@
+import ctypes
 import os
+import sys
 import time
+from pathlib import Path
+
+# Preload NVIDIA CUDA libraries from venv if present so CTranslate2 can locate libcublas / libcudnn
+_site_packages = [p for p in sys.path if "site-packages" in p]
+for sp in _site_packages:
+    nvidia_dir = Path(sp) / "nvidia"
+    if nvidia_dir.exists():
+        for so in sorted(nvidia_dir.glob("**/*.so*")):
+            try:
+                ctypes.CDLL(str(so), mode=ctypes.RTLD_GLOBAL)
+            except Exception:
+                pass
 
 import ctranslate2
 import torch
@@ -26,7 +40,9 @@ class SeamlessTranslationEngine:
         device: str | None = None,
         compute_dtype: str | None = None,
     ) -> None:
-        self.model_id = "facebook/seamless-m4t-v2-large"
+        self.model_id = os.getenv(
+            "SEAMLESS_MODEL_ID", "JustFrederik/nllb-200-distilled-600M-ct2-float16"
+        )
         self.requested_device = device or os.getenv(
             "SEAMLESS_DEVICE", "cuda" if torch.cuda.is_available() else "cpu"
         )

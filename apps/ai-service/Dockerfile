@@ -1,24 +1,46 @@
-FROM pytorch/pytorch:2.3.1-cuda12.1-cudnn8-runtime
+# =============================================================================
+# Optimized Dockerfile for AI Microservice (Whisper & NLLB CTranslate2)
+# Context: Root workspace directory (.)
+# =============================================================================
+
+FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install system dependencies
+ENV TZ=Asia/Ho_Chi_Minh \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH="/app" \
+    PATH="/app/.venv/bin:$PATH" \
+    SEAMLESS_DEVICE="cuda" \
+    SEAMLESS_DTYPE="float16" \
+    SEAMLESS_MODEL_ID="JustFrederik/nllb-200-distilled-600M-ct2-float16" \
+    WHISPER_DEVICE="cuda" \
+    WHISPER_COMPUTE_TYPE="float16" \
+    UV_LINK_MODE="copy"
+
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    git \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-COPY app/ ./app/
+# Copy dependencies manifest
+COPY pyproject.toml uv.lock* README.md* ./
 
-ENV PYTHONUNBUFFERED=1
-ENV SEAMLESS_DEVICE=cuda
-ENV SEAMLESS_DTYPE=float16
-ENV SEAMLESS_MODEL_ID=facebook/seamless-m4t-v2-large
+# Install dependencies with extra AI and immediately clear cache to save disk space
+RUN uv sync --frozen --no-dev --extra ai --no-install-project \
+    && uv cache clean \
+    && rm -rf /root/.cache
+
+# Copy source code
+COPY core ./core
+COPY modules ./modules
+COPY apps ./apps
 
 EXPOSE 8005
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8005"]
+CMD ["uvicorn", "--app-dir", "apps/ai-service", "app.main:app", "--host", "0.0.0.0", "--port", "8005"]
