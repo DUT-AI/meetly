@@ -24,7 +24,7 @@ services:
     container_name: meetly-redis
     restart: always
     ports:
-      - "${REDIS_PORT:-6380}:6379"
+      - "${REDIS_PORT:-6388}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -112,6 +112,7 @@ services:
       - "traefik.http.services.web.loadbalancer.server.port=3000"
 
   ai-service:
+    profiles: ["ai"]
     build:
       context: .
       dockerfile: apps/ai-service/Dockerfile

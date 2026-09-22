@@ -57,6 +57,7 @@ export default function MeetingReportPage() {
   const [editorInstance, setEditorInstance] = useState<any>(null);
   const audioPlayerRef = useRef<AudioTimelinePlayerRef | null>(null);
   const [currentTimeMs, setCurrentTimeMs] = useState<number>(0);
+  const serverUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://meetly.dutai.io.vn');
 
   const handleEditorReady = useCallback((editor: any) => {
     setEditorInstance(editor);
@@ -373,13 +374,13 @@ export default function MeetingReportPage() {
                 <input
                   type="text"
                   readOnly
-                  value="http://localhost:8000"
+                  value={serverUrl}
                   className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-mono text-slate-800 w-full select-all"
                 />
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => handleCopy('http://localhost:8000', 'Server URL')}
+                  onClick={() => handleCopy(serverUrl, 'Server URL')}
                   className="h-8.5 px-3 shrink-0 rounded-xl border-slate-200 gap-1 text-xs font-medium hover:bg-slate-100"
                 >
                   {copiedKey === 'Server URL' ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}

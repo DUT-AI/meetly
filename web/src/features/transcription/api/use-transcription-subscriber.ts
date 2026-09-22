@@ -11,31 +11,20 @@ interface UseTranscriptionSubscriberProps {
 }
 
 const buildWsUrl = (pathWithQuery: string): string => {
-  let host = 'localhost:8000';
-  let isHttps = false;
   if (typeof window !== 'undefined') {
-    const hostname = window.location.hostname;
-    host =
-      hostname !== 'localhost' && hostname !== '127.0.0.1'
-        ? `${hostname}:8000`
-        : process.env.NEXT_PUBLIC_API_BASE_URL
-          ? new URL(process.env.NEXT_PUBLIC_API_BASE_URL).host
-          : 'localhost:8000';
-    isHttps = window.location.protocol === 'https:';
-  } else {
-    const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000/api/v1';
-    if (apiBase.startsWith('http://') || apiBase.startsWith('https://')) {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    if (process.env.NEXT_PUBLIC_API_BASE_URL && process.env.NEXT_PUBLIC_API_BASE_URL.startsWith('http')) {
       try {
-        const parsed = new URL(apiBase);
-        host = parsed.host;
-        isHttps = parsed.protocol === 'https:';
+        const parsed = new URL(process.env.NEXT_PUBLIC_API_BASE_URL);
+        const wsProto = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+        return `${wsProto}//${parsed.host}${pathWithQuery}`;
       } catch {
-        host = 'localhost:8000';
+        // Fallback to window.location.host
       }
     }
+    return `${protocol}//${window.location.host}${pathWithQuery}`;
   }
-  const protocol = isHttps ? 'wss:' : 'ws:';
-  return `${protocol}//${host}${pathWithQuery}`;
+  return `ws://localhost:8000${pathWithQuery}`;
 };
 
 export const useTranscriptionSubscriber = ({

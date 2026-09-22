@@ -1,21 +1,11 @@
 import axios from 'axios';
 
 export const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? 'http://localhost:8000/api/v1',
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? '/api/v1',
   withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
-});
-
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const host = window.location.hostname;
-    if (host !== 'localhost' && host !== '127.0.0.1') {
-      config.baseURL = `${window.location.protocol}//${host}:8000/api/v1`;
-    }
-  }
-  return config;
 });
 
 api.interceptors.response.use(

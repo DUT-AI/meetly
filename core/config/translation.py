@@ -16,7 +16,7 @@ class TranslationSettings(BaseSettings):
     )
 
     translation_enabled: bool = True
-    translation_service_url: str = "http://localhost:8005"
+    translation_service_url: str = "http://100.84.133.34:8005"
     translation_source_lang: str = "vie"
     translation_target_lang: str = "eng"
     translation_timeout_s: float = 3.0
