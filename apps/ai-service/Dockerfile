@@ -31,10 +31,8 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 # Copy dependencies manifest
 COPY pyproject.toml uv.lock* README.md* ./
 
-# Install dependencies with extra AI and immediately clear cache to save disk space
-RUN uv sync --frozen --no-dev --extra ai --no-install-project \
-    && uv cache clean \
-    && rm -rf /root/.cache
+# Install dependencies with extra AI using --no-cache to avoid disk exhaustion during build
+RUN uv sync --no-cache --frozen --no-dev --extra ai --no-install-project
 
 # Copy source code
 COPY core ./core
