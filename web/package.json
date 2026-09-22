@@ -6,10 +6,10 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint && eslint .",
-    "lint:fix": "next lint --fix && eslint . --fix",
-    "format": "prettier --check . --config .prettierrc.mjs",
-    "format:fix": "prettier --write . --config .prettierrc.mjs"
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "format": "prettier --check src/ --config .prettierrc.mjs",
+    "format:fix": "prettier --write src/ --config .prettierrc.mjs"
   },
   "dependencies": {
     "@hello-pangea/dnd": "^18.0.1",

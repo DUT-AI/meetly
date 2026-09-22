@@ -126,12 +126,7 @@ export const CreateProjectForm = ({ onCancel }: CreateProjectFormProps) => {
                         >
                           {previewUrl ? (
                             <div className="relative size-[72px] overflow-hidden rounded-md border border-neutral-200">
-                              <Image
-                                src={previewUrl}
-                                alt="Project Logo"
-                                fill
-                                className="object-cover transition group-hover:opacity-75"
-                              />
+                              <Image src={previewUrl} alt="Project Logo" fill className="object-cover transition group-hover:opacity-75" />
                               <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition group-hover:opacity-100">
                                 <CameraIcon className="size-5 text-white" />
                               </div>

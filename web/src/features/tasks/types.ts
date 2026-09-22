@@ -1,5 +1,6 @@
 import { type Member, normalizeMember } from '@/features/members/types';
 import { type Project, normalizeProject } from '@/features/projects/types';
+import type { WorkspaceInfo } from '@/features/workspaces/types';
 
 export enum TaskStatus {
   BACKLOG = 'BACKLOG',
@@ -38,8 +39,6 @@ export type Task = {
   created_at?: string;
   updated_at?: string;
 };
-
-import type { WorkspaceInfo } from '@/features/workspaces/types';
 
 export type PopulatedTask = Task & {
   project: Project;
@@ -85,8 +84,7 @@ export function normalizeTaskComment(c: any): TaskComment {
   const userId = rawUser.id ?? c.userId ?? c.user_id ?? '';
   const userName = rawUser.name ?? c.userName ?? c.user_name ?? `User ${userId}`;
   const userEmail = rawUser.email ?? c.userEmail ?? c.user_email ?? '';
-  const userAvatarUrl =
-    rawUser.avatarUrl ?? rawUser.avatar_url ?? c.userAvatarUrl ?? c.user_avatar_url ?? null;
+  const userAvatarUrl = rawUser.avatarUrl ?? rawUser.avatar_url ?? c.userAvatarUrl ?? c.user_avatar_url ?? null;
 
   const user: TaskCommentUser = {
     id: userId,
@@ -123,12 +121,12 @@ export function normalizeTaskComment(c: any): TaskComment {
 export function normalizeTask(t: any): PopulatedTask {
   if (!t) return t;
   const id = t.id ?? t.$id;
-  const rawAssignees: Member[] = Array.isArray(t.assignees)
-    ? t.assignees.map(normalizeMember)
-    : [];
+  const rawAssignees: Member[] = Array.isArray(t.assignees) ? t.assignees.map(normalizeMember) : [];
   const rawAssigneeIds: string[] = Array.isArray(t.assigneeIds ?? t.assignee_ids)
     ? (t.assigneeIds ?? t.assignee_ids)
-    : (rawAssignees.length > 0 ? rawAssignees.map((m) => m.id) : []);
+    : rawAssignees.length > 0
+      ? rawAssignees.map((m) => m.id)
+      : [];
 
   return {
     ...t,

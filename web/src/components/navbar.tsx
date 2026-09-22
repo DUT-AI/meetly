@@ -3,7 +3,6 @@
 import { usePathname } from 'next/navigation';
 
 import { UserButton } from '@/features/auth/components/user-button';
-
 import { NotificationPopover } from '@/features/notifications/components/notification-popover';
 
 import { MobileSidebar } from './mobile-sidebar';
@@ -50,7 +49,6 @@ export const Navbar = () => {
         <NotificationPopover />
 
         <UserButton />
-
       </div>
     </nav>
   );

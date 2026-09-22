@@ -2,8 +2,9 @@
 
 import { Loader2, UploadCloud } from 'lucide-react';
 import { useCallback, useRef, useState } from 'react';
-import type { EntityType } from '../types';
+
 import { useUploadAsset } from '../api/use-upload-asset';
+import type { EntityType } from '../types';
 
 interface AssetUploaderProps {
   workspaceId: string;
@@ -14,14 +15,7 @@ interface AssetUploaderProps {
   compact?: boolean;
 }
 
-export const AssetUploader = ({
-  workspaceId,
-  entityType,
-  entityId,
-  onUploaded,
-  onFilesSelected,
-  compact = false,
-}: AssetUploaderProps) => {
+export const AssetUploader = ({ workspaceId, entityType, entityId, onUploaded, onFilesSelected, compact = false }: AssetUploaderProps) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const { mutate: uploadAsset, isPending: isUploading } = useUploadAsset();
@@ -79,25 +73,14 @@ export const AssetUploader = ({
   if (compact) {
     return (
       <div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          className="hidden"
-          onChange={onFileChange}
-          disabled={isUploading}
-        />
+        <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onFileChange} disabled={isUploading} />
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
           className="flex items-center gap-1.5 text-xs text-muted-foreground transition hover:text-primary disabled:opacity-50"
         >
-          {isUploading ? (
-            <Loader2 className="size-3.5 animate-spin text-primary" />
-          ) : (
-            <UploadCloud className="size-3.5" />
-          )}
+          {isUploading ? <Loader2 className="size-3.5 animate-spin text-primary" /> : <UploadCloud className="size-3.5" />}
           <span>Đính kèm tệp</span>
         </button>
       </div>
@@ -111,19 +94,10 @@ export const AssetUploader = ({
       onDrop={onDrop}
       onClick={() => fileInputRef.current?.click()}
       className={`group relative flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed p-5 text-center transition-colors ${
-        isDragging
-          ? 'border-primary bg-primary/5'
-          : 'border-neutral-200 bg-neutral-50/50 hover:border-neutral-300 hover:bg-neutral-50'
+        isDragging ? 'border-primary bg-primary/5' : 'border-neutral-200 bg-neutral-50/50 hover:border-neutral-300 hover:bg-neutral-50'
       } ${isUploading ? 'pointer-events-none opacity-60' : ''}`}
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={onFileChange}
-        disabled={isUploading}
-      />
+      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onFileChange} disabled={isUploading} />
 
       <div className="flex flex-col items-center gap-1.5">
         <div className="flex size-9 items-center justify-center rounded-full bg-white shadow-xs border">
@@ -134,13 +108,9 @@ export const AssetUploader = ({
           )}
         </div>
         <p className="text-xs font-semibold text-neutral-700">
-          {isUploading
-            ? 'Đang tải tệp lên...'
-            : 'Kéo thả tệp vào đây, nhấn để chọn hoặc dán (Ctrl + V)'}
+          {isUploading ? 'Đang tải tệp lên...' : 'Kéo thả tệp vào đây, nhấn để chọn hoặc dán (Ctrl + V)'}
         </p>
-        <p className="text-[11px] text-muted-foreground">
-          Hỗ trợ dán ảnh từ clipboard, PDF, DOCX, XLSX, ZIP, MP4,...
-        </p>
+        <p className="text-[11px] text-muted-foreground">Hỗ trợ dán ảnh từ clipboard, PDF, DOCX, XLSX, ZIP, MP4,...</p>
       </div>
     </div>
   );

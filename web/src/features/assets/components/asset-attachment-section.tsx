@@ -2,13 +2,15 @@
 
 import { Paperclip, Plus, UploadCloud } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
 import { Button } from '@/components/ui/button';
+
+import { useGetAssets } from '../api/use-get-assets';
+import { useUploadAsset } from '../api/use-upload-asset';
 import type { EntityType } from '../types';
 import { AssetList } from './asset-list';
 import { AssetUploader } from './asset-uploader';
 import { UploadProgressCard, type UploadProgressItem } from './upload-progress-card';
-import { useGetAssets } from '../api/use-get-assets';
-import { useUploadAsset } from '../api/use-upload-asset';
 
 interface AssetAttachmentSectionProps {
   workspaceId: string;
@@ -105,13 +107,7 @@ export const AssetAttachmentSection = ({
           });
 
           // Mark completed
-          setUploadQueue((prev) =>
-            prev.map((item) =>
-              item.id === itemId
-                ? { ...item, progress: 100, status: 'completed' }
-                : item,
-            ),
-          );
+          setUploadQueue((prev) => prev.map((item) => (item.id === itemId ? { ...item, progress: 100, status: 'completed' } : item)));
 
           // Auto-remove completed item after a short delay
           setTimeout(() => {
@@ -119,13 +115,7 @@ export const AssetAttachmentSection = ({
           }, 1200);
         } catch (err: any) {
           const detail = err?.response?.data?.detail || 'Tải lên thất bại';
-          setUploadQueue((prev) =>
-            prev.map((item) =>
-              item.id === itemId
-                ? { ...item, status: 'error', error: detail }
-                : item,
-            ),
-          );
+          setUploadQueue((prev) => prev.map((item) => (item.id === itemId ? { ...item, status: 'error', error: detail } : item)));
         }
       }
     },
@@ -139,10 +129,7 @@ export const AssetAttachmentSection = ({
     const handlePaste = (e: ClipboardEvent) => {
       const activeEl = document.activeElement;
       const isTextInput =
-        activeEl &&
-        (activeEl.tagName === 'INPUT' ||
-          activeEl.tagName === 'TEXTAREA' ||
-          (activeEl as HTMLElement).isContentEditable);
+        activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || (activeEl as HTMLElement).isContentEditable);
 
       const clipboardFiles: File[] = [];
 
@@ -221,24 +208,14 @@ export const AssetAttachmentSection = ({
       } ${className}`}
     >
       {/* Hidden file input */}
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        className="hidden"
-        onChange={onFileInputChange}
-      />
+      <input ref={fileInputRef} type="file" multiple className="hidden" onChange={onFileInputChange} />
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Paperclip className="size-4 text-neutral-600" />
           <h3 className="text-sm font-semibold text-neutral-800">{title}</h3>
-          {count > 0 && (
-            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600">
-              {count}
-            </span>
-          )}
+          {count > 0 && <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-[11px] font-semibold text-neutral-600">{count}</span>}
         </div>
 
         {canUpload && (
@@ -283,21 +260,11 @@ export const AssetAttachmentSection = ({
 
       {/* Spacious dropzone when no files have been uploaded yet */}
       {canUpload && count === 0 && uploadQueue.length === 0 && (
-        <AssetUploader
-          workspaceId={workspaceId}
-          entityType={entityType}
-          entityId={entityId}
-          onFilesSelected={handleFiles}
-        />
+        <AssetUploader workspaceId={workspaceId} entityType={entityType} entityId={entityId} onFilesSelected={handleFiles} />
       )}
 
       {/* Assets Grid / List */}
-      <AssetList
-        workspaceId={workspaceId}
-        entityType={entityType}
-        entityId={entityId}
-        canDelete={canDelete}
-      />
+      <AssetList workspaceId={workspaceId} entityType={entityType} entityId={entityId} canDelete={canDelete} />
     </div>
   );
 };

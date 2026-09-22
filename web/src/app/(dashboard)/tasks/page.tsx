@@ -10,7 +10,7 @@ const MyTasksPage = async () => {
 
   return (
     <div className="flex flex-col h-full bg-neutral-50/50">
-      <GlobalTaskView userId={user.$id || ""} />
+      <GlobalTaskView userId={user.$id || ''} />
     </div>
   );
 };

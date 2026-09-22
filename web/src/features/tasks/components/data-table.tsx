@@ -1,19 +1,13 @@
 'use client';
 
-import {
-  type ColumnDef,
-  type ColumnFiltersState,
-  type RowData,
-  type SortingState,
-  useTable,
-} from '@tanstack/react-table';
+import { type ColumnDef, type ColumnFiltersState, type RowData, type SortingState, useTable } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
-import { features, type DataTableFeatures } from './data-table-features';
+import { type DataTableFeatures, features } from './data-table-features';
 
 interface DataTableProps<TData extends RowData> {
   columns: ColumnDef<DataTableFeatures, TData>[];
@@ -55,10 +49,7 @@ export function DataTable<TData extends RowData>({ columns, data, onRowClick }: 
     } else {
       // Default task navigation if rowData has workspaceId and id
       const item = rowData as any;
-      const workspaceId =
-        item.workspaceId ||
-        item.workspace_id ||
-        (item.workspace && (item.workspace.$id || item.workspace.id));
+      const workspaceId = item.workspaceId || item.workspace_id || (item.workspace && (item.workspace.$id || item.workspace.id));
       const taskId = item.$id || item.id;
       if (workspaceId && taskId) {
         router.push(`/workspaces/${workspaceId}/tasks/${taskId}`);
@@ -74,11 +65,7 @@ export function DataTable<TData extends RowData>({ columns, data, onRowClick }: 
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => {
-                  return (
-                    <TableHead key={header.id}>
-                      {header.isPlaceholder ? null : <table.FlexRender header={header} />}
-                    </TableHead>
-                  );
+                  return <TableHead key={header.id}>{header.isPlaceholder ? null : <table.FlexRender header={header} />}</TableHead>;
                 })}
               </TableRow>
             ))}

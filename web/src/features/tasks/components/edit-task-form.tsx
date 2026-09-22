@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Check } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -11,10 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
-import { Check } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useUpdateTask } from '@/features/tasks/api/use-update-task';
 import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
@@ -45,9 +45,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
       priority: initialValues.priority || TaskPriority.MEDIUM,
       labels: initialValues.labels || [],
       projectId: initialValues.projectId,
-      assigneeIds: initialValues.assigneeIds?.length
-        ? initialValues.assigneeIds
-        : (initialValues.assignees?.map((m) => m.id) ?? []),
+      assigneeIds: initialValues.assigneeIds?.length ? initialValues.assigneeIds : (initialValues.assignees?.map((m) => m.id) ?? []),
       dueDate: initialValues.dueDate ? new Date(initialValues.dueDate) : undefined,
     },
   });
@@ -123,9 +121,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                   const selectedMembers = memberOptions.filter((m) => selectedIds.includes(m.id));
 
                   const toggleMember = (memberId: string) => {
-                    const next = selectedIds.includes(memberId)
-                      ? selectedIds.filter((id) => id !== memberId)
-                      : [...selectedIds, memberId];
+                    const next = selectedIds.includes(memberId) ? selectedIds.filter((id) => id !== memberId) : [...selectedIds, memberId];
                     field.onChange(next);
                   };
 
@@ -141,19 +137,20 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                               disabled={isPending}
                               className="w-full justify-between font-normal h-10 px-3"
                             >
-                              {selectedMembers.length === 0 && (
-                                <span className="text-muted-foreground">Select assignees</span>
-                              )}
+                              {selectedMembers.length === 0 && <span className="text-muted-foreground">Select assignees</span>}
                               {selectedMembers.length > 0 && (
                                 <div className="flex items-center gap-1.5 overflow-hidden">
                                   <div className="flex -space-x-1.5 overflow-hidden">
                                     {selectedMembers.slice(0, 3).map((m) => (
-                                      <MemberAvatar key={m.id} className="size-5 border border-background" name={m.name} image={m.imageUrl} />
+                                      <MemberAvatar
+                                        key={m.id}
+                                        className="size-5 border border-background"
+                                        name={m.name}
+                                        image={m.imageUrl}
+                                      />
                                     ))}
                                   </div>
-                                  <span className="truncate text-xs">
-                                    {selectedMembers.map((m) => m.name).join(', ')}
-                                  </span>
+                                  <span className="truncate text-xs">{selectedMembers.map((m) => m.name).join(', ')}</span>
                                 </div>
                               )}
                             </Button>
@@ -169,7 +166,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                                   onClick={() => toggleMember(member.id)}
                                   className={cn(
                                     'flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-accent text-sm',
-                                    isSelected && 'bg-accent/50 font-medium'
+                                    isSelected && 'bg-accent/50 font-medium',
                                   )}
                                 >
                                   <div className="flex items-center gap-x-2 truncate">
@@ -180,9 +177,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                                 </div>
                               );
                             })}
-                            {memberOptions.length === 0 && (
-                              <p className="text-xs text-muted-foreground p-2">No members found</p>
-                            )}
+                            {memberOptions.length === 0 && <p className="text-xs text-muted-foreground p-2">No members found</p>}
                           </div>
                         </PopoverContent>
                       </Popover>
@@ -230,22 +225,20 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                     <Select disabled={isPending} defaultValue={field.value} value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          {field.value ? (
-                            (() => {
-                              const selectedProject = projectOptions.find((p) => p.id === field.value);
-                              if (selectedProject) {
-                                return (
-                                  <div className="flex items-center gap-x-2 truncate">
-                                    <ProjectAvatar className="size-5" name={selectedProject.name} image={selectedProject.imageUrl} />
-                                    <span className="truncate">{selectedProject.name}</span>
-                                  </div>
-                                );
-                              }
-                              return <SelectValue placeholder="Select project" />;
-                            })()
-                          ) : (
-                            'Select project'
-                          )}
+                          {field.value
+                            ? (() => {
+                                const selectedProject = projectOptions.find((p) => p.id === field.value);
+                                if (selectedProject) {
+                                  return (
+                                    <div className="flex items-center gap-x-2 truncate">
+                                      <ProjectAvatar className="size-5" name={selectedProject.name} image={selectedProject.imageUrl} />
+                                      <span className="truncate">{selectedProject.name}</span>
+                                    </div>
+                                  );
+                                }
+                                return <SelectValue placeholder="Select project" />;
+                              })()
+                            : 'Select project'}
                         </SelectTrigger>
                       </FormControl>
 
@@ -319,7 +312,7 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                     <FormLabel>Labels (Nhãn công việc)</FormLabel>
 
                     <div className="flex flex-wrap gap-1.5 p-2 rounded-md border min-h-[42px] bg-background">
-                      {(!workspaceLabels || workspaceLabels.length === 0) ? (
+                      {!workspaceLabels || workspaceLabels.length === 0 ? (
                         <p className="text-xs text-muted-foreground italic py-1">
                           Chưa có nhãn trong phòng ban. Bạn có thể thêm nhãn tại Cài đặt phòng ban.
                         </p>

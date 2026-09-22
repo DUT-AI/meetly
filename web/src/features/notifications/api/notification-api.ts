@@ -1,9 +1,6 @@
 import { api } from '@/lib/api';
-import {
-  type NotificationItem,
-  type NotificationListResponse,
-  normalizeNotification,
-} from '../types';
+
+import { type NotificationItem, type NotificationListResponse, normalizeNotification } from '../types';
 
 export const notificationApi = {
   async listNotifications(unreadOnly = false): Promise<NotificationListResponse> {

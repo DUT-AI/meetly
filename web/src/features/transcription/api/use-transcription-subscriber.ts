@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+
 import { LiveTranscriptEvent, TranscriptSegment } from '../types';
 import { transcriptionApi } from './transcription-api';
 
@@ -116,11 +117,7 @@ export const useTranscriptionSubscriber = ({
       wsRef.current.close();
       wsRef.current = null;
     }
-    const wsUrl = buildWsUrl(
-      `/api/v1/transcription-sessions/${sessionId}/events?ticket=${encodeURIComponent(
-        subscriberTicket
-      )}`
-    );
+    const wsUrl = buildWsUrl(`/api/v1/transcription-sessions/${sessionId}/events?ticket=${encodeURIComponent(subscriberTicket)}`);
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
     attachWsListeners(ws);
@@ -144,9 +141,7 @@ export const useTranscriptionSubscriber = ({
         }
 
         const wsUrl = buildWsUrl(
-          `/api/v1/transcription-sessions/${session.session_id}/events?ticket=${encodeURIComponent(
-            session.subscriber_ticket
-          )}`
+          `/api/v1/transcription-sessions/${session.session_id}/events?ticket=${encodeURIComponent(session.subscriber_ticket)}`,
         );
         const ws = new WebSocket(wsUrl);
         wsRef.current = ws;

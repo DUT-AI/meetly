@@ -5,42 +5,37 @@ import { vi } from 'date-fns/locale';
 import {
   ArrowLeft,
   Calendar,
-  Clock,
-  FileText,
-  Printer,
-  Save,
-  Sparkles,
-  Users,
-  Mic,
+  Check,
   CheckCircle2,
-  Mail,
-  ShieldCheck,
-  Puzzle,
+  Clock,
   Copy,
   ExternalLink,
-  Check,
+  FileText,
+  Mail,
+  Mic,
+  Printer,
+  Puzzle,
+  Save,
+  ShieldCheck,
+  Sparkles,
+  Users,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useState, useRef, useCallback } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
 import { ResponsiveModal } from '@/components/responsive-modal';
 import { Button } from '@/components/ui/button';
-import { useGetMembers } from '@/features/members/api/use-get-members';
-import { MemberAvatar } from '@/features/members/components/member-avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGetMeeting } from '@/features/meetings/api/use-get-meeting';
 import { useUpdateMeeting } from '@/features/meetings/api/use-update-meeting';
 import { MeetingReportEditor } from '@/features/meetings/components/meeting-report-editor';
-import {
-  AudioTimelinePlayer,
-  AudioTimelinePlayerRef,
-  LiveTranscriptPanel,
-  useGetTranscripts,
-} from '@/features/transcription';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useGetMembers } from '@/features/members/api/use-get-members';
+import { MemberAvatar } from '@/features/members/components/member-avatar';
+import { AudioTimelinePlayer, AudioTimelinePlayerRef, LiveTranscriptPanel, useGetTranscripts } from '@/features/transcription';
 import { cn } from '@/lib/utils';
 
 export default function MeetingReportPage() {
@@ -74,9 +69,7 @@ export default function MeetingReportPage() {
   if (isLoadingMeeting) return <PageLoader />;
   if (!meeting) return <PageError message="Không tìm thấy cuộc họp" />;
 
-  const memberMap = Object.fromEntries(
-    (membersResponse?.documents ?? []).map((m) => [m.$id, m])
-  );
+  const memberMap = Object.fromEntries((membersResponse?.documents ?? []).map((m) => [m.$id, m]));
 
   const handleSave = () => {
     const reportData = report ?? meeting.report ?? {};
@@ -91,7 +84,7 @@ export default function MeetingReportPage() {
         onSuccess: () => {
           toast.success('Đã lưu biên bản cuộc họp');
         },
-      }
+      },
     );
   };
 
@@ -108,9 +101,7 @@ export default function MeetingReportPage() {
     audioPlayerRef.current?.seekTo(timeMs);
   };
 
-  const durationMinutes = Math.round(
-    (new Date(meeting.end_time).getTime() - new Date(meeting.start_time).getTime()) / 60000
-  );
+  const durationMinutes = Math.round((new Date(meeting.end_time).getTime() - new Date(meeting.start_time).getTime()) / 60000);
 
   const segmentCount = transcriptsData?.segments?.length || 0;
 
@@ -169,15 +160,8 @@ export default function MeetingReportPage() {
 
           <div className="flex flex-col min-w-0">
             <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-black text-slate-900 truncate max-w-lg">
-                {meeting.title}
-              </h1>
-              <span
-                className={cn(
-                  'text-[11px] font-bold border px-2.5 py-0.5 rounded-full shrink-0',
-                  meetingStatus.className
-                )}
-              >
+              <h1 className="text-base sm:text-lg font-black text-slate-900 truncate max-w-lg">{meeting.title}</h1>
+              <span className={cn('text-[11px] font-bold border px-2.5 py-0.5 rounded-full shrink-0', meetingStatus.className)}>
                 {meetingStatus.label}
               </span>
             </div>
@@ -282,12 +266,8 @@ export default function MeetingReportPage() {
           <div className="bg-white border border-slate-300/90 shadow-md rounded-xs w-full max-w-[900px] min-h-[1100px] p-8 sm:p-16 my-2 transition-all printable-paper">
             {/* Formal Document Title Header */}
             <div className="border-b-2 border-slate-900 pb-5 mb-8">
-              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">
-                BIÊN BẢN CUỘC HỌP CHÍNH THỨC
-              </div>
-              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight tracking-tight">
-                {meeting.title}
-              </h1>
+              <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">BIÊN BẢN CUỘC HỌP CHÍNH THỨC</div>
+              <h1 className="text-3xl sm:text-4xl font-black text-slate-900 leading-tight tracking-tight">{meeting.title}</h1>
 
               {/* Formal Document Meta Specs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-6 pt-5 border-t border-slate-200 text-xs font-semibold text-slate-600">
@@ -342,15 +322,9 @@ export default function MeetingReportPage() {
                     className="flex items-center justify-between p-4 rounded-2xl bg-slate-50/80 border border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-2xs"
                   >
                     <div className="flex items-center gap-3.5 min-w-0">
-                      <MemberAvatar
-                        name={m.name}
-                        image={m.avatar_url ?? m.avatarUrl}
-                        className="size-11 ring-2 ring-blue-100 shrink-0"
-                      />
+                      <MemberAvatar name={m.name} image={m.avatar_url ?? m.avatarUrl} className="size-11 ring-2 ring-blue-100 shrink-0" />
                       <div className="flex flex-col leading-tight min-w-0">
-                        <span className="text-sm font-bold text-slate-900 truncate">
-                          {m.name}
-                        </span>
+                        <span className="text-sm font-bold text-slate-900 truncate">{m.name}</span>
                         <span className="text-xs text-slate-500 font-medium truncate mt-0.5 flex items-center gap-1">
                           <Mail className="size-3 text-slate-400" />
                           {m.email}
@@ -460,9 +434,15 @@ export default function MeetingReportPage() {
           <div className="bg-amber-50/90 border border-amber-200/80 rounded-xl p-3.5 text-xs text-amber-900 leading-relaxed">
             <p className="font-bold mb-1">💡 3 Bước ghi âm Google Meet:</p>
             <ol className="list-decimal list-inside space-y-1 text-amber-800">
-              <li>Mở icon <strong>Meetly</strong> trên thanh tiện ích Chrome.</li>
-              <li>Dán <strong>Workspace ID</strong> & <strong>Meeting ID</strong> ở trên vào Extension Popup.</li>
-              <li>Vào phòng họp Google Meet và bấm <strong>Bắt đầu ghi âm</strong> trên bảng điều khiển nổi.</li>
+              <li>
+                Mở icon <strong>Meetly</strong> trên thanh tiện ích Chrome.
+              </li>
+              <li>
+                Dán <strong>Workspace ID</strong> & <strong>Meeting ID</strong> ở trên vào Extension Popup.
+              </li>
+              <li>
+                Vào phòng họp Google Meet và bấm <strong>Bắt đầu ghi âm</strong> trên bảng điều khiển nổi.
+              </li>
             </ol>
           </div>
 

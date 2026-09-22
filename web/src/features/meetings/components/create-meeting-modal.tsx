@@ -1,6 +1,9 @@
 'use client';
 
+import { Check, CheckCheck, Clock, Search, Sparkles, UserCheck, Users, Video, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
+
 import { ResponsiveModal } from '@/components/responsive-modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,8 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { cn } from '@/lib/utils';
-import { Check, CheckCheck, Clock, Search, Sparkles, UserCheck, Users, Video, X } from 'lucide-react';
-import { toast } from 'sonner';
+
 import { useCreateMeeting } from '../api/use-create-meeting';
 
 interface CreateMeetingModalProps {
@@ -49,11 +51,7 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
   const filteredMembers = useMemo(() => {
     if (!searchQuery.trim()) return memberList;
     const query = searchQuery.toLowerCase().trim();
-    return memberList.filter(
-      (m) =>
-        m.name?.toLowerCase().includes(query) ||
-        m.email?.toLowerCase().includes(query)
-    );
+    return memberList.filter((m) => m.name?.toLowerCase().includes(query) || m.email?.toLowerCase().includes(query));
   }, [memberList, searchQuery]);
 
   const handleSelectAllFiltered = () => {
@@ -119,7 +117,7 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
           setParticipants([]);
           setSearchQuery('');
         },
-      }
+      },
     );
   };
 
@@ -139,9 +137,7 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
           </div>
           <div>
             <h2 className="text-lg font-extrabold text-slate-900 leading-tight">Tạo cuộc họp mới</h2>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Lên lịch họp và gửi thông báo tự động cho các thành viên
-            </p>
+            <p className="text-xs text-slate-500 font-medium mt-0.5">Lên lịch họp và gửi thông báo tự động cho các thành viên</p>
           </div>
         </div>
 
@@ -268,16 +264,14 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
                       key={member.$id}
                       onClick={() => {
                         setParticipants((prev) =>
-                          prev.includes(member.$id)
-                            ? prev.filter((id) => id !== member.$id)
-                            : [...prev, member.$id]
+                          prev.includes(member.$id) ? prev.filter((id) => id !== member.$id) : [...prev, member.$id],
                         );
                       }}
                       className={cn(
                         'flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border select-none group',
                         isSelected
                           ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/90 to-purple-50/50 border-indigo-300 ring-1 ring-indigo-300/50 shadow-xs font-semibold text-indigo-950'
-                          : 'bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-700'
+                          : 'bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-700',
                       )}
                     >
                       <MemberAvatar
@@ -285,23 +279,19 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
                         image={member.avatar_url}
                         className={cn(
                           'size-8 shrink-0 transition-transform group-hover:scale-105',
-                          isSelected ? 'ring-2 ring-indigo-500' : 'ring-1 ring-slate-200'
+                          isSelected ? 'ring-2 ring-indigo-500' : 'ring-1 ring-slate-200',
                         )}
                       />
                       <div className="flex flex-col flex-1 min-w-0 leading-tight">
-                        <span className="text-sm font-semibold truncate group-hover:text-indigo-600 transition-colors">
-                          {member.name}
-                        </span>
-                        <span className="text-xs text-slate-400 font-normal truncate">
-                          {member.email}
-                        </span>
+                        <span className="text-sm font-semibold truncate group-hover:text-indigo-600 transition-colors">{member.name}</span>
+                        <span className="text-xs text-slate-400 font-normal truncate">{member.email}</span>
                       </div>
                       <div
                         className={cn(
                           'size-5 rounded-md flex items-center justify-center shrink-0 transition-all',
                           isSelected
                             ? 'bg-indigo-600 text-white shadow-xs'
-                            : 'border border-slate-300 group-hover:border-indigo-400 bg-white'
+                            : 'border border-slate-300 group-hover:border-indigo-400 bg-white',
                         )}
                       >
                         {isSelected && <Check className="size-3.5 stroke-[3]" />}

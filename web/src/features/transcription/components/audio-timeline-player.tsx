@@ -1,15 +1,8 @@
 'use client';
 
-import React, { forwardRef, useImperativeHandle, useRef, useState, useEffect } from 'react';
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  RotateCw,
-  Volume2,
-  VolumeX,
-  FastForward,
-} from 'lucide-react';
+import { Pause, Play, RotateCcw, RotateCw, Volume2, VolumeX } from 'lucide-react';
+import React, { forwardRef, useImperativeHandle, useRef, useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -43,12 +36,12 @@ export const AudioTimelinePlayer = forwardRef<AudioTimelinePlayerRef, AudioTimel
           audioRef.current.currentTime = targetSec;
           setCurrentTime(targetSec);
           if (!isPlaying) {
-            audioRef.current.play().catch(() => {});
+            audioRef.current.play().catch(() => { });
           }
         }
       },
       play: () => {
-        audioRef.current?.play().catch(() => {});
+        audioRef.current?.play().catch(() => { });
       },
       pause: () => {
         audioRef.current?.pause();
@@ -77,7 +70,7 @@ export const AudioTimelinePlayer = forwardRef<AudioTimelinePlayerRef, AudioTimel
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play().catch(() => {});
+        audioRef.current.play().catch(() => { });
       }
     };
 
@@ -127,7 +120,9 @@ export const AudioTimelinePlayer = forwardRef<AudioTimelinePlayerRef, AudioTimel
 
     if (!audioUrl) {
       return (
-        <div className={cn('p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 font-medium', className)}>
+        <div
+          className={cn('p-4 rounded-2xl bg-slate-50 border border-slate-200 text-center text-xs text-slate-500 font-medium', className)}
+        >
           Chưa có file ghi âm cuộc họp hoặc phiên đang diễn ra.
         </div>
       );
@@ -147,9 +142,7 @@ export const AudioTimelinePlayer = forwardRef<AudioTimelinePlayerRef, AudioTimel
 
         {/* Scrubber Progress Bar */}
         <div className="flex items-center gap-3">
-          <span className="text-[11px] font-mono text-slate-400 w-10 text-right">
-            {formatDuration(currentTime)}
-          </span>
+          <span className="text-[11px] font-mono text-slate-400 w-10 text-right">{formatDuration(currentTime)}</span>
           <div className="relative flex-1 group flex items-center">
             <input
               type="range"
@@ -161,9 +154,7 @@ export const AudioTimelinePlayer = forwardRef<AudioTimelinePlayerRef, AudioTimel
               className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500 focus:outline-none"
             />
           </div>
-          <span className="text-[11px] font-mono text-slate-400 w-10">
-            {formatDuration(duration)}
-          </span>
+          <span className="text-[11px] font-mono text-slate-400 w-10">{formatDuration(duration)}</span>
         </div>
 
         {/* Controls Row */}
@@ -229,7 +220,7 @@ export const AudioTimelinePlayer = forwardRef<AudioTimelinePlayerRef, AudioTimel
         </div>
       </div>
     );
-  }
+  },
 );
 
 AudioTimelinePlayer.displayName = 'AudioTimelinePlayer';

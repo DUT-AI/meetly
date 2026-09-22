@@ -30,12 +30,7 @@ interface TaskLabelsProps {
   maxDisplay?: number;
 }
 
-export const TaskLabels = ({
-  labels = [],
-  labelColorMap = {},
-  className,
-  maxDisplay,
-}: TaskLabelsProps) => {
+export const TaskLabels = ({ labels = [], labelColorMap = {}, className, maxDisplay }: TaskLabelsProps) => {
   if (!labels || labels.length === 0) return null;
 
   const displayLabels = maxDisplay ? labels.slice(0, maxDisplay) : labels;
@@ -63,4 +58,3 @@ export const TaskLabels = ({
     </div>
   );
 };
-

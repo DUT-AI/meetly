@@ -2,10 +2,10 @@ import { Folder, ListChecks, UserIcon } from 'lucide-react';
 
 import { DatePicker } from '@/components/date-picker';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { useGetMembers } from '@/features/members/api/use-get-members';
-import { ProjectAvatar } from '@/features/projects/components/project-avatar';
+import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { useGetProjects } from '@/features/projects/api/use-get-projects';
+import { ProjectAvatar } from '@/features/projects/components/project-avatar';
 import { useTaskFilters } from '@/features/tasks/hooks/use-task-filters';
 import { TaskStatus } from '@/features/tasks/types';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';

@@ -1,36 +1,38 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  Sparkles,
-  Search,
   ArrowDown,
-  Copy,
-  PlusCircle,
-  Radio,
-  Clock,
-  User,
   Check,
-  Mic,
-  Square,
-  Loader2,
-  Languages,
+  Clock,
+  Copy,
   Download,
   Filter,
-  X,
-  Volume2,
   Headphones,
+  Languages,
+  Loader2,
+  Mic,
+  PlusCircle,
+  Radio,
+  Search,
+  Sparkles,
+  Square,
+  User,
+  Volume2,
+  X,
 } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
+
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { TranscriptSegment } from '../types';
+
 import { useGetTranscripts } from '../api/use-get-transcripts';
 import { useTranscriptionSubscriber } from '../api/use-transcription-subscriber';
 import { useDirectMicStreaming } from '../hooks/use-direct-mic-streaming';
+import { TranscriptSegment } from '../types';
 import { AudioTimelinePlayer, AudioTimelinePlayerRef } from './audio-timeline-player';
-import { toast } from 'sonner';
 
 interface LiveTranscriptPanelProps {
   workspaceId: string;
@@ -70,12 +72,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
   });
 
   // 3. Direct browser microphone streaming
-  const {
-    isRecording,
-    isInitializing,
-    startRecording,
-    stopRecording,
-  } = useDirectMicStreaming({
+  const { isRecording, isInitializing, startRecording, stopRecording } = useDirectMicStreaming({
     workspaceId,
     meetingId,
     onSessionCreated: (session) => {
@@ -85,14 +82,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
     },
   });
 
-  const {
-    segments: liveSegments,
-    partialText,
-    partialTranslation,
-    partialSpeaker,
-    isConnected,
-    sessionStatus,
-  } = subscriber;
+  const { segments: liveSegments, partialText, partialTranslation, partialSpeaker, isConnected, sessionStatus } = subscriber;
 
   // Extract unique speakers list for filtering
   const uniqueSpeakers = useMemo(() => {
@@ -112,8 +102,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
         (s.translation && s.translation.toLowerCase().includes(searchQuery.toLowerCase())) ||
         (s.speaker_label && s.speaker_label.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      const matchesSpeaker =
-        selectedSpeaker === 'ALL' || s.speaker_label === selectedSpeaker;
+      const matchesSpeaker = selectedSpeaker === 'ALL' || s.speaker_label === selectedSpeaker;
 
       return matchesSearch && matchesSpeaker;
     });
@@ -192,7 +181,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
         (s) =>
           `[${formatMs(s.start_ms)}] ${getSpeakerDisplay(s.speaker_label).name}:\n${s.text}${
             s.translation ? `\n(Dịch EN: ${s.translation})` : ''
-          }`
+          }`,
       )
       .join('\n\n');
     navigator.clipboard.writeText(formatted);
@@ -211,7 +200,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
         (s) =>
           `[${formatMs(s.start_ms)} - ${formatMs(s.end_ms)}] ${
             getSpeakerDisplay(s.speaker_label).name
-          }:\n${s.text}${s.translation ? `\n-> Translation: ${s.translation}` : ''}\n`
+          }:\n${s.text}${s.translation ? `\n-> Translation: ${s.translation}` : ''}\n`,
       )
       .join('\n');
 
@@ -232,7 +221,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
         (s) =>
           `[${formatMs(s.start_ms)}] ${getSpeakerDisplay(s.speaker_label).name}: ${s.text}${
             s.translation ? `\n   -> ${s.translation}` : ''
-          }`
+          }`,
       )
       .join('\n\n');
     onInsertToEditor(formatted);
@@ -262,20 +251,20 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                 isConnected
                   ? 'bg-emerald-500 shadow-xs shadow-emerald-500 animate-pulse'
                   : isRecording
-                  ? 'bg-amber-500 animate-pulse'
-                  : hasSession
-                  ? 'bg-blue-500'
-                  : 'bg-slate-300'
+                    ? 'bg-amber-500 animate-pulse'
+                    : hasSession
+                      ? 'bg-blue-500'
+                      : 'bg-slate-300',
               )}
             />
             <span className="text-xs font-bold text-slate-800">
               {isConnected
                 ? 'WebSocket Realtime Kết nối'
                 : isRecording
-                ? 'Đang phát sóng ghi âm...'
-                : hasSession
-                ? 'Đã tải dữ liệu hội thoại'
-                : 'Chưa bắt đầu phiên'}
+                  ? 'Đang phát sóng ghi âm...'
+                  : hasSession
+                    ? 'Đã tải dữ liệu hội thoại'
+                    : 'Chưa bắt đầu phiên'}
             </span>
           </div>
 
@@ -290,7 +279,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                 'text-[11px] uppercase font-bold px-2.5 py-1 tracking-wider',
                 sessionStatus === 'STREAMING'
                   ? 'bg-emerald-100 text-emerald-800 border-emerald-200 animate-pulse'
-                  : 'bg-blue-100 text-blue-800 border-blue-200'
+                  : 'bg-blue-100 text-blue-800 border-blue-200',
               )}
             >
               {sessionStatus}
@@ -340,9 +329,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             onClick={() => setShowTranslation(!showTranslation)}
             className={cn(
               'h-9 text-xs font-bold gap-1.5 px-3 rounded-xl border-slate-200',
-              showTranslation
-                ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
-                : 'text-slate-600 hover:bg-slate-100'
+              showTranslation ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'text-slate-600 hover:bg-slate-100',
             )}
             title="Bật/Tắt hiển thị bản dịch tiếng Anh"
           >
@@ -360,11 +347,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             className="h-9 text-xs font-bold text-slate-700 hover:bg-slate-100 border-slate-200 gap-1.5 px-3 rounded-xl"
             title="Sao chép toàn bộ nội dung transcript"
           >
-            {copiedAll ? (
-              <Check className="size-3.5 text-emerald-600" />
-            ) : (
-              <Copy className="size-3.5 text-slate-600" />
-            )}
+            {copiedAll ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5 text-slate-600" />}
             <span>{copiedAll ? 'Đã chép' : 'Sao chép tất cả'}</span>
           </Button>
 
@@ -454,7 +437,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               'text-xs font-bold px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap',
               selectedSpeaker === 'ALL'
                 ? 'bg-slate-900 text-white border-slate-900 shadow-2xs'
-                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50',
             )}
           >
             Tất cả ({liveSegments.length})
@@ -471,7 +454,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                   'text-xs font-bold px-3 py-1.5 rounded-xl border transition-all whitespace-nowrap',
                   selectedSpeaker === spk
                     ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50',
                 )}
               >
                 {spkInfo.name} ({count})
@@ -486,9 +469,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             onClick={() => setAutoScroll(!autoScroll)}
             className={cn(
               'h-8 px-2.5 rounded-xl text-xs font-bold gap-1 ml-auto shrink-0',
-              autoScroll
-                ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
-                : 'text-slate-400 hover:text-slate-600'
+              autoScroll ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200' : 'text-slate-400 hover:text-slate-600',
             )}
             title={autoScroll ? 'Đang tự cuộn theo lời thoại mới' : 'Bật tự cuộn'}
           >
@@ -499,10 +480,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
       </div>
 
       {/* ── 4. Main Conversational Transcript Stream ── */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto space-y-3.5 max-h-[720px] min-h-[450px] pr-1"
-      >
+      <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-3.5 max-h-[720px] min-h-[450px] pr-1">
         {/* Empty State: Not recording & No session */}
         {!hasSession && !isLoading && !isRecording && (
           <div className="flex flex-col items-center justify-center p-12 text-center text-slate-500 h-full gap-4 max-w-lg mx-auto">
@@ -510,11 +488,10 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               <Radio className="size-8" />
             </div>
             <div>
-              <h4 className="text-base font-extrabold text-slate-900">
-                Chưa có phiên bóc băng trực tiếp
-              </h4>
+              <h4 className="text-base font-extrabold text-slate-900">Chưa có phiên bóc băng trực tiếp</h4>
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                Bạn có thể bấm nút <b>"Bật Mic thu âm trực tiếp"</b> ở trên để nói thử vào microphone và xem AI chuyển giọng nói thành văn bản thời gian thực kèm dịch tiếng Anh, hoặc sử dụng <b>Meetly Extension</b> khi họp trên Google Meet.
+                Bạn có thể bấm nút <b>"Bật Mic thu âm trực tiếp"</b> ở trên để nói thử vào microphone và xem AI chuyển giọng nói thành văn
+                bản thời gian thực kèm dịch tiếng Anh, hoặc sử dụng <b>Meetly Extension</b> khi họp trên Google Meet.
               </p>
             </div>
             <Button
@@ -537,9 +514,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             <div className="size-16 rounded-full bg-emerald-100 border border-emerald-200 flex items-center justify-center text-emerald-600 animate-pulse shadow-sm">
               <Mic className="size-8 animate-bounce" />
             </div>
-            <h4 className="text-sm font-extrabold text-emerald-800">
-              Đang lắng nghe Microphone...
-            </h4>
+            <h4 className="text-sm font-extrabold text-emerald-800">Đang lắng nghe Microphone...</h4>
             <p className="text-xs text-slate-500 leading-relaxed">
               Hãy nói một câu tiếng Việt vào mic. Hệ thống sẽ ngay lập tức nhận diện và hiển thị chữ chạy trực tiếp ra màn hình!
             </p>
@@ -549,17 +524,14 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
         {/* Filter Zero State */}
         {filteredSegments.length === 0 && hasSession && !partialText && (
           <div className="text-center py-16 text-slate-400 text-xs">
-            {searchQuery
-              ? `Không tìm thấy kết quả nào khớp với "${searchQuery}"`
-              : 'Chưa có câu thoại nào từ người nói này.'}
+            {searchQuery ? `Không tìm thấy kết quả nào khớp với "${searchQuery}"` : 'Chưa có câu thoại nào từ người nói này.'}
           </div>
         )}
 
         {/* Segment Cards List */}
         {filteredSegments.map((seg) => {
           const speaker = getSpeakerDisplay(seg.speaker_label);
-          const isPlayingThis =
-            activePlayerTimeMs >= seg.start_ms && activePlayerTimeMs <= seg.end_ms;
+          const isPlayingThis = activePlayerTimeMs >= seg.start_ms && activePlayerTimeMs <= seg.end_ms;
 
           return (
             <div
@@ -568,7 +540,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                 'group relative rounded-2xl border p-4 sm:p-5 transition-all shadow-2xs',
                 isPlayingThis
                   ? 'bg-blue-50/90 border-blue-300 ring-2 ring-blue-400/20 shadow-xs'
-                  : 'bg-white hover:bg-slate-50/90 border-slate-200/80 hover:border-slate-300'
+                  : 'bg-white hover:bg-slate-50/90 border-slate-200/80 hover:border-slate-300',
               )}
             >
               {/* Card Header: Avatar, Speaker Name, Timestamp, Actions */}
@@ -578,21 +550,14 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                   <div
                     className={cn(
                       'size-7 rounded-xl bg-gradient-to-br flex items-center justify-center text-white text-xs font-bold shadow-2xs shrink-0',
-                      speaker.bgGradient
+                      speaker.bgGradient,
                     )}
                   >
                     {speaker.avatarChar}
                   </div>
 
                   {/* Speaker Name Badge */}
-                  <span
-                    className={cn(
-                      'px-2.5 py-0.5 rounded-lg border text-xs font-semibold',
-                      speaker.badgeClass
-                    )}
-                  >
-                    {speaker.name}
-                  </span>
+                  <span className={cn('px-2.5 py-0.5 rounded-lg border text-xs font-semibold', speaker.badgeClass)}>{speaker.name}</span>
 
                   {/* Interactive Audio Timestamp Chip */}
                   <button
@@ -614,11 +579,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                     className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-all"
                     title="Sao chép câu nói"
                   >
-                    {copiedId === seg.id ? (
-                      <Check className="size-3.5 text-emerald-600" />
-                    ) : (
-                      <Copy className="size-3.5" />
-                    )}
+                    {copiedId === seg.id ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
                   </button>
 
                   {onInsertToEditor && (
@@ -626,9 +587,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                       type="button"
                       onClick={() => {
                         onInsertToEditor(
-                          `[${formatMs(seg.start_ms)}] ${speaker.name}: ${seg.text}${
-                            seg.translation ? `\n   -> ${seg.translation}` : ''
-                          }`
+                          `[${formatMs(seg.start_ms)}] ${speaker.name}: ${seg.text}${seg.translation ? `\n   -> ${seg.translation}` : ''}`,
                         );
                         toast.success('Đã chèn câu thoại vào biên bản');
                       }}
@@ -642,9 +601,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               </div>
 
               {/* Main Vietnamese Transcript Text */}
-              <p className="text-sm text-slate-900 leading-relaxed font-normal select-text">
-                {seg.text}
-              </p>
+              <p className="text-sm text-slate-900 leading-relaxed font-normal select-text">{seg.text}</p>
 
               {/* English Translation Sub-Box */}
               {showTranslation && seg.translation && (
@@ -669,9 +626,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               <Sparkles className="size-4 text-blue-600 animate-spin" />
               <span>Đang bóc băng trực tiếp ({getSpeakerDisplay(partialSpeaker).name})...</span>
             </div>
-            <p className="text-sm font-semibold text-blue-950 italic leading-relaxed">
-              "{partialText}"
-            </p>
+            <p className="text-sm font-semibold text-blue-950 italic leading-relaxed">"{partialText}"</p>
             {showTranslation && partialTranslation && (
               <div className="mt-1 pt-2 border-t border-blue-200/80 flex items-start gap-2 text-xs text-indigo-700 font-medium">
                 <Languages className="size-3.5 text-indigo-500 mt-0.5 shrink-0" />
@@ -684,4 +639,3 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
     </div>
   );
 };
-

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
 import { Check, Clock, Edit3, FileText, Sparkles, Users } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
 
 import { ResponsiveModal } from '@/components/responsive-modal';
 import { Button } from '@/components/ui/button';
@@ -11,11 +12,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
 
 import { useUpdateMeeting } from '../api/use-update-meeting';
-import { MeetingReportEditor } from './meeting-report-editor';
 import type { Meeting } from '../types';
+import { MeetingReportEditor } from './meeting-report-editor';
 
 interface EditMeetingModalProps {
   isOpen: boolean;
@@ -97,17 +97,12 @@ export const EditMeetingModal = ({ isOpen, setIsOpen, workspaceId, meeting }: Ed
         onSuccess: () => {
           setIsOpen(false);
         },
-      }
+      },
     );
   };
 
   return (
-    <ResponsiveModal
-      open={isOpen}
-      onOpenChange={setIsOpen}
-      title="Chỉnh sửa cuộc họp"
-      description="Cập nhật thông tin của cuộc họp."
-    >
+    <ResponsiveModal open={isOpen} onOpenChange={setIsOpen} title="Chỉnh sửa cuộc họp" description="Cập nhật thông tin của cuộc họp.">
       <div className="w-full h-full p-6 bg-gradient-to-b from-slate-50 via-white to-slate-50 overflow-y-auto">
         {/* Bright Header */}
         <div className="flex items-center gap-3 mb-6 p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-slate-50 border border-purple-200/80">
@@ -140,7 +135,10 @@ export const EditMeetingModal = ({ isOpen, setIsOpen, workspaceId, meeting }: Ed
           {/* Time range */}
           <div className="grid grid-cols-2 gap-4 bg-purple-50/40 p-4 rounded-2xl border border-purple-100/80">
             <div className="space-y-2">
-              <Label htmlFor="edit-startTime" className="text-xs font-bold text-purple-900 flex items-center gap-1.5 uppercase tracking-wide">
+              <Label
+                htmlFor="edit-startTime"
+                className="text-xs font-bold text-purple-900 flex items-center gap-1.5 uppercase tracking-wide"
+              >
                 <Clock className="size-3.5 text-purple-600" />
                 Thời gian Bắt đầu
               </Label>
@@ -190,16 +188,14 @@ export const EditMeetingModal = ({ isOpen, setIsOpen, workspaceId, meeting }: Ed
                       key={member.$id}
                       onClick={() => {
                         setParticipants((prev) =>
-                          prev.includes(member.$id)
-                            ? prev.filter((id) => id !== member.$id)
-                            : [...prev, member.$id]
+                          prev.includes(member.$id) ? prev.filter((id) => id !== member.$id) : [...prev, member.$id],
                         );
                       }}
                       className={cn(
                         'flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border',
                         isSelected
                           ? 'bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-300 shadow-2xs font-semibold text-purple-950'
-                          : 'border-transparent hover:bg-slate-50 text-slate-700'
+                          : 'border-transparent hover:bg-slate-50 text-slate-700',
                       )}
                     >
                       <MemberAvatar name={member.name} image={member.avatar_url} className="size-7 ring-2 ring-purple-100" />
@@ -216,9 +212,7 @@ export const EditMeetingModal = ({ isOpen, setIsOpen, workspaceId, meeting }: Ed
                   );
                 })}
                 {!members?.documents?.length && (
-                  <p className="text-sm text-slate-400 text-center py-6 font-medium">
-                    Chưa có thành viên nào trong phòng ban
-                  </p>
+                  <p className="text-sm text-slate-400 text-center py-6 font-medium">Chưa có thành viên nào trong phòng ban</p>
                 )}
               </div>
             </ScrollArea>

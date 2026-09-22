@@ -36,10 +36,7 @@ export const globalColumns = columnHelper.columns([
       return (
         <div className="flex items-center gap-x-2 text-sm font-semibold">
           <WorkspaceAvatar className="size-6 text-xs" name={workspace.name} image={workspace.imageUrl} />
-          <Link
-            href={`/workspaces/${workspace.$id}`}
-            className="line-clamp-1 hover:underline text-neutral-800"
-          >
+          <Link href={`/workspaces/${workspace.$id}`} className="line-clamp-1 hover:underline text-neutral-800">
             {workspace.name}
           </Link>
         </div>
@@ -61,10 +58,7 @@ export const globalColumns = columnHelper.columns([
       const taskId = row.original.$id;
 
       return (
-        <Link
-          href={`/workspaces/${workspaceId}/tasks/${taskId}`}
-          className="line-clamp-1 font-medium hover:underline text-primary"
-        >
+        <Link href={`/workspaces/${workspaceId}/tasks/${taskId}`} className="line-clamp-1 font-medium hover:underline text-primary">
           {name}
         </Link>
       );

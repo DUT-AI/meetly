@@ -45,7 +45,7 @@ export const DateTimePicker = ({
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
-    
+
     // Create a new date with the selected day and the current time string
     const [hours, minutes] = time.split(':').map(Number);
     const newDate = new Date(date);
@@ -56,7 +56,7 @@ export const DateTimePicker = ({
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = e.target.value;
     setTime(newTime);
-    
+
     if (value) {
       const [hours, minutes] = newTime.split(':').map(Number);
       const newDate = new Date(value);
@@ -89,12 +89,7 @@ export const DateTimePicker = ({
 
         <div className="p-3 border-t border-border flex items-center justify-between gap-2">
           <span className="text-sm font-medium">Time</span>
-          <Input 
-            type="time" 
-            value={time} 
-            onChange={handleTimeChange} 
-            className="w-auto h-8 text-sm"
-          />
+          <Input type="time" value={time} onChange={handleTimeChange} className="w-auto h-8 text-sm" />
         </div>
 
         {showReset && value && (

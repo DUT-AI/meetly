@@ -3,6 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 
 import type { TaskStatus } from '@/features/tasks/types';
+
 import { taskApi } from './task-api';
 
 interface UseGetTasksProps {
@@ -14,24 +15,9 @@ interface UseGetTasksProps {
   dueDate?: string | null;
 }
 
-export const useGetTasks = ({
-  workspaceId,
-  projectId,
-  status,
-  search,
-  assigneeId,
-  dueDate,
-}: UseGetTasksProps) => {
+export const useGetTasks = ({ workspaceId, projectId, status, search, assigneeId, dueDate }: UseGetTasksProps) => {
   const query = useQuery({
-    queryKey: [
-      'tasks',
-      workspaceId,
-      projectId ?? null,
-      status ?? null,
-      search ?? null,
-      assigneeId ?? null,
-      dueDate ?? null,
-    ],
+    queryKey: ['tasks', workspaceId, projectId ?? null, status ?? null, search ?? null, assigneeId ?? null, dueDate ?? null],
     queryFn: async () => {
       return await taskApi.getTasks({
         workspaceId,

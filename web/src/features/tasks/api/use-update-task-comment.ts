@@ -11,13 +11,7 @@ export const useUpdateTaskComment = ({ taskId }: UseUpdateTaskCommentProps) => {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
-    mutationFn: async ({
-      commentId,
-      data,
-    }: {
-      commentId: string;
-      data: { content: string; mentions?: string[] };
-    }) => {
+    mutationFn: async ({ commentId, data }: { commentId: string; data: { content: string; mentions?: string[] } }) => {
       return await taskApi.updateTaskComment(taskId, commentId, data);
     },
     onSuccess: () => {

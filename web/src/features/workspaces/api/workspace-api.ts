@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+
 import {
   type Workspace,
   type WorkspaceAnalytics,
@@ -136,32 +137,20 @@ export const workspaceApi = {
     return (result || []).map(normalizeWorkspaceLabel);
   },
 
-  createLabel: async (
-    workspaceId: string,
-    data: { name: string; color: string },
-  ): Promise<WorkspaceLabel> => {
+  createLabel: async (workspaceId: string, data: { name: string; color: string }): Promise<WorkspaceLabel> => {
     const response = await api.post<{ data: any }>(`/workspaces/${workspaceId}/labels`, data);
     const result = response.data?.data ?? response.data;
     return normalizeWorkspaceLabel(result);
   },
 
-  updateLabel: async (
-    workspaceId: string,
-    labelId: string,
-    data: { name?: string; color?: string },
-  ): Promise<WorkspaceLabel> => {
-    const response = await api.patch<{ data: any }>(
-      `/workspaces/${workspaceId}/labels/${labelId}`,
-      data,
-    );
+  updateLabel: async (workspaceId: string, labelId: string, data: { name?: string; color?: string }): Promise<WorkspaceLabel> => {
+    const response = await api.patch<{ data: any }>(`/workspaces/${workspaceId}/labels/${labelId}`, data);
     const result = response.data?.data ?? response.data;
     return normalizeWorkspaceLabel(result);
   },
 
   deleteLabel: async (workspaceId: string, labelId: string): Promise<{ id: string }> => {
-    const response = await api.delete<{ data: { id: string } }>(
-      `/workspaces/${workspaceId}/labels/${labelId}`,
-    );
+    const response = await api.delete<{ data: { id: string } }>(`/workspaces/${workspaceId}/labels/${labelId}`);
     return response.data?.data ?? response.data;
   },
 };

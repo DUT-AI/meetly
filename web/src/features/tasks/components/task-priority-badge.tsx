@@ -37,19 +37,12 @@ const PRIORITY_CONFIG = {
   },
 };
 
-export const TaskPriorityBadge = ({
-  priority = TaskPriority.MEDIUM,
-  className,
-  showIcon = true,
-}: TaskPriorityBadgeProps) => {
+export const TaskPriorityBadge = ({ priority = TaskPriority.MEDIUM, className, showIcon = true }: TaskPriorityBadgeProps) => {
   const config = PRIORITY_CONFIG[priority] || PRIORITY_CONFIG[TaskPriority.MEDIUM];
   const Icon = config.icon;
 
   return (
-    <Badge
-      variant="outline"
-      className={cn('inline-flex items-center gap-x-1 px-2 py-0.5 text-xs font-medium', config.color, className)}
-    >
+    <Badge variant="outline" className={cn('inline-flex items-center gap-x-1 px-2 py-0.5 text-xs font-medium', config.color, className)}>
       {showIcon && <Icon className={cn('size-3', config.iconColor)} />}
       <span>{config.label}</span>
     </Badge>

@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { assetApi } from './asset-api';
 import type { EntityType } from '../types';
+import { assetApi } from './asset-api';
 
 interface DeleteAssetParam {
   workspaceId: string;
@@ -20,19 +20,10 @@ export const useDeleteAsset = () => {
       return await assetApi.deleteAsset(workspaceId, assetId);
     },
     onSuccess: (_, variables) => {
-      toast.success(
-        variables.fileName
-          ? `Đã xoá tệp: ${variables.fileName}`
-          : 'Đã xoá tệp đính kèm',
-      );
+      toast.success(variables.fileName ? `Đã xoá tệp: ${variables.fileName}` : 'Đã xoá tệp đính kèm');
       if (variables.entityType && variables.entityId) {
         queryClient.invalidateQueries({
-          queryKey: [
-            'assets',
-            variables.workspaceId,
-            variables.entityType,
-            variables.entityId,
-          ],
+          queryKey: ['assets', variables.workspaceId, variables.entityType, variables.entityId],
         });
       } else {
         queryClient.invalidateQueries({

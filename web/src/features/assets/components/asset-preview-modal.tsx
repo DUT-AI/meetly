@@ -2,13 +2,10 @@
 
 import { Download, ExternalLink, ZoomIn, ZoomOut } from 'lucide-react';
 import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 import type { Asset } from '../types';
 import { AssetIcon, formatFileSize } from './asset-icon';
 
@@ -18,11 +15,7 @@ interface AssetPreviewModalProps {
   onClose: () => void;
 }
 
-export const AssetPreviewModal = ({
-  asset,
-  isOpen,
-  onClose,
-}: AssetPreviewModalProps) => {
+export const AssetPreviewModal = ({ asset, isOpen, onClose }: AssetPreviewModalProps) => {
   const [zoom, setZoom] = useState(1);
 
   if (!asset) return null;
@@ -61,9 +54,7 @@ export const AssetPreviewModal = ({
               <AssetIcon category={asset.category} extension={asset.extension} />
             </div>
             <div className="truncate text-left">
-              <DialogTitle className="text-base font-semibold truncate text-neutral-900">
-                {asset.fileName}
-              </DialogTitle>
+              <DialogTitle className="text-base font-semibold truncate text-neutral-900">{asset.fileName}</DialogTitle>
               <p className="text-xs text-muted-foreground">
                 {formatFileSize(asset.fileSize)} • {asset.extension.toUpperCase()}
               </p>
@@ -92,12 +83,7 @@ export const AssetPreviewModal = ({
                   <ZoomOut className="size-4" />
                 </Button>
                 {zoom !== 1 && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-7 text-xs px-1.5"
-                    onClick={() => setZoom(1)}
-                  >
+                  <Button size="sm" variant="ghost" className="h-7 text-xs px-1.5" onClick={() => setZoom(1)}>
                     {Math.round(zoom * 100)}%
                   </Button>
                 )}
@@ -117,12 +103,7 @@ export const AssetPreviewModal = ({
                   <span>Tab mới</span>
                 </Button>
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleDownload}
-                  className="gap-1.5 text-xs"
-                >
+                <Button size="sm" variant="outline" onClick={handleDownload} className="gap-1.5 text-xs">
                   <Download className="size-3.5" />
                   <span>Tải xuống</span>
                 </Button>
@@ -144,18 +125,9 @@ export const AssetPreviewModal = ({
               />
             </div>
           ) : isPdf && url ? (
-            <iframe
-              src={url}
-              title={asset.fileName}
-              className="size-full rounded-lg border-0 bg-white shadow-lg"
-            />
+            <iframe src={url} title={asset.fileName} className="size-full rounded-lg border-0 bg-white shadow-lg" />
           ) : isVideo && url ? (
-            <video
-              src={url}
-              controls
-              className="max-h-[82vh] max-w-full rounded-lg shadow-2xl"
-              autoPlay
-            >
+            <video src={url} controls className="max-h-[82vh] max-w-full rounded-lg shadow-2xl" autoPlay>
               Trình duyệt của bạn không hỗ trợ phát video.
             </video>
           ) : isAudio && url ? (
@@ -167,16 +139,10 @@ export const AssetPreviewModal = ({
           ) : (
             <div className="flex flex-col items-center justify-center gap-4 rounded-2xl bg-white p-12 text-center shadow-xl max-w-lg border">
               <div className="flex size-20 items-center justify-center rounded-2xl bg-neutral-100 shadow-xs border">
-                <AssetIcon
-                  category={asset.category}
-                  extension={asset.extension}
-                  className="size-10"
-                />
+                <AssetIcon category={asset.category} extension={asset.extension} className="size-10" />
               </div>
               <div>
-                <h3 className="text-base font-semibold text-neutral-900">
-                  {asset.fileName}
-                </h3>
+                <h3 className="text-base font-semibold text-neutral-900">{asset.fileName}</h3>
                 <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
                   Định dạng này không hỗ trợ xem trước trực tiếp trong trình duyệt. Vui lòng tải về máy để mở.
                 </p>

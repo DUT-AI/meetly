@@ -19,8 +19,8 @@ import {
 } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import {
-  Calendar as CalendarIcon,
   CalendarDays,
+  Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -38,14 +38,14 @@ import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
 import { ResponsiveModal } from '@/components/responsive-modal';
 import { Button } from '@/components/ui/button';
-import { useCurrentMember } from '@/features/members/api/use-current-member';
-import { useGetMembers } from '@/features/members/api/use-get-members';
-import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { useGetMeetings } from '@/features/meetings/api/use-get-meetings';
 import { CreateMeetingModal } from '@/features/meetings/components/create-meeting-modal';
 import { MeetingActions } from '@/features/meetings/components/meeting-actions';
 import { MeetingReportEditor } from '@/features/meetings/components/meeting-report-editor';
 import type { Meeting } from '@/features/meetings/types';
+import { useCurrentMember } from '@/features/members/api/use-current-member';
+import { useGetMembers } from '@/features/members/api/use-get-members';
+import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { cn } from '@/lib/utils';
 
@@ -102,9 +102,7 @@ export const MeetingsClient = () => {
   const isAdmin = member?.role === 'ADMIN' || !member;
 
   // Lookup map: memberId → member object
-  const memberMap = Object.fromEntries(
-    (membersResponse?.documents ?? []).map((m) => [m.$id || m.id, m])
-  );
+  const memberMap = Object.fromEntries((membersResponse?.documents ?? []).map((m) => [m.$id || m.id, m]));
 
   if (isLoading) return <PageLoader />;
   if (!meetingsResponse) return <PageError message="Không thể tải dữ liệu cuộc họp" />;
@@ -189,9 +187,7 @@ export const MeetingsClient = () => {
               onClick={() => setViewMode('month')}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                viewMode === 'month'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                viewMode === 'month' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900',
               )}
             >
               <LayoutGrid className="size-3.5" />
@@ -201,9 +197,7 @@ export const MeetingsClient = () => {
               onClick={() => setViewMode('week')}
               className={cn(
                 'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all',
-                viewMode === 'week'
-                  ? 'bg-white text-blue-700 shadow-xs'
-                  : 'text-slate-600 hover:text-slate-900'
+                viewMode === 'week' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-600 hover:text-slate-900',
               )}
             >
               <CalendarDays className="size-3.5" />
@@ -275,7 +269,7 @@ export const MeetingsClient = () => {
                   key={label}
                   className={cn(
                     'py-2.5 text-center text-xs font-bold uppercase tracking-wider text-slate-600',
-                    i === 0 && 'text-rose-600 font-extrabold' // Sunday accent
+                    i === 0 && 'text-rose-600 font-extrabold', // Sunday accent
                   )}
                 >
                   {label}
@@ -298,7 +292,7 @@ export const MeetingsClient = () => {
                     className={cn(
                       'border-r border-b border-slate-100 p-2 flex flex-col group min-h-[115px] transition-all relative hover:bg-blue-50/30',
                       !isCurrentMonth && 'bg-slate-50/50 opacity-40',
-                      isCurrentDay && 'bg-blue-50/40 font-medium'
+                      isCurrentDay && 'bg-blue-50/40 font-medium',
                     )}
                   >
                     {/* Cell Header */}
@@ -309,8 +303,8 @@ export const MeetingsClient = () => {
                           isCurrentDay
                             ? 'bg-blue-600 text-white font-extrabold shadow-xs scale-105'
                             : isCurrentMonth
-                            ? 'text-slate-800 group-hover:text-blue-700 font-bold'
-                            : 'text-slate-400'
+                              ? 'text-slate-800 group-hover:text-blue-700 font-bold'
+                              : 'text-slate-400',
                         )}
                       >
                         {format(day, 'd')}
@@ -340,13 +334,11 @@ export const MeetingsClient = () => {
                             }}
                             className={cn(
                               'w-full text-left text-[11px] font-bold px-2 py-1 rounded-lg truncate transition-all transform hover:scale-[1.02] flex items-center gap-1.5',
-                              MEETING_COLORS[idx]
+                              MEETING_COLORS[idx],
                             )}
                           >
                             <span className={cn('size-1.5 rounded-full shrink-0', MEETING_DOT_COLORS[idx])} />
-                            <span className="shrink-0 font-extrabold">
-                              {format(parseISO(meeting.start_time), 'HH:mm')}
-                            </span>
+                            <span className="shrink-0 font-extrabold">{format(parseISO(meeting.start_time), 'HH:mm')}</span>
                             <span className="truncate">{meeting.title}</span>
                           </button>
                         );
@@ -393,16 +385,14 @@ export const MeetingsClient = () => {
                     key={idx}
                     className={cn(
                       'py-2.5 px-2 text-center flex flex-col items-center justify-center border-r border-slate-200',
-                      idx === 6 && 'text-rose-600 font-extrabold' // CN accent
+                      idx === 6 && 'text-rose-600 font-extrabold', // CN accent
                     )}
                   >
-                    <span className="text-[11px] uppercase tracking-wider font-bold text-slate-500">
-                      {WEEKDAY_LABELS_WEEK[idx]}
-                    </span>
+                    <span className="text-[11px] uppercase tracking-wider font-bold text-slate-500">{WEEKDAY_LABELS_WEEK[idx]}</span>
                     <span
                       className={cn(
                         'text-xs px-2 py-0.5 rounded-full font-bold mt-0.5',
-                        isCurrentDay ? 'bg-blue-600 text-white font-extrabold shadow-xs' : 'text-slate-800'
+                        isCurrentDay ? 'bg-blue-600 text-white font-extrabold shadow-xs' : 'text-slate-800',
                       )}
                     >
                       {format(day, 'dd/MM')}
@@ -434,7 +424,7 @@ export const MeetingsClient = () => {
                           onClick={() => isAdmin && handleOpenCreateForDate(day, hour)}
                           className={cn(
                             'p-1.5 border-r border-slate-100 transition-colors flex flex-col gap-1 relative group/cell hover:bg-blue-50/30 cursor-pointer',
-                            isCurrentDay && 'bg-blue-50/20'
+                            isCurrentDay && 'bg-blue-50/20',
                           )}
                         >
                           {/* Meetings inside this hour slot */}
@@ -449,7 +439,7 @@ export const MeetingsClient = () => {
                                 }}
                                 className={cn(
                                   'w-full text-left text-[11px] font-bold px-2 py-1.5 rounded-lg truncate transition-all transform hover:scale-[1.02] shadow-2xs flex flex-col justify-center',
-                                  MEETING_COLORS[idx]
+                                  MEETING_COLORS[idx],
                                 )}
                               >
                                 <div className="flex items-center gap-1.5">
@@ -524,15 +514,13 @@ export const MeetingsClient = () => {
                     }}
                     className={cn(
                       'group flex items-center justify-between p-4 rounded-2xl transition-all cursor-pointer shadow-xs border',
-                      MEETING_COLORS[idx]
+                      MEETING_COLORS[idx],
                     )}
                   >
                     <div className="flex items-center gap-3.5">
                       <div className={cn('w-2.5 h-12 rounded-full shrink-0 shadow-xs', MEETING_DOT_COLORS[idx])} />
                       <div className="flex flex-col">
-                        <p className="text-sm font-extrabold text-slate-900 group-hover:text-blue-700 transition-colors">
-                          {m.title}
-                        </p>
+                        <p className="text-sm font-extrabold text-slate-900 group-hover:text-blue-700 transition-colors">{m.title}</p>
                         <div className="flex items-center gap-2 text-xs text-slate-600 mt-1 font-semibold">
                           <Clock className="size-3.5 text-blue-600" />
                           <span>
@@ -540,10 +528,7 @@ export const MeetingsClient = () => {
                           </span>
                           <span>•</span>
                           <span className="font-extrabold text-blue-700">
-                            {Math.round(
-                              (new Date(m.end_time).getTime() - new Date(m.start_time).getTime()) / 60000
-                            )}{' '}
-                            phút
+                            {Math.round((new Date(m.end_time).getTime() - new Date(m.start_time).getTime()) / 60000)} phút
                           </span>
                         </div>
                       </div>
@@ -611,10 +596,7 @@ export const MeetingsClient = () => {
                   </p>
                   <p className="text-xs text-blue-800 font-bold">
                     Thời lượng:{' '}
-                    {Math.round(
-                      (new Date(selectedMeeting.end_time).getTime() - new Date(selectedMeeting.start_time).getTime()) /
-                        60000
-                    )}{' '}
+                    {Math.round((new Date(selectedMeeting.end_time).getTime() - new Date(selectedMeeting.start_time).getTime()) / 60000)}{' '}
                     phút
                   </p>
                 </div>
@@ -636,11 +618,7 @@ export const MeetingsClient = () => {
                           key={pid}
                           className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-blue-50/50 transition-colors"
                         >
-                          <MemberAvatar
-                            name={m.name}
-                            image={m.avatar_url ?? m.avatarUrl}
-                            className="size-8 ring-2 ring-blue-200"
-                          />
+                          <MemberAvatar name={m.name} image={m.avatar_url ?? m.avatarUrl} className="size-8 ring-2 ring-blue-200" />
                           <div className="flex flex-col leading-tight">
                             <span className="text-sm font-bold text-slate-900">{m.name}</span>
                             <span className="text-xs text-slate-500 font-medium">{m.email}</span>

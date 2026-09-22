@@ -1,6 +1,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Check } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
@@ -13,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
@@ -24,8 +26,6 @@ import { createTaskSchema } from '@/features/tasks/schema';
 import { TaskPriority, TaskStatus } from '@/features/tasks/types';
 import { useGetLabels } from '@/features/workspaces/api/use-get-labels';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
-import { Check } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
 interface CreateTaskFormProps {
@@ -187,22 +187,22 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                         >
                           <FormControl>
                             <SelectTrigger>
-                              {field.value ? (
-                                (() => {
-                                  const selectedProject = projectOptions.find((p) => p.id === field.value);
-                                  if (selectedProject) {
-                                    return (
-                                      <div className="flex items-center gap-x-2 truncate">
-                                        <ProjectAvatar className="size-5" name={selectedProject.name} image={selectedProject.imageUrl} />
-                                        <span className="truncate">{selectedProject.name}</span>
-                                      </div>
-                                    );
-                                  }
-                                  return <SelectValue placeholder="Select project" />;
-                                })()
-                              ) : (
-                                projectOptions.length === 0 ? 'Chưa có dự án nào' : 'Select project'
-                              )}
+                              {field.value
+                                ? (() => {
+                                    const selectedProject = projectOptions.find((p) => p.id === field.value);
+                                    if (selectedProject) {
+                                      return (
+                                        <div className="flex items-center gap-x-2 truncate">
+                                          <ProjectAvatar className="size-5" name={selectedProject.name} image={selectedProject.imageUrl} />
+                                          <span className="truncate">{selectedProject.name}</span>
+                                        </div>
+                                      );
+                                    }
+                                    return <SelectValue placeholder="Select project" />;
+                                  })()
+                                : projectOptions.length === 0
+                                  ? 'Chưa có dự án nào'
+                                  : 'Select project'}
                             </SelectTrigger>
                           </FormControl>
 
@@ -267,19 +267,20 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                                   disabled={isPending}
                                   className="w-full justify-between font-normal h-10 px-3"
                                 >
-                                  {selectedMembers.length === 0 && (
-                                    <span className="text-muted-foreground">Select assignees</span>
-                                  )}
+                                  {selectedMembers.length === 0 && <span className="text-muted-foreground">Select assignees</span>}
                                   {selectedMembers.length > 0 && (
                                     <div className="flex items-center gap-1.5 overflow-hidden">
                                       <div className="flex -space-x-1.5 overflow-hidden">
                                         {selectedMembers.slice(0, 3).map((m) => (
-                                          <MemberAvatar key={m.id} className="size-5 border border-background" name={m.name} image={m.imageUrl} />
+                                          <MemberAvatar
+                                            key={m.id}
+                                            className="size-5 border border-background"
+                                            name={m.name}
+                                            image={m.imageUrl}
+                                          />
                                         ))}
                                       </div>
-                                      <span className="truncate text-xs">
-                                        {selectedMembers.map((m) => m.name).join(', ')}
-                                      </span>
+                                      <span className="truncate text-xs">{selectedMembers.map((m) => m.name).join(', ')}</span>
                                     </div>
                                   )}
                                 </Button>
@@ -295,7 +296,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                                       onClick={() => toggleMember(member.id)}
                                       className={cn(
                                         'flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-accent text-sm',
-                                        isSelected && 'bg-accent/50 font-medium'
+                                        isSelected && 'bg-accent/50 font-medium',
                                       )}
                                     >
                                       <div className="flex items-center gap-x-2 truncate">
@@ -306,9 +307,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                                     </div>
                                   );
                                 })}
-                                {memberOptions.length === 0 && (
-                                  <p className="text-xs text-muted-foreground p-2">No members found</p>
-                                )}
+                                {memberOptions.length === 0 && <p className="text-xs text-muted-foreground p-2">No members found</p>}
                               </div>
                             </PopoverContent>
                           </Popover>
@@ -372,7 +371,7 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                       <FormLabel>Labels (Nhãn công việc)</FormLabel>
 
                       <div className="flex flex-wrap gap-1.5 p-2 rounded-md border min-h-[42px] bg-background">
-                        {(!workspaceLabels || workspaceLabels.length === 0) ? (
+                        {!workspaceLabels || workspaceLabels.length === 0 ? (
                           <p className="text-xs text-muted-foreground italic py-1">
                             Chưa có nhãn trong phòng ban. Bạn có thể thêm nhãn tại Cài đặt phòng ban.
                           </p>

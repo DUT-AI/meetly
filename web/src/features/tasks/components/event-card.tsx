@@ -59,11 +59,7 @@ export const EventCard = ({ title, assignees, project, status, id }: EventCardPr
                   image={m.avatar_url || (m as any)?.avatarUrl}
                 />
               ))}
-              {memberList.length > 3 && (
-                <span className="text-[9px] font-semibold text-neutral-500 pl-1">
-                  +{memberList.length - 3}
-                </span>
-              )}
+              {memberList.length > 3 && <span className="text-[9px] font-semibold text-neutral-500 pl-1">+{memberList.length - 3}</span>}
             </div>
           ) : (
             <span className="text-[10px] text-neutral-400 italic">Chưa giao</span>

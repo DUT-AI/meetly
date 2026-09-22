@@ -13,32 +13,32 @@ import { TaskItem } from '@tiptap/extension-task-item';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TextAlign } from '@tiptap/extension-text-align';
 import { Underline } from '@tiptap/extension-underline';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import {
+  AlignCenter,
+  AlignJustify,
+  AlignLeft,
+  AlignRight,
   Bold,
-  Italic,
-  Underline as UnderlineIcon,
-  Strikethrough,
-  Highlighter,
+  CheckSquare,
+  Code,
   Heading1,
   Heading2,
   Heading3,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignJustify,
+  Highlighter,
+  Italic,
+  Link as LinkIcon,
   List,
   ListOrdered,
-  CheckSquare,
-  Table as TableIcon,
   Quote,
-  Code,
-  Link as LinkIcon,
+  Redo,
+  Strikethrough,
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
+  Table as TableIcon,
+  Underline as UnderlineIcon,
   Undo,
-  Redo,
 } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 
@@ -94,7 +94,7 @@ export const MeetingReportEditor = ({
       attributes: {
         class: cn(
           'prose prose-slate max-w-none focus:outline-none text-slate-800 text-base leading-relaxed font-sans tiptap',
-          readOnly ? 'min-h-[200px]' : 'min-h-[750px]'
+          readOnly ? 'min-h-[200px]' : 'min-h-[750px]',
         ),
       },
     },
@@ -165,7 +165,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('heading', { level: 1 }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('heading', { level: 1 }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Tiêu đề 1"
           >
@@ -179,7 +179,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('heading', { level: 2 }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('heading', { level: 2 }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Tiêu đề 2"
           >
@@ -193,7 +193,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('heading', { level: 3 }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('heading', { level: 3 }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Tiêu đề 3"
           >
@@ -210,7 +210,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleBold().run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('bold') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('bold') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="In đậm (Ctrl+B)"
           >
@@ -224,7 +224,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleItalic().run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('italic') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('italic') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="In nghiêng (Ctrl+I)"
           >
@@ -238,7 +238,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleUnderline().run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('underline') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('underline') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Gạch chân (Ctrl+U)"
           >
@@ -252,7 +252,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleStrike().run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('strike') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('strike') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Gạch ngang"
           >
@@ -266,7 +266,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleHighlight({ color: '#fef08a' }).run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-amber-600',
-              editor.isActive('highlight') && 'bg-amber-100 text-amber-700 shadow-2xs border border-amber-300'
+              editor.isActive('highlight') && 'bg-amber-100 text-amber-700 shadow-2xs border border-amber-300',
             )}
             title="Tô màu Highlight"
           >
@@ -280,7 +280,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleSubscript().run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('subscript') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('subscript') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Chỉ số dưới (Subscript)"
           >
@@ -294,7 +294,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleSuperscript().run()}
             className={cn(
               'h-8 px-2 rounded-xl font-semibold text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('superscript') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('superscript') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Chỉ số trên (Superscript)"
           >
@@ -311,7 +311,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().setTextAlign('left').run()}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive({ textAlign: 'left' }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive({ textAlign: 'left' }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Căn trái"
           >
@@ -325,7 +325,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().setTextAlign('center').run()}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive({ textAlign: 'center' }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive({ textAlign: 'center' }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Căn giữa"
           >
@@ -339,7 +339,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().setTextAlign('right').run()}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive({ textAlign: 'right' }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive({ textAlign: 'right' }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Căn phải"
           >
@@ -353,7 +353,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().setTextAlign('justify').run()}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive({ textAlign: 'justify' }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive({ textAlign: 'justify' }) && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Căn đều"
           >
@@ -370,7 +370,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleBulletList().run()}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('bulletList') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('bulletList') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Danh sách gạch đầu dòng"
           >
@@ -384,7 +384,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleOrderedList().run()}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('orderedList') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('orderedList') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Danh sách đánh số"
           >
@@ -398,7 +398,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleTaskList().run()}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('taskList') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('taskList') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Danh sách công việc (Checklist)"
           >
@@ -412,9 +412,7 @@ export const MeetingReportEditor = ({
             type="button"
             variant="ghost"
             size="sm"
-            onClick={() =>
-              editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()
-            }
+            onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
             className="h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600"
             title="Chèn bảng (3x3)"
           >
@@ -428,7 +426,7 @@ export const MeetingReportEditor = ({
             onClick={setLink}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('link') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('link') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Chèn liên kết URL"
           >
@@ -442,7 +440,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleBlockquote().run()}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('blockquote') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('blockquote') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Trích dẫn"
           >
@@ -456,7 +454,7 @@ export const MeetingReportEditor = ({
             onClick={() => editor.chain().focus().toggleCodeBlock().run()}
             className={cn(
               'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
-              editor.isActive('codeBlock') && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+              editor.isActive('codeBlock') && 'bg-white text-blue-600 shadow-2xs border border-slate-200',
             )}
             title="Khối mã (Code Block)"
           >

@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+
 import { meetingApi } from './meeting-api';
 
 export const useGetMeetings = (workspaceId: string) => {

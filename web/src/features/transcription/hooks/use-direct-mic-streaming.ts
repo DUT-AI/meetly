@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
-import { toast } from 'sonner';
-import { transcriptionApi } from '../api/transcription-api';
 import { useQueryClient } from '@tanstack/react-query';
+import { useCallback, useRef, useState } from 'react';
+import { toast } from 'sonner';
+
+import { transcriptionApi } from '../api/transcription-api';
 
 interface UseDirectMicStreamingProps {
   workspaceId: string;
@@ -61,11 +62,7 @@ const buildWsUrl = (pathWithQuery: string): string => {
   return `${protocol}//${host}${pathWithQuery}`;
 };
 
-export const useDirectMicStreaming = ({
-  workspaceId,
-  meetingId,
-  onSessionCreated,
-}: UseDirectMicStreamingProps) => {
+export const useDirectMicStreaming = ({ workspaceId, meetingId, onSessionCreated }: UseDirectMicStreamingProps) => {
   const [isRecording, setIsRecording] = useState(false);
   const [isInitializing, setIsInitializing] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
@@ -106,9 +103,7 @@ export const useDirectMicStreaming = ({
 
       // 3. Connect Producer WebSocket
       const wsUrl = buildWsUrl(
-        `/api/v1/transcription-sessions/${session.session_id}/audio?ticket=${encodeURIComponent(
-          session.producer_ticket
-        )}`
+        `/api/v1/transcription-sessions/${session.session_id}/audio?ticket=${encodeURIComponent(session.producer_ticket)}`,
       );
 
       const ws = new WebSocket(wsUrl);
@@ -123,20 +118,12 @@ export const useDirectMicStreaming = ({
         };
         ws.onerror = () => {
           if (!isOpened) {
-            reject(
-              new Error(
-                'Lỗi kết nối WebSocket tới Backend API. Vui lòng kiểm tra server backend đã chạy (port 8000).'
-              )
-            );
+            reject(new Error('Lỗi kết nối WebSocket tới Backend API. Vui lòng kiểm tra server backend đã chạy (port 8000).'));
           }
         };
         ws.onclose = (ev) => {
           if (!isOpened) {
-            reject(
-              new Error(
-                `WebSocket bị đóng (Mã ${ev.code}: ${ev.reason || 'Server từ chối kết nối'})`
-              )
-            );
+            reject(new Error(`WebSocket bị đóng (Mã ${ev.code}: ${ev.reason || 'Server từ chối kết nối'})`));
           }
         };
       });
@@ -176,8 +163,7 @@ export const useDirectMicStreaming = ({
         if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) return;
 
         const rawData = e.inputBuffer.getChannelData(0);
-        const inputData =
-          actualSampleRate !== 16000 ? downsampleTo16k(rawData, actualSampleRate) : rawData;
+        const inputData = actualSampleRate !== 16000 ? downsampleTo16k(rawData, actualSampleRate) : rawData;
 
         // Convert Float32 to Int16 PCM (Little-Endian)
         const int16 = new Int16Array(inputData.length);

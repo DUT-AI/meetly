@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
 import { ProjectAvatar } from '@/features/projects/components/project-avatar';
-import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
 import { TaskLabels } from '@/features/tasks/components/task-labels';
+import { TaskPriorityBadge } from '@/features/tasks/components/task-priority-badge';
 import type { PopulatedTask } from '@/features/tasks/types';
 import { snakeCaseToTitleCase } from '@/lib/utils';
 
@@ -100,9 +100,7 @@ export const columns = columnHelper.columns([
               </div>
             )}
           </div>
-          <p className="line-clamp-1 text-xs text-neutral-600">
-            {assignees.map((m) => m.name).join(', ')}
-          </p>
+          <p className="line-clamp-1 text-xs text-neutral-600">{assignees.map((m) => m.name).join(', ')}</p>
         </div>
       );
     },

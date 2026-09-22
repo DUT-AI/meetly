@@ -1,4 +1,5 @@
 import { api } from '@/lib/api';
+
 import { Meeting } from '../types';
 
 export interface CreateMeetingPayload {
@@ -19,9 +20,7 @@ export interface UpdateMeetingPayload {
 
 export const meetingApi = {
   getMeetings: async (workspaceId: string): Promise<{ documents: Meeting[]; total: number }> => {
-    const response = await api.get<any>(
-      `/workspaces/${workspaceId}/meetings`,
-    );
+    const response = await api.get<any>(`/workspaces/${workspaceId}/meetings`);
     const resData = response.data?.data ?? response.data;
     if (Array.isArray(resData)) {
       return { documents: resData, total: resData.length };
@@ -33,9 +32,7 @@ export const meetingApi = {
   },
 
   getMeeting: async (workspaceId: string, meetingId: string): Promise<Meeting> => {
-    const response = await api.get<any>(
-      `/workspaces/${workspaceId}/meetings/${meetingId}`,
-    );
+    const response = await api.get<any>(`/workspaces/${workspaceId}/meetings/${meetingId}`);
     return response.data?.data ?? response.data;
   },
 
@@ -52,31 +49,20 @@ export const meetingApi = {
     return response.data?.data ?? response.data;
   },
 
-  updateMeeting: async (
-    workspaceId: string,
-    meetingId: string,
-    payload: UpdateMeetingPayload,
-  ): Promise<Meeting> => {
+  updateMeeting: async (workspaceId: string, meetingId: string, payload: UpdateMeetingPayload): Promise<Meeting> => {
     const body: Record<string, any> = { ...payload };
     if (payload.start_time) {
-      body.start_time =
-        payload.start_time instanceof Date ? payload.start_time.toISOString() : payload.start_time;
+      body.start_time = payload.start_time instanceof Date ? payload.start_time.toISOString() : payload.start_time;
     }
     if (payload.end_time) {
-      body.end_time =
-        payload.end_time instanceof Date ? payload.end_time.toISOString() : payload.end_time;
+      body.end_time = payload.end_time instanceof Date ? payload.end_time.toISOString() : payload.end_time;
     }
-    const response = await api.patch<{ data: Meeting }>(
-      `/workspaces/${workspaceId}/meetings/${meetingId}`,
-      body,
-    );
+    const response = await api.patch<{ data: Meeting }>(`/workspaces/${workspaceId}/meetings/${meetingId}`, body);
     return response.data?.data ?? response.data;
   },
 
   deleteMeeting: async (workspaceId: string, meetingId: string): Promise<{ id: string }> => {
-    const response = await api.delete<{ data: { id: string } }>(
-      `/workspaces/${workspaceId}/meetings/${meetingId}`,
-    );
+    const response = await api.delete<{ data: { id: string } }>(`/workspaces/${workspaceId}/meetings/${meetingId}`);
     return response.data?.data ?? response.data;
   },
 };

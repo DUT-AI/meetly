@@ -53,9 +53,7 @@ export const KanbanCard = ({ task }: KanbanCardProps) => {
               className="size-4 shrink-0"
               fallbackClassName="text-[8px]"
             />
-            <span className="truncate text-xs font-medium text-neutral-500">
-              {task.project.name}
-            </span>
+            <span className="truncate text-xs font-medium text-neutral-500">{task.project.name}</span>
           </div>
         ) : (
           <span />

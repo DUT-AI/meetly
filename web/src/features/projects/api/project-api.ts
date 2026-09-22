@@ -1,10 +1,6 @@
 import { api } from '@/lib/api';
-import {
-  type Project,
-  type ProjectAnalytics,
-  normalizeProject,
-  normalizeProjectAnalytics,
-} from '../types';
+
+import { type Project, type ProjectAnalytics, normalizeProject, normalizeProjectAnalytics } from '../types';
 
 export const projectApi = {
   getProjects: async (workspaceId: string): Promise<{ documents: Project[]; total: number }> => {
@@ -24,9 +20,7 @@ export const projectApi = {
     return normalizeProject(result);
   },
 
-  createProject: async (
-    data: FormData | { name: string; workspaceId: string; image?: File | string },
-  ): Promise<Project> => {
+  createProject: async (data: FormData | { name: string; workspaceId: string; image?: File | string }): Promise<Project> => {
     let payload: FormData;
     if (data instanceof FormData) {
       payload = data;

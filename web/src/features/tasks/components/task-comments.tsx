@@ -2,29 +2,18 @@
 
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import {
-  AtSign,
-  Edit2,
-  Loader2,
-  MessageSquare,
-  MoreVertical,
-  Paperclip,
-  Send,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { AtSign, Edit2, Loader2, MessageSquare, MoreVertical, Paperclip, Send, Trash2, X } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Textarea } from '@/components/ui/textarea';
+import { CommentAttachments } from '@/features/assets';
+import { useUploadAsset } from '@/features/assets/api/use-upload-asset';
+import { formatFileSize } from '@/features/assets/components/asset-icon';
+import { DocumentBadgeIcon } from '@/features/assets/components/document-badge-icon';
 import { useCurrent } from '@/features/auth/api/use-current';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
@@ -36,10 +25,6 @@ import { useUpdateTaskComment } from '@/features/tasks/api/use-update-task-comme
 import type { TaskComment } from '@/features/tasks/types';
 import { useConfirm } from '@/hooks/use-confirm';
 import { cn } from '@/lib/utils';
-import { CommentAttachments } from '@/features/assets';
-import { useUploadAsset } from '@/features/assets/api/use-upload-asset';
-import { DocumentBadgeIcon } from '@/features/assets/components/document-badge-icon';
-import { formatFileSize } from '@/features/assets/components/asset-icon';
 
 interface TaskCommentsProps {
   taskId: string;
@@ -56,11 +41,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
   const { mutate: updateComment, isPending: isUpdating } = useUpdateTaskComment({ taskId });
   const { mutate: deleteComment, isPending: isDeleting } = useDeleteTaskComment({ taskId });
 
-  const [ConfirmDialog, confirmDelete] = useConfirm(
-    'Xóa bình luận',
-    'Bạn có chắc chắn muốn xóa bình luận này không?',
-    'destructive',
-  );
+  const [ConfirmDialog, confirmDelete] = useConfirm('Xóa bình luận', 'Bạn có chắc chắn muốn xóa bình luận này không?', 'destructive');
 
   const [content, setContent] = useState('');
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
@@ -81,9 +62,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
   const filteredMembers = useMemo(() => {
     if (!mentionFilter) return members;
     return members.filter(
-      (m) =>
-        m.name.toLowerCase().includes(mentionFilter.toLowerCase()) ||
-        m.email.toLowerCase().includes(mentionFilter.toLowerCase()),
+      (m) => m.name.toLowerCase().includes(mentionFilter.toLowerCase()) || m.email.toLowerCase().includes(mentionFilter.toLowerCase()),
     );
   }, [members, mentionFilter]);
 
@@ -302,10 +281,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
     return parts.map((part, i) => {
       if (part.startsWith('@') && memberNames.includes(part.slice(1))) {
         return (
-          <span
-            key={i}
-            className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-semibold text-xs mx-0.5"
-          >
+          <span key={i} className="inline-flex items-center px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-semibold text-xs mx-0.5">
             {part}
           </span>
         );
@@ -322,9 +298,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
           <div className="flex items-center gap-2">
             <MessageSquare className="size-5 text-neutral-600" />
             <h3 className="text-lg font-semibold">Trao đổi & Bình luận</h3>
-            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-bold text-neutral-600">
-              {comments?.length || 0}
-            </span>
+            <span className="rounded-full bg-neutral-100 px-2 py-0.5 text-xs font-bold text-neutral-600">{comments?.length || 0}</span>
           </div>
         </div>
 
@@ -369,24 +343,15 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
                     className="group relative flex items-center gap-2 rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs shadow-2xs"
                   >
                     {isImage ? (
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={file.name}
-                        className="size-7 rounded object-cover"
-                      />
+                      <img src={URL.createObjectURL(file)} alt={file.name} className="size-7 rounded object-cover" />
                     ) : (
-                      <DocumentBadgeIcon
-                        extension={file.name.split('.').pop() || ''}
-                        className="scale-60 -mx-2"
-                      />
+                      <DocumentBadgeIcon extension={file.name.split('.').pop() || ''} className="scale-60 -mx-2" />
                     )}
                     <div className="flex flex-col min-w-0 max-w-[140px]">
                       <span className="truncate text-[11px] font-medium text-neutral-800" title={file.name}>
                         {file.name}
                       </span>
-                      <span className="text-[9px] text-neutral-400">
-                        {formatFileSize(file.size)}
-                      </span>
+                      <span className="text-[9px] text-neutral-400">{formatFileSize(file.size)}</span>
                     </div>
                     <button
                       type="button"
@@ -405,9 +370,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
           {/* Autocomplete mention popover */}
           {showMentionMenu && filteredMembers.length > 0 && (
             <div className="absolute z-50 left-2 bottom-12 w-64 max-h-48 overflow-y-auto rounded-lg border bg-white shadow-lg p-1">
-              <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase">
-                Nhắc tên thành viên
-              </div>
+              <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase">Nhắc tên thành viên</div>
               {filteredMembers.map((m, idx) => (
                 <button
                   key={m.id}
@@ -457,7 +420,8 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
               <span className="text-neutral-300 text-xs hidden sm:inline">|</span>
 
               <p className="text-[11px] text-muted-foreground hidden sm:flex items-center gap-1">
-                <AtSign className="size-3 text-muted-foreground" /> Gõ <kbd className="px-1 py-0.5 bg-neutral-100 rounded border">@</kbd> để mention
+                <AtSign className="size-3 text-muted-foreground" /> Gõ <kbd className="px-1 py-0.5 bg-neutral-100 rounded border">@</kbd> để
+                mention
               </p>
             </div>
 
@@ -501,29 +465,23 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
             comments.map((comment) => {
               const isAuthor = Boolean(
                 currentUser?.id &&
-                  (String(currentUser.id) === String(comment.user?.id) ||
-                    String(currentUser.id) === String(comment.userId)),
+                (String(currentUser.id) === String(comment.user?.id) || String(currentUser.id) === String(comment.userId)),
               );
               const isEditing = editingCommentId === comment.id;
               const authorName = comment.user?.name || comment.userName || 'User';
-              const authorAvatar =
-                comment.user?.avatarUrl || comment.user?.avatar_url || comment.userAvatarUrl;
+              const authorAvatar = comment.user?.avatarUrl || comment.user?.avatar_url || comment.userAvatarUrl;
 
               return (
                 <div key={comment.id} className="flex gap-3 text-sm group">
                   <Avatar className="size-8 shrink-0">
                     <AvatarImage src={authorAvatar || undefined} />
-                    <AvatarFallback className="text-xs bg-neutral-200 font-semibold">
-                      {authorName.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
+                    <AvatarFallback className="text-xs bg-neutral-200 font-semibold">{authorName.slice(0, 2).toUpperCase()}</AvatarFallback>
                   </Avatar>
 
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="font-semibold text-neutral-800 text-xs">
-                          {authorName}
-                        </span>
+                        <span className="font-semibold text-neutral-800 text-xs">{authorName}</span>
                         <span className="text-[11px] text-muted-foreground">
                           {formatDistanceToNow(new Date(comment.createdAt), {
                             addSuffix: true,
@@ -535,19 +493,12 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
                       {isAuthor && !isEditing && (
                         <DropdownMenu modal={false}>
                           <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="size-6 opacity-0 group-hover:opacity-100 transition"
-                            >
+                            <Button variant="ghost" size="icon" className="size-6 opacity-0 group-hover:opacity-100 transition">
                               <MoreVertical className="size-3.5" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-32">
-                            <DropdownMenuItem
-                              onClick={() => handleStartEdit(comment)}
-                              className="cursor-pointer gap-2 text-xs"
-                            >
+                            <DropdownMenuItem onClick={() => handleStartEdit(comment)} className="cursor-pointer gap-2 text-xs">
                               <Edit2 className="size-3" /> Chỉnh sửa
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -578,12 +529,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
                           autoFocus
                         />
                         <div className="flex items-center gap-1 justify-end">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="xs"
-                            onClick={() => setEditingCommentId(null)}
-                          >
+                          <Button type="button" variant="secondary" size="xs" onClick={() => setEditingCommentId(null)}>
                             <X className="size-3 mr-1" /> Hủy
                           </Button>
                           <Button
@@ -603,11 +549,7 @@ export const TaskComments = ({ taskId, workspaceId }: TaskCommentsProps) => {
                         </div>
 
                         {/* Attached files and images for this comment */}
-                        <CommentAttachments
-                          workspaceId={workspaceId}
-                          commentId={comment.id}
-                          canDelete={isAuthor}
-                        />
+                        <CommentAttachments workspaceId={workspaceId} commentId={comment.id} canDelete={isAuthor} />
                       </div>
                     )}
                   </div>

@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
+
 import { getCurrent } from '@/features/auth/queries';
+
 import { MeetingsClient } from './client';
 
 const MeetingsPage = async () => {

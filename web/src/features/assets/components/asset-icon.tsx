@@ -1,16 +1,8 @@
-import {
-  File,
-  FileArchive,
-  FileCode,
-  FileSpreadsheet,
-  FileText,
-  Film,
-  Image as ImageIcon,
-  Music,
-  Presentation,
-} from 'lucide-react';
-import type { AssetCategory } from '../types';
+import { File, FileArchive, FileCode, FileSpreadsheet, FileText, Film, Image as ImageIcon, Music, Presentation } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
+
+import type { AssetCategory } from '../types';
 
 interface AssetIconProps {
   category: AssetCategory | string;

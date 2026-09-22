@@ -1,12 +1,13 @@
-"use client";
+'use client';
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { authService } from "../services";
-import type { LoginInput } from "../types";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
-export const AUTH_QUERY_KEY = ["current"] as const;
+import { authService } from '../services';
+import type { LoginInput } from '../types';
+
+export const AUTH_QUERY_KEY = ['current'] as const;
 
 export function useUserQuery() {
   return useQuery({
@@ -32,10 +33,10 @@ export function useLoginMutation() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: AUTH_QUERY_KEY });
       router.refresh();
-      router.push("/");
+      router.push('/');
     },
     onError: () => {
-      toast.error("Email or Password is incorrect!");
+      toast.error('Email or Password is incorrect!');
     },
   });
 }
@@ -50,12 +51,12 @@ export function useLogoutMutation() {
       queryClient.setQueryData(AUTH_QUERY_KEY, null);
       await queryClient.invalidateQueries();
       router.refresh();
-      router.push("/sign-in");
+      router.push('/sign-in');
     },
     onError: async () => {
       queryClient.setQueryData(AUTH_QUERY_KEY, null);
       router.refresh();
-      router.push("/sign-in");
+      router.push('/sign-in');
     },
   });
 }

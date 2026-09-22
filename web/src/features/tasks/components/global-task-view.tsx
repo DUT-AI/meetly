@@ -1,28 +1,28 @@
 'use client';
 
-import { Loader2, PlusIcon, Search, ListChecks, UserIcon, Folder, BriefcaseBusiness } from 'lucide-react';
+import { BriefcaseBusiness, Folder, ListChecks, Loader2, PlusIcon, Search, UserIcon } from 'lucide-react';
 import { useQueryState } from 'nuqs';
 import { useCallback, useMemo } from 'react';
 
+import { DatePicker } from '@/components/date-picker';
 import { DottedSeparator } from '@/components/dotted-separator';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { DatePicker } from '@/components/date-picker';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
-import { useGetMyGlobalTasks } from '@/features/tasks/api/use-get-my-global-tasks';
-import { useBulkUpdateTasks } from '@/features/tasks/api/use-bulk-update-tasks';
-import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
 import type { Member } from '@/features/members/types';
 import type { Project } from '@/features/projects/types';
+import { useBulkUpdateTasks } from '@/features/tasks/api/use-bulk-update-tasks';
+import { useGetMyGlobalTasks } from '@/features/tasks/api/use-get-my-global-tasks';
+import { useCreateTaskModal } from '@/features/tasks/hooks/use-create-task-modal';
+import { type PopulatedTask, TaskStatus } from '@/features/tasks/types';
 import type { WorkspaceInfo } from '@/features/workspaces/types';
-import { TaskStatus, type PopulatedTask } from '@/features/tasks/types';
 
-import { globalColumns } from './global-columns';
 import { DataCalendar } from './data-calendar';
 import { DataKanban } from './data-kanban';
 import { DataTable } from './data-table';
+import { globalColumns } from './global-columns';
 
 export interface AssigneeOption {
   id: string;
@@ -38,7 +38,7 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
   const [view, setView] = useQueryState('task-view', {
     defaultValue: 'table',
   });
-  
+
   // Filters state
   const [assigneeFilter, setAssigneeFilter] = useQueryState('assignee', {
     defaultValue: userId,
@@ -123,7 +123,7 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
     if (workspaceFilter !== 'all') {
       result = result.filter((t: PopulatedTask) => t.workspaceId === workspaceFilter);
     }
-    
+
     if (projectFilter !== 'all') {
       result = result.filter((t: PopulatedTask) => t.projectId === projectFilter);
     }
@@ -136,7 +136,7 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
         });
       });
     }
-    
+
     if (dueDateFilter) {
       result = result.filter((t: PopulatedTask) => {
         if (!t.dueDate) return false;
@@ -232,7 +232,7 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
                 ))}
               </SelectContent>
             </Select>
-            
+
             {/* Workspaces */}
             <Select value={workspaceFilter} onValueChange={setWorkspaceFilter}>
               <SelectTrigger className="h-8 w-full lg:w-auto">
@@ -274,7 +274,7 @@ export const GlobalTaskView = ({ userId }: GlobalTaskViewProps) => {
         </div>
 
         <DottedSeparator className="my-4" />
-        
+
         {isLoading ? (
           <div className="flex h-[200px] w-full flex-col items-center justify-center rounded-lg border">
             <Loader2 className="size-5 animate-spin text-muted-foreground" />

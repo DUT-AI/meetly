@@ -5,22 +5,9 @@ import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAddMember } from '@/features/members/api/use-add-member';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { useGetUsers } from '@/features/members/api/use-get-users';
@@ -45,9 +32,7 @@ export const AddMemberDialog = () => {
 
   const { mutate: addMember, isPending: isAddingMember } = useAddMember();
 
-  const existingMemberUserIds = new Set(
-    (membersData?.documents || []).map((m) => String(m.user_id || m.userId || m.$id)),
-  );
+  const existingMemberUserIds = new Set((membersData?.documents || []).map((m) => String(m.user_id || m.userId || m.$id)));
 
   const handleAdd = (userId: string | number) => {
     addMember(
@@ -81,9 +66,7 @@ export const AddMemberDialog = () => {
             <Users className="size-5 text-primary" />
             Thêm nhân sự vào phòng ban
           </DialogTitle>
-          <DialogDescription>
-            Tìm kiếm người dùng theo tên hoặc địa chỉ email để thêm vào phòng ban.
-          </DialogDescription>
+          <DialogDescription>Tìm kiếm người dùng theo tên hoặc địa chỉ email để thêm vào phòng ban.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 py-2">
@@ -100,10 +83,7 @@ export const AddMemberDialog = () => {
               />
             </div>
 
-            <Select
-              value={selectedRole}
-              onValueChange={(val) => setSelectedRole(val as MemberRole)}
-            >
+            <Select value={selectedRole} onValueChange={(val) => setSelectedRole(val as MemberRole)}>
               <SelectTrigger className="w-full sm:w-[150px] h-9">
                 <SelectValue placeholder="Vai trò" />
               </SelectTrigger>
@@ -124,9 +104,7 @@ export const AddMemberDialog = () => {
             ) : !usersData?.items || usersData.items.length === 0 ? (
               <div className="flex h-32 flex-col items-center justify-center text-center text-sm text-muted-foreground">
                 <p>Không tìm thấy người dùng phù hợp.</p>
-                <p className="text-xs text-neutral-400 mt-1">
-                  Vui lòng thử tìm kiếm bằng từ khóa hoặc email khác.
-                </p>
+                <p className="text-xs text-neutral-400 mt-1">Vui lòng thử tìm kiếm bằng từ khóa hoặc email khác.</p>
               </div>
             ) : (
               usersData.items.map((user) => {
@@ -138,12 +116,7 @@ export const AddMemberDialog = () => {
                     className="flex items-center justify-between gap-3 p-2.5 rounded-lg hover:bg-neutral-50 transition"
                   >
                     <div className="flex items-center gap-3 min-w-0">
-                      <MemberAvatar
-                        name={user.name}
-                        image={user.avatar_url}
-                        className="size-9"
-                        fallbackClassName="text-sm font-semibold"
-                      />
+                      <MemberAvatar name={user.name} image={user.avatar_url} className="size-9" fallbackClassName="text-sm font-semibold" />
                       <div className="flex flex-col min-w-0">
                         <p className="text-sm font-medium truncate">{user.name}</p>
                         <p className="text-xs text-muted-foreground truncate">{user.email}</p>

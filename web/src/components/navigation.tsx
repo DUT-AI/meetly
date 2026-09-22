@@ -1,6 +1,6 @@
 'use client';
 
-import { Settings, Calendar } from 'lucide-react';
+import { Calendar, Settings } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { GoCheckCircle, GoCheckCircleFill, GoHome, GoHomeFill } from 'react-icons/go';
@@ -22,11 +22,7 @@ export const GlobalNavigation = () => {
             isActive && 'bg-white text-primary shadow-sm hover:opacity-100',
           )}
         >
-          {isActive ? (
-            <GoCheckCircleFill className="size-5 text-primary" />
-          ) : (
-            <GoCheckCircle className="size-5 text-neutral-500" />
-          )}
+          {isActive ? <GoCheckCircleFill className="size-5 text-primary" /> : <GoCheckCircle className="size-5 text-neutral-500" />}
           Tất cả việc của tôi
         </Link>
       </li>

@@ -1,6 +1,7 @@
 'use server';
 
 import { serverFetch } from '@/lib/api-server';
+
 import { type Workspace, normalizeWorkspace } from './types';
 
 export const getWorkspaces = async (): Promise<{ documents: Workspace[]; total: number }> => {

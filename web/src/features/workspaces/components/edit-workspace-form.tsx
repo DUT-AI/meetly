@@ -53,12 +53,9 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
       ...initialValues,
       note: initialValues.note || '',
       discord_room_id: initialValues.discord_room_id || initialValues.discordRoomId || '',
-      notify_on_task_status_change:
-        initialValues.notify_on_task_status_change ?? initialValues.notifyOnTaskStatusChange ?? true,
-      notify_task_status_discord:
-        initialValues.notify_task_status_discord ?? initialValues.notifyTaskStatusDiscord ?? true,
-      notify_task_status_zalo:
-        initialValues.notify_task_status_zalo ?? initialValues.notifyTaskStatusZalo ?? true,
+      notify_on_task_status_change: initialValues.notify_on_task_status_change ?? initialValues.notifyOnTaskStatusChange ?? true,
+      notify_task_status_discord: initialValues.notify_task_status_discord ?? initialValues.notifyTaskStatusDiscord ?? true,
+      notify_task_status_zalo: initialValues.notify_task_status_zalo ?? initialValues.notifyTaskStatusZalo ?? true,
       zalo_room_id: initialValues.zalo_room_id || initialValues.zaloRoomId || '',
       image: initialValues.imageUrl ?? '',
     },
@@ -138,7 +135,6 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
 
       <Card className="size-full border-none shadow-none">
         <CardHeader className="flex flex-row items-center gap-x-4 space-y-0 p-7">
-
           <div className="flex flex-col">
             <CardTitle className="text-xl font-bold">{initialValues.name}</CardTitle>
             <p className="text-sm text-muted-foreground">Chỉnh sửa thông tin cơ bản của phòng ban.</p>
@@ -193,11 +189,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                           </p>
                         </div>
                         <FormControl>
-                          <Switch
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                          />
+                          <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isPending} />
                         </FormControl>
                       </FormItem>
                     )}
@@ -218,11 +210,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                             </p>
                           </div>
                           <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={isPending}
-                            />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isPending} />
                           </FormControl>
                         </FormItem>
                       )}
@@ -235,12 +223,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                         <FormItem>
                           <FormLabel className="text-xs font-medium text-muted-foreground">Discord Channel ID</FormLabel>
                           <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              placeholder="Ví dụ: 123456789012345678"
-                              className="h-9 text-xs"
-                            />
+                            <Input {...field} type="text" placeholder="Ví dụ: 123456789012345678" className="h-9 text-xs" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -263,11 +246,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                             </p>
                           </div>
                           <FormControl>
-                            <Switch
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              disabled={isPending}
-                            />
+                            <Switch checked={field.value} onCheckedChange={field.onChange} disabled={isPending} />
                           </FormControl>
                         </FormItem>
                       )}
@@ -280,12 +259,7 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
                         <FormItem>
                           <FormLabel className="text-xs font-medium text-muted-foreground">Zalo Chat / Group ID</FormLabel>
                           <FormControl>
-                            <Input
-                              {...field}
-                              type="text"
-                              placeholder="Nhập ID nhóm hoặc Chat ID Zalo..."
-                              className="h-9 text-xs"
-                            />
+                            <Input {...field} type="text" placeholder="Nhập ID nhóm hoặc Chat ID Zalo..." className="h-9 text-xs" />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -501,7 +475,9 @@ export const EditWorkspaceForm = ({ onCancel, initialValues }: EditWorkspaceForm
           <div className="flex flex-col">
             <h3 className="font-bold text-red-600">Vùng nguy hiểm</h3>
 
-            <p className="text-sm text-muted-foreground">Xóa phòng ban là hành động không thể khôi phục và sẽ xóa toàn bộ dự án, công việc liên quan.</p>
+            <p className="text-sm text-muted-foreground">
+              Xóa phòng ban là hành động không thể khôi phục và sẽ xóa toàn bộ dự án, công việc liên quan.
+            </p>
 
             <DottedSeparator className="py-7" />
 

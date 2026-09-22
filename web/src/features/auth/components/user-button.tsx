@@ -25,10 +25,7 @@ export const UserButton = () => {
   const name = user.name || '';
   const email = user.email || '';
 
-  const avatarFallback =
-    (name && name.charAt(0).toUpperCase()) ||
-    (email && email.charAt(0).toUpperCase()) ||
-    '?';
+  const avatarFallback = (name && name.charAt(0).toUpperCase()) || (email && email.charAt(0).toUpperCase()) || '?';
 
   return (
     <DropdownMenu modal={false}>

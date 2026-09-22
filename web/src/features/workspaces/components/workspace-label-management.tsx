@@ -134,15 +134,21 @@ export const WorkspaceLabelManagement = ({ workspaceId }: WorkspaceLabelManageme
                         key={c}
                         type="button"
                         onClick={() => setNewLabelColor(c)}
-                        className={`size-6 rounded-full border-2 transition-transform cursor-pointer ${newLabelColor === c ? 'scale-125 border-neutral-900 shadow-md' : 'border-transparent hover:scale-110'
-                          }`}
+                        className={`size-6 rounded-full border-2 transition-transform cursor-pointer ${
+                          newLabelColor === c ? 'scale-125 border-neutral-900 shadow-md' : 'border-transparent hover:scale-110'
+                        }`}
                         style={{ backgroundColor: c }}
                       />
                     ))}
                   </div>
                 </div>
 
-                <Button type="submit" disabled={isCreating || !newLabelName.trim()} size="sm" className="gap-x-1.5 shrink-0 self-end sm:self-auto">
+                <Button
+                  type="submit"
+                  disabled={isCreating || !newLabelName.trim()}
+                  size="sm"
+                  className="gap-x-1.5 shrink-0 self-end sm:self-auto"
+                >
                   {isCreating ? <Loader2 className="size-4 animate-spin" /> : <Plus className="size-4" />}
                   Thêm nhãn
                 </Button>
@@ -183,8 +189,9 @@ export const WorkspaceLabelManagement = ({ workspaceId }: WorkspaceLabelManageme
                                 key={c}
                                 type="button"
                                 onClick={() => setEditingColor(c)}
-                                className={`size-5 rounded-full border-2 cursor-pointer ${editingColor === c ? 'scale-125 border-neutral-900 shadow-sm' : 'border-transparent'
-                                  }`}
+                                className={`size-5 rounded-full border-2 cursor-pointer ${
+                                  editingColor === c ? 'scale-125 border-neutral-900 shadow-sm' : 'border-transparent'
+                                }`}
                                 style={{ backgroundColor: c }}
                               />
                             ))}
@@ -193,12 +200,7 @@ export const WorkspaceLabelManagement = ({ workspaceId }: WorkspaceLabelManageme
                             <Button type="submit" size="xs" disabled={isUpdating || !editingName.trim()}>
                               Lưu
                             </Button>
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              size="xs"
-                              onClick={() => setEditingLabel(null)}
-                            >
+                            <Button type="button" variant="secondary" size="xs" onClick={() => setEditingLabel(null)}>
                               <X className="size-3" />
                             </Button>
                           </div>
@@ -216,12 +218,7 @@ export const WorkspaceLabelManagement = ({ workspaceId }: WorkspaceLabelManageme
                         </div>
 
                         <div className="flex items-center gap-1">
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="size-7"
-                            onClick={() => handleStartEdit(label)}
-                          >
+                          <Button size="icon" variant="ghost" className="size-7" onClick={() => handleStartEdit(label)}>
                             <Edit2 className="size-3.5 text-muted-foreground" />
                           </Button>
                           <Button

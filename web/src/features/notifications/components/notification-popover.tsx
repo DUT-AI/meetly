@@ -20,16 +20,9 @@ import { useState } from 'react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import {
-  useGetNotifications,
-  useMarkAllNotificationsRead,
-  useMarkNotificationRead,
-} from '../api/use-notifications';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+import { useGetNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from '../api/use-notifications';
 import type { NotificationItem } from '../types';
 
 export const NotificationPopover = () => {
@@ -95,19 +88,13 @@ export const NotificationPopover = () => {
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent
-        align="end"
-        sideOffset={8}
-        className="w-80 sm:w-96 p-0 shadow-lg rounded-xl border border-neutral-200"
-      >
+      <PopoverContent align="end" sideOffset={8} className="w-80 sm:w-96 p-0 shadow-lg rounded-xl border border-neutral-200">
         {/* Header */}
         <div className="flex items-center justify-between border-b px-4 py-3 bg-neutral-50/50 rounded-t-xl">
           <div className="flex items-center gap-2">
             <h4 className="font-semibold text-sm text-neutral-800">Thông báo</h4>
             {unreadCount > 0 && (
-              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">
-                {unreadCount} mới
-              </span>
+              <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[11px] font-semibold text-blue-700">{unreadCount} mới</span>
             )}
           </div>
 
@@ -131,9 +118,7 @@ export const NotificationPopover = () => {
             type="button"
             onClick={() => setActiveTab('all')}
             className={`py-2 border-b-2 transition ${
-              activeTab === 'all'
-                ? 'border-neutral-900 text-neutral-900 font-semibold'
-                : 'border-transparent hover:text-neutral-700'
+              activeTab === 'all' ? 'border-neutral-900 text-neutral-900 font-semibold' : 'border-transparent hover:text-neutral-700'
             }`}
           >
             Tất cả
@@ -142,9 +127,7 @@ export const NotificationPopover = () => {
             type="button"
             onClick={() => setActiveTab('unread')}
             className={`py-2 border-b-2 transition ${
-              activeTab === 'unread'
-                ? 'border-neutral-900 text-neutral-900 font-semibold'
-                : 'border-transparent hover:text-neutral-700'
+              activeTab === 'unread' ? 'border-neutral-900 text-neutral-900 font-semibold' : 'border-transparent hover:text-neutral-700'
             }`}
           >
             Chưa đọc ({unreadCount})
@@ -162,9 +145,7 @@ export const NotificationPopover = () => {
               <Bell className="size-8 stroke-1 text-neutral-400 mb-2" />
               <p className="text-sm font-medium text-neutral-700">Không có thông báo nào</p>
               <p className="text-xs text-neutral-400">
-                {activeTab === 'unread'
-                  ? 'Bạn đã đọc tất cả thông báo.'
-                  : 'Bạn chưa có thông báo nào trong thời gian này.'}
+                {activeTab === 'unread' ? 'Bạn đã đọc tất cả thông báo.' : 'Bạn chưa có thông báo nào trong thời gian này.'}
               </p>
             </div>
           ) : (
@@ -190,21 +171,11 @@ export const NotificationPopover = () => {
 
                 <div className="flex-1 space-y-1 overflow-hidden">
                   <div className="flex items-start justify-between gap-1">
-                    <p
-                      className={`text-neutral-900 truncate ${
-                        !item.isRead ? 'font-semibold' : 'font-normal'
-                      }`}
-                    >
-                      {item.title}
-                    </p>
-                    {!item.isRead && (
-                      <span className="size-1.5 rounded-full bg-blue-600 shrink-0 mt-1" />
-                    )}
+                    <p className={`text-neutral-900 truncate ${!item.isRead ? 'font-semibold' : 'font-normal'}`}>{item.title}</p>
+                    {!item.isRead && <span className="size-1.5 rounded-full bg-blue-600 shrink-0 mt-1" />}
                   </div>
 
-                  <p className="text-neutral-500 line-clamp-2 text-[11px] leading-relaxed">
-                    {item.content}
-                  </p>
+                  <p className="text-neutral-500 line-clamp-2 text-[11px] leading-relaxed">{item.content}</p>
 
                   <p className="text-[10px] text-neutral-400">
                     {formatDistanceToNow(new Date(item.createdAt), {

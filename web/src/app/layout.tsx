@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import type { PropsWithChildren } from 'react';
-
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
+import type { PropsWithChildren } from 'react';
 
 import { QueryProvider } from '@/components/query-provider';
 import { Toaster } from '@/components/ui/sonner';
@@ -20,10 +19,7 @@ export const metadata: Metadata = siteConfig;
 const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={cn(inter.className, 'min-h-screen antialiased')}
-        suppressHydrationWarning
-      >
+      <body className={cn(inter.className, 'min-h-screen antialiased')} suppressHydrationWarning>
         <QueryProvider>
           <NuqsAdapter>
             <Toaster theme="light" richColors closeButton />

@@ -1,12 +1,6 @@
 import { api } from '@/lib/api';
-import {
-  type PopulatedTask,
-  type TaskComment,
-  TaskPriority,
-  TaskStatus,
-  normalizeTask,
-  normalizeTaskComment,
-} from '../types';
+
+import { type PopulatedTask, type TaskComment, TaskPriority, TaskStatus, normalizeTask, normalizeTaskComment } from '../types';
 
 export interface GetTasksParams {
   workspaceId: string;
@@ -95,8 +89,7 @@ export const taskApi = {
   },
 
   createTask: async (payload: CreateTaskPayload): Promise<PopulatedTask> => {
-    const formattedDueDate =
-      payload.dueDate instanceof Date ? payload.dueDate.toISOString() : payload.dueDate;
+    const formattedDueDate = payload.dueDate instanceof Date ? payload.dueDate.toISOString() : payload.dueDate;
     const body: Record<string, any> = {
       name: payload.name,
       status: payload.status,
@@ -122,8 +115,7 @@ export const taskApi = {
     if (payload.projectId !== undefined) body.project_id = payload.projectId;
     if (payload.assigneeIds !== undefined) body.assignee_ids = payload.assigneeIds;
     if (payload.dueDate !== undefined) {
-      body.due_date =
-        payload.dueDate instanceof Date ? payload.dueDate.toISOString() : payload.dueDate;
+      body.due_date = payload.dueDate instanceof Date ? payload.dueDate.toISOString() : payload.dueDate;
     }
     if (payload.description !== undefined) body.description = payload.description;
 
@@ -132,18 +124,13 @@ export const taskApi = {
     return normalizeTask(result);
   },
 
-  bulkUpdateTasks: async (
-    tasks: BulkUpdateTaskItem[],
-  ): Promise<{ updatedTasks: PopulatedTask[]; workspaceId?: string }> => {
+  bulkUpdateTasks: async (tasks: BulkUpdateTaskItem[]): Promise<{ updatedTasks: PopulatedTask[]; workspaceId?: string }> => {
     const mappedTasks = tasks.map((t) => ({
       id: t.id ?? t.$id,
       status: t.status,
       position: t.position,
     }));
-    const response = await api.post<{ data: { updatedTasks: any[]; workspaceId?: string } }>(
-      '/tasks/bulk-update',
-      { tasks: mappedTasks },
-    );
+    const response = await api.post<{ data: { updatedTasks: any[]; workspaceId?: string } }>('/tasks/bulk-update', { tasks: mappedTasks });
     const result = response.data?.data ?? response.data;
     return {
       updatedTasks: (result.updatedTasks || []).map(normalizeTask),
@@ -162,32 +149,20 @@ export const taskApi = {
     return (result || []).map(normalizeTaskComment);
   },
 
-  createTaskComment: async (
-    taskId: string,
-    data: { content: string; mentions?: string[] },
-  ): Promise<TaskComment> => {
+  createTaskComment: async (taskId: string, data: { content: string; mentions?: string[] }): Promise<TaskComment> => {
     const response = await api.post<{ data: any }>(`/tasks/${taskId}/comments`, data);
     const result = response.data?.data ?? response.data;
     return normalizeTaskComment(result);
   },
 
-  updateTaskComment: async (
-    taskId: string,
-    commentId: string,
-    data: { content: string; mentions?: string[] },
-  ): Promise<TaskComment> => {
-    const response = await api.patch<{ data: any }>(
-      `/tasks/${taskId}/comments/${commentId}`,
-      data,
-    );
+  updateTaskComment: async (taskId: string, commentId: string, data: { content: string; mentions?: string[] }): Promise<TaskComment> => {
+    const response = await api.patch<{ data: any }>(`/tasks/${taskId}/comments/${commentId}`, data);
     const result = response.data?.data ?? response.data;
     return normalizeTaskComment(result);
   },
 
   deleteTaskComment: async (taskId: string, commentId: string): Promise<{ id: string }> => {
-    const response = await api.delete<{ data: { id: string } }>(
-      `/tasks/${taskId}/comments/${commentId}`,
-    );
+    const response = await api.delete<{ data: { id: string } }>(`/tasks/${taskId}/comments/${commentId}`);
     return response.data?.data ?? response.data;
   },
 };

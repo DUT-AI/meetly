@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
-import { meetingApi, type CreateMeetingPayload } from './meeting-api';
+import { type CreateMeetingPayload, meetingApi } from './meeting-api';
 
 export const useCreateMeeting = (workspaceId: string) => {
   const queryClient = useQueryClient();

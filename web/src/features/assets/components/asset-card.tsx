@@ -1,17 +1,14 @@
 'use client';
 
 import { Download, Eye, MoreVertical, Trash2 } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+
+import { useDeleteAsset } from '../api/use-delete-asset';
 import type { Asset } from '../types';
 import { formatFileSize } from './asset-icon';
 import { DocumentBadgeIcon } from './document-badge-icon';
-import { useDeleteAsset } from '../api/use-delete-asset';
 
 interface AssetCardProps {
   asset: Asset;
@@ -20,19 +17,10 @@ interface AssetCardProps {
   canDelete?: boolean;
 }
 
-export const AssetCard = ({
-  asset,
-  workspaceId,
-  onPreview,
-  canDelete = true,
-}: AssetCardProps) => {
+export const AssetCard = ({ asset, workspaceId, onPreview, canDelete = true }: AssetCardProps) => {
   const { mutate: deleteAsset, isPending: isDeleting } = useDeleteAsset();
 
-  const isPreviewable =
-    asset.category === 'IMAGE' ||
-    asset.extension === 'pdf' ||
-    asset.category === 'VIDEO' ||
-    asset.category === 'AUDIO';
+  const isPreviewable = asset.category === 'IMAGE' || asset.extension === 'pdf' || asset.category === 'VIDEO' || asset.category === 'AUDIO';
 
   const handleDownload = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -67,10 +55,7 @@ export const AssetCard = ({
 
         {/* File Details */}
         <div className="flex flex-1 flex-col justify-center min-w-0">
-          <p
-            className="text-[14px] font-semibold text-neutral-800 truncate leading-snug"
-            title={asset.fileName}
-          >
+          <p className="text-[14px] font-semibold text-neutral-800 truncate leading-snug" title={asset.fileName}>
             {asset.fileName}
           </p>
 
@@ -118,10 +103,7 @@ export const AssetCard = ({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  className="text-red-600 focus:text-red-600 cursor-pointer"
-                  onClick={handleDelete}
-                >
+                <DropdownMenuItem className="text-red-600 focus:text-red-600 cursor-pointer" onClick={handleDelete}>
                   <Trash2 className="mr-2 size-4" /> Xoá tệp
                 </DropdownMenuItem>
               </DropdownMenuContent>

@@ -64,9 +64,7 @@ export const MembersList = ({ hideBackButton }: MembersListProps = {}) => {
 
           <div className="flex flex-col">
             <CardTitle className="text-xl font-bold">Danh sách nhân sự phòng ban</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Quản lý thành viên và phân quyền vai trò trong phòng ban.
-            </p>
+            <p className="text-sm text-muted-foreground">Quản lý thành viên và phân quyền vai trò trong phòng ban.</p>
           </div>
         </div>
 

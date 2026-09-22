@@ -1,8 +1,9 @@
 'use client';
 
 import { Check, Loader2, RotateCw, X } from 'lucide-react';
-import { DocumentBadgeIcon } from './document-badge-icon';
+
 import { formatFileSize } from './asset-icon';
+import { DocumentBadgeIcon } from './document-badge-icon';
 
 export interface UploadProgressItem {
   id: string;
@@ -23,11 +24,7 @@ interface UploadProgressCardProps {
   onRetry?: (item: UploadProgressItem) => void;
 }
 
-export const UploadProgressCard = ({
-  item,
-  onCancel,
-  onRetry,
-}: UploadProgressCardProps) => {
+export const UploadProgressCard = ({ item, onCancel, onRetry }: UploadProgressCardProps) => {
   const isError = item.status === 'error';
   const isCompleted = item.status === 'completed';
 
@@ -39,10 +36,7 @@ export const UploadProgressCard = ({
 
         {/* File Details */}
         <div className="flex flex-1 flex-col justify-center min-w-0">
-          <p
-            className="text-[14px] font-semibold text-neutral-800 truncate leading-snug"
-            title={item.fileName}
-          >
+          <p className="text-[14px] font-semibold text-neutral-800 truncate leading-snug" title={item.fileName}>
             {item.fileName}
           </p>
 
@@ -57,9 +51,7 @@ export const UploadProgressCard = ({
             {/* Status indicator */}
             {isError ? (
               <span className="flex items-center gap-1 font-medium text-red-600">
-                <span className="flex size-4 items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold">
-                  !
-                </span>
+                <span className="flex size-4 items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold">!</span>
                 <span>Error</span>
               </span>
             ) : isCompleted ? (
@@ -106,11 +98,7 @@ export const UploadProgressCard = ({
       <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-slate-200/80">
         <div
           className={`h-full rounded-full transition-all duration-300 ease-out ${
-            isError
-              ? 'bg-neutral-300 w-full'
-              : isCompleted
-              ? 'bg-[#48396e] w-full'
-              : 'bg-[#48396e]'
+            isError ? 'bg-neutral-300 w-full' : isCompleted ? 'bg-[#48396e] w-full' : 'bg-[#48396e]'
           }`}
           style={{
             width: isError || isCompleted ? '100%' : `${Math.max(item.progress, 4)}%`,

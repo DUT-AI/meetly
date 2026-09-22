@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+
 import { cn } from '@/lib/utils';
 
 interface DocumentBadgeIconProps {
@@ -64,12 +65,7 @@ export const DocumentBadgeIcon = ({ extension, className }: DocumentBadgeIconPro
   return (
     <div className={cn('relative flex size-12 shrink-0 items-center justify-center select-none', className)}>
       {/* Folded Paper Outline SVG */}
-      <svg
-        className="size-11 drop-shadow-2xs"
-        viewBox="0 0 38 48"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+      <svg className="size-11 drop-shadow-2xs" viewBox="0 0 38 48" fill="none" xmlns="http://www.w3.org/2000/svg">
         {/* Document Body with folded corner */}
         <path
           d="M3 8C3 4.68629 5.68629 2 9 2H23.5L35 13.5V40C35 43.3137 32.3137 46 29 46H9C5.68629 46 3 43.3137 3 40V8Z"

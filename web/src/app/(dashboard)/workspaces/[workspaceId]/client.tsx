@@ -33,12 +33,10 @@ export const WorkspaceIdClient = () => {
   const { data: projects, isLoading: isLoadingProjects } = useGetProjects({ workspaceId });
   const { data: members, isLoading: isLoadingMembers } = useGetMembers({ workspaceId });
 
-  const isLoading =
-    isLoadingWorkspace || isLoadingAnalytics || isLoadingTasks || isLoadingProjects || isLoadingMembers;
+  const isLoading = isLoadingWorkspace || isLoadingAnalytics || isLoadingTasks || isLoadingProjects || isLoadingMembers;
 
   if (isLoading) return <PageLoader />;
-  if (!workspaceAnalytics || !tasks || !projects || !members)
-    return <PageError message="Failed to load workspace data." />;
+  if (!workspaceAnalytics || !tasks || !projects || !members) return <PageError message="Failed to load workspace data." />;
 
   return (
     <div className="flex h-full flex-col space-y-4">
@@ -80,13 +78,9 @@ export const WorkspaceNote = ({ note, workspaceId }: WorkspaceNoteProps) => {
         <DottedSeparator className="my-3" />
 
         {note ? (
-          <p className="text-sm leading-relaxed text-neutral-700 whitespace-pre-wrap break-all">
-            {note}
-          </p>
+          <p className="text-sm leading-relaxed text-neutral-700 whitespace-pre-wrap break-all">{note}</p>
         ) : (
-          <p className="text-sm text-muted-foreground italic">
-            Chưa có ghi chú hoặc thông báo chung cho phòng ban này.
-          </p>
+          <p className="text-sm text-muted-foreground italic">Chưa có ghi chú hoặc thông báo chung cho phòng ban này.</p>
         )}
       </div>
     </div>

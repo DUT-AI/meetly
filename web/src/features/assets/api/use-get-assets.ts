@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { assetApi } from './asset-api';
+
 import type { EntityType } from '../types';
+import { assetApi } from './asset-api';
 
 interface UseGetAssetsProps {
   workspaceId: string;
@@ -9,12 +10,7 @@ interface UseGetAssetsProps {
   enabled?: boolean;
 }
 
-export const useGetAssets = ({
-  workspaceId,
-  entityType,
-  entityId,
-  enabled = true,
-}: UseGetAssetsProps) => {
+export const useGetAssets = ({ workspaceId, entityType, entityId, enabled = true }: UseGetAssetsProps) => {
   return useQuery({
     queryKey: ['assets', workspaceId, entityType, entityId],
     queryFn: async () => {

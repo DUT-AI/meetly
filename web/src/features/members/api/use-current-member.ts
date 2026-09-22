@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 
 import { useCurrent } from '@/features/auth/api/use-current';
+
 import { useGetMembers } from './use-get-members';
 
 interface UseCurrentMemberProps {

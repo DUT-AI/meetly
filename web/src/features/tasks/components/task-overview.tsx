@@ -67,9 +67,7 @@ export const TaskOverview = ({ task }: TaskOverviewProps) => {
                   />
                 ))}
               </div>
-              <p className="text-sm font-medium text-neutral-800 line-clamp-2">
-                {task.assignees.map((m) => m.name).join(', ')}
-              </p>
+              <p className="text-sm font-medium text-neutral-800 line-clamp-2">{task.assignees.map((m) => m.name).join(', ')}</p>
             </div>
           ) : (
             <p className="text-sm font-medium text-neutral-400 italic">Chưa giao</p>

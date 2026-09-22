@@ -1,13 +1,6 @@
 export type EntityType = 'TASK' | 'TASK_COMMENT' | 'PROJECT' | 'WORKSPACE';
 
-export type AssetCategory =
-  | 'IMAGE'
-  | 'DOCUMENT'
-  | 'ARCHIVE'
-  | 'VIDEO'
-  | 'AUDIO'
-  | 'CODE'
-  | 'OTHER';
+export type AssetCategory = 'IMAGE' | 'DOCUMENT' | 'ARCHIVE' | 'VIDEO' | 'AUDIO' | 'CODE' | 'OTHER';
 
 export interface Asset {
   id: string;

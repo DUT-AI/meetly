@@ -2,13 +2,15 @@
 
 import { Download, Eye, Loader2, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+
 import { Button } from '@/components/ui/button';
+
+import { useDeleteAsset } from '../api/use-delete-asset';
+import { useGetAssets } from '../api/use-get-assets';
 import type { Asset } from '../types';
 import { formatFileSize } from './asset-icon';
 import { AssetPreviewModal } from './asset-preview-modal';
 import { DocumentBadgeIcon } from './document-badge-icon';
-import { useDeleteAsset } from '../api/use-delete-asset';
-import { useGetAssets } from '../api/use-get-assets';
 
 interface CommentAttachmentsProps {
   workspaceId: string;
@@ -17,12 +19,7 @@ interface CommentAttachmentsProps {
   className?: string;
 }
 
-export const CommentAttachments = ({
-  workspaceId,
-  commentId,
-  canDelete = false,
-  className = '',
-}: CommentAttachmentsProps) => {
+export const CommentAttachments = ({ workspaceId, commentId, canDelete = false, className = '' }: CommentAttachmentsProps) => {
   const [previewAsset, setPreviewAsset] = useState<Asset | null>(null);
 
   const { data, isLoading } = useGetAssets({
@@ -39,12 +36,8 @@ export const CommentAttachments = ({
     return null;
   }
 
-  const images = assets.filter(
-    (a) => a.category === 'IMAGE' || a.mimeType?.startsWith('image/'),
-  );
-  const otherFiles = assets.filter(
-    (a) => a.category !== 'IMAGE' && !a.mimeType?.startsWith('image/'),
-  );
+  const images = assets.filter((a) => a.category === 'IMAGE' || a.mimeType?.startsWith('image/'));
+  const otherFiles = assets.filter((a) => a.category !== 'IMAGE' && !a.mimeType?.startsWith('image/'));
 
   const handleDownload = (e: React.MouseEvent, asset: Asset) => {
     e.stopPropagation();
@@ -70,13 +63,7 @@ export const CommentAttachments = ({
     <div className={`mt-2 flex flex-col gap-2 ${className}`}>
       {/* Image Gallery */}
       {images.length > 0 && (
-        <div
-          className={
-            images.length === 1
-              ? 'flex'
-              : 'grid grid-cols-2 sm:grid-cols-3 gap-2 max-w-lg'
-          }
-        >
+        <div className={images.length === 1 ? 'flex' : 'grid grid-cols-2 sm:grid-cols-3 gap-2 max-w-lg'}>
           {images.map((img) => (
             <div
               key={img.id}
@@ -122,10 +109,7 @@ export const CommentAttachments = ({
       {otherFiles.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {otherFiles.map((file) => {
-            const isPreviewable =
-              file.extension === 'pdf' ||
-              file.category === 'VIDEO' ||
-              file.category === 'AUDIO';
+            const isPreviewable = file.extension === 'pdf' || file.category === 'VIDEO' || file.category === 'AUDIO';
 
             return (
               <div
@@ -141,9 +125,7 @@ export const CommentAttachments = ({
                   <span className="truncate font-medium text-[12px] text-neutral-800" title={file.fileName}>
                     {file.fileName}
                   </span>
-                  <span className="text-[10px] text-neutral-400">
-                    {formatFileSize(file.fileSize)}
-                  </span>
+                  <span className="text-[10px] text-neutral-400">{formatFileSize(file.fileSize)}</span>
                 </div>
 
                 <div className="flex items-center gap-0.5 ml-1">
@@ -191,11 +173,7 @@ export const CommentAttachments = ({
       )}
 
       {/* Preview Modal */}
-      <AssetPreviewModal
-        asset={previewAsset}
-        isOpen={!!previewAsset}
-        onClose={() => setPreviewAsset(null)}
-      />
+      <AssetPreviewModal asset={previewAsset} isOpen={!!previewAsset} onClose={() => setPreviewAsset(null)} />
     </div>
   );
 };
