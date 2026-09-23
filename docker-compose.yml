@@ -162,7 +162,17 @@ services:
     depends_on:
       - api
       - web
-
+      
+  discord-bot:
+    build:
+      context: ./apps/discord-bot
+      dockerfile: Dockerfile
+    container_name: meetly-discord-bot
+    restart: always
+    env_file:
+      - ./apps/discord-bot/.env
+    networks:
+      - meetly-net
 networks:
   meetly-net:
     driver: bridge

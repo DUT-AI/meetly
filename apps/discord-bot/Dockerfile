@@ -16,19 +16,25 @@ FROM node:22-alpine AS runner
 
 WORKDIR /app
 
-# Install runtime dependencies (FFmpeg for audio downmixing)
-RUN apk add --no-cache ffmpeg
+# Install runtime dependencies:
+# - ffmpeg: Xử lý mix/encode audio stream
+# - dumb-init: Quản lý PID 1 và chuyển tiếp signals (SIGTERM/SIGINT) dọn dẹp tiến trình con FFmpeg
+# - libc6-compat: Tương thích C++ bindings trên Alpine
+RUN apk add --no-cache ffmpeg dumb-init libc6-compat
 
 ENV NODE_ENV=production
 
 COPY package*.json ./
-RUN npm ci --only=production
+# Dùng --omit=dev thay thế cho --only=production đã deprecated
+RUN npm ci --omit=dev --no-audit --no-fund
 
 COPY --from=builder /app/dist ./dist
 
-# Create temp storage directory
+# Tạo thư mục temp cho audio processing và phân quyền cho user node
 RUN mkdir -p /app/tmp && chown -R node:node /app
 
 USER node
 
+# Sử dụng dumb-init để bọc process node
+ENTRYPOINT ["dumb-init", "--"]
 CMD ["node", "dist/index.js"]

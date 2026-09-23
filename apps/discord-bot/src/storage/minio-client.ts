@@ -38,9 +38,14 @@ export class MinioStorageClient {
       console.log(`[Storage] MinIO bucket '${this.bucket}' is ready.`);
     } catch (err: any) {
       if (err.name === 'NotFound' || err.$metadata?.httpStatusCode === 404) {
-        console.log(`[Storage] Bucket '${this.bucket}' not found. Creating...`);
-        await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
-        console.log(`[Storage] Created bucket '${this.bucket}'.`);
+        console.log(`[Storage] Bucket '${this.bucket}' not found. Attempting to create...`);
+        try {
+          await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+          console.log(`[Storage] Created bucket '${this.bucket}'.`);
+        } catch (createErr: any) {
+          console.warn(`[Storage] ⚠️ Could not auto-create bucket '${this.bucket}': ${createErr.message}`);
+          console.warn(`[Storage] Please ensure bucket '${this.bucket}' is created in MinIO Console / Web UI.`);
+        }
       } else {
         console.warn(`[Storage] Could not verify bucket '${this.bucket}': ${err.message}`);
       }
