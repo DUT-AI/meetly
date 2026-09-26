@@ -2,7 +2,7 @@ Meetly Discord Audio Extractor Bot
 
 Dedicated voice capture and storage service for Meetly. It listens in Discord voice channels, extracts and synchronizes speech from all participants using Discord's **DAVE Protocol (E2EE)**, mixes the tracks via **FFmpeg** into a standardized 16kHz mono MP3, and directly uploads the audio and metadata to **MinIO (S3)**.
 
-> 📖 **Chi tiết kiến trúc và quy trình**: Xem tài liệu kỹ thuật đầy đủ tại [ARCHITECTURE_AND_WORKFLOW.md](file:///home/phuqy/Develop/meetly/apps/discord-bot/ARCHITECTURE_AND_WORKFLOW.md).
+> **Chi tiết kiến trúc và quy trình**: Xem tài liệu kỹ thuật đầy đủ tại [ARCHITECTURE_AND_WORKFLOW.md](file:///home/phuqy/Develop/meetly/apps/discord-bot/ARCHITECTURE_AND_WORKFLOW.md).
 
 ---
 

@@ -24,7 +24,7 @@ const client = new S3Client({
 const bucket = config.MINIO_BUCKET;
 
 async function listMeetings() {
-  console.log(`\n🔍 Listing recordings in bucket: '${bucket}' (Endpoint: ${config.MINIO_ENDPOINT})...\n`);
+  console.log(`\nListing recordings in bucket: '${bucket}' (Endpoint: ${config.MINIO_ENDPOINT})...\n`);
   try {
     const response = await client.send(
       new ListObjectsV2Command({
@@ -63,7 +63,7 @@ async function listMeetings() {
       console.log('------------------------------------------------------------');
     }
   } catch (err: any) {
-    console.error('❌ Failed to list meetings:', err.message);
+    console.error('Failed to list meetings:', err.message);
   }
 }
 
@@ -76,7 +76,7 @@ async function downloadMeeting(meetingId: string, outputDir: string = './downloa
   }
 
   const destPath = path.resolve(outputDir, `${meetingId}.mp3`);
-  console.log(`\n⬇️ Downloading audio for meeting '${meetingId}' to:\n  ${destPath}...`);
+  console.log(`\nDownloading audio for meeting '${meetingId}' to:\n  ${destPath}...`);
 
   try {
     const audioRes = await client.send(
@@ -94,7 +94,7 @@ async function downloadMeeting(meetingId: string, outputDir: string = './downloa
       writeStream.on('error', reject);
     });
 
-    console.log(`✅ Successfully downloaded: ${destPath}`);
+    console.log(`Successfully downloaded: ${destPath}`);
 
     // Optional: download metadata if present
     try {
@@ -112,17 +112,17 @@ async function downloadMeeting(meetingId: string, outputDir: string = './downloa
         metaWriteStream.on('finish', () => resolve());
         metaWriteStream.on('error', reject);
       });
-      console.log(`✅ Metadata downloaded: ${metaDestPath}`);
+      console.log(`Metadata downloaded: ${metaDestPath}`);
     } catch {
       // Metadata not found or optional
     }
   } catch (err: any) {
-    console.error(`❌ Failed to download meeting '${meetingId}':`, err.message);
+    console.error(`Failed to download meeting '${meetingId}':`, err.message);
   }
 }
 
 async function deleteMeeting(meetingId: string) {
-  console.log(`\n🗑️ Deleting files for meeting '${meetingId}' from bucket '${bucket}'...`);
+  console.log(`\nDeleting files for meeting '${meetingId}' from bucket '${bucket}'...`);
   try {
     // List all objects for this meeting
     const listRes = await client.send(
@@ -145,10 +145,10 @@ async function deleteMeeting(meetingId: string) {
       })
     );
 
-    console.log(`✅ Successfully deleted ${deleteObjects.length} object(s):`);
+    console.log(`Successfully deleted ${deleteObjects.length} object(s):`);
     deleteObjects.forEach((obj) => console.log(`  - ${obj.Key}`));
   } catch (err: any) {
-    console.error(`❌ Failed to delete meeting '${meetingId}':`, err.message);
+    console.error(`Failed to delete meeting '${meetingId}':`, err.message);
   }
 }
 
@@ -176,13 +176,13 @@ Examples:
     await listMeetings();
   } else if (action === 'download') {
     if (!targetId) {
-      console.error('❌ Error: Meeting ID is required. Example: npm run storage download <meetingId>');
+      console.error('Error: Meeting ID is required. Example: npm run storage download <meetingId>');
       process.exit(1);
     }
     await downloadMeeting(targetId);
   } else if (action === 'delete') {
     if (!targetId) {
-      console.error('❌ Error: Meeting ID is required. Example: npm run storage delete <meetingId>');
+      console.error('Error: Meeting ID is required. Example: npm run storage delete <meetingId>');
       process.exit(1);
     }
     await deleteMeeting(targetId);

@@ -12,6 +12,8 @@ export interface MixResult {
 export class AudioMixer {
   /**
    * Mixes multiple synchronized PCM files into a standardized 16kHz Mono MP3.
+   * Incorporates an audio peak limiter (alimiter) and SoX resampler (soxr) to
+   * completely eradicate digital hard-clipping and frequency aliasing distortion.
    */
   public static async mixToMp3(
     pcmFiles: string[],
@@ -62,18 +64,23 @@ export class AudioMixer {
         );
       });
 
-      // Filter graph for mixing
+      // Filter graph:
+      // When multiple tracks: amix to sum, followed by alimiter to protect against > 0dBFS clipping,
+      // and soxr high-fidelity anti-aliasing resampling to 16kHz.
       if (pcmFiles.length > 1) {
         args.push(
           "-filter_complex",
-          `amix=inputs=${pcmFiles.length}:duration=longest:dropout_transition=2:normalize=0`,
+          `amix=inputs=${pcmFiles.length}:duration=longest:dropout_transition=2:normalize=0,alimiter=limit=0.95:attack=5:release=50:asc=1,aresample=16000:resampler=soxr`,
+        );
+      } else {
+        args.push(
+          "-af",
+          "alimiter=limit=0.95:attack=5:release=50:asc=1,aresample=16000:resampler=soxr",
         );
       }
 
       // Output settings: 16kHz Mono MP3 at 48k bitrate (ideal for speech & LLM ingestion)
       args.push(
-        "-ar",
-        "16000",
         "-ac",
         "1",
         "-b:a",

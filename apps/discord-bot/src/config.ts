@@ -77,7 +77,7 @@ const parsed = configSchema.safeParse({
 });
 
 if (!parsed.success) {
-  console.warn('⚠️ Environment warning: Some required keys may be missing (e.g. DISCORD_BOT_TOKEN).');
+  console.warn('[Config] Environment warning: Some required keys may be missing (e.g. DISCORD_BOT_TOKEN).');
   parsed.error.errors.forEach((err) => {
     console.warn(`  - ${err.path.join('.')}: ${err.message}`);
   });
