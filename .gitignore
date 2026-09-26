@@ -28,6 +28,8 @@ htmlcov/
 # IDE & Editor
 .idea/
 .vscode/
+.project
+.settings/
 
 # System & OS
 .DS_Store

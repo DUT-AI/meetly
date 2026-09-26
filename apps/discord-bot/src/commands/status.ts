@@ -23,17 +23,25 @@ export const statusCommand = {
   data: statusCommandBuilder,
 
   async execute(interaction: ChatInputCommandInteraction) {
+    if (!interaction.deferred && !interaction.replied) {
+      try {
+        await interaction.deferReply({ ephemeral: true });
+      } catch (deferErr: any) {
+        console.warn('[Command:Status] Failed to defer interaction:', deferErr.message);
+        return;
+      }
+    }
+
     if (!interaction.guildId) {
-      await interaction.reply({ content: 'Must be used within a server.', ephemeral: true });
+      await interaction.editReply({ content: 'Must be used within a server.' });
       return;
     }
 
     const session = sessionManager.getSession(interaction.guildId);
 
     if (!session) {
-      await interaction.reply({
+      await interaction.editReply({
         content: '**Idle**: No meeting is currently being recorded in this server.',
-        ephemeral: true,
       });
       return;
     }
@@ -54,6 +62,6 @@ export const statusCommand = {
       .setFooter({ text: 'Meetly AI Platform • Confidential' })
       .setTimestamp();
 
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+    await interaction.editReply({ embeds: [embed] });
   },
 };

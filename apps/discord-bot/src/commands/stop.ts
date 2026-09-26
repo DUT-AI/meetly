@@ -23,24 +23,54 @@ export const stopCommand = {
   data: stopCommandBuilder,
 
   async execute(interaction: ChatInputCommandInteraction) {
+    let isInteractionValid = false;
+    // 1. Attempt to defer reply to beat Discord's strict 3-second acknowledgement deadline
+    if (!interaction.deferred && !interaction.replied) {
+      try {
+        await interaction.deferReply({ ephemeral: false });
+        isInteractionValid = true;
+      } catch (deferErr: any) {
+        console.warn('[Command:Stop] Failed to defer interaction (will fallback to channel send):', deferErr.message);
+        isInteractionValid = false;
+      }
+    } else {
+      isInteractionValid = true;
+    }
+
+    const respond = async (options: { content?: string; embeds?: EmbedBuilder[] } | string) => {
+      const payload = typeof options === 'string' ? { content: options } : options;
+      if (isInteractionValid) {
+        try {
+          await interaction.editReply(payload);
+          return;
+        } catch (editErr: any) {
+          console.warn('[Command:Stop] editReply failed, falling back to channel send:', editErr.message);
+          isInteractionValid = false;
+        }
+      }
+      if (interaction.channel && 'send' in interaction.channel) {
+        try {
+          await (interaction.channel as any).send(payload);
+        } catch (sendErr: any) {
+          console.error('[Command:Stop] Fallback channel send failed:', sendErr.message);
+        }
+      }
+    };
+
     if (!interaction.guildId) {
-      await interaction.reply({
-        content: '**Error**: This command must be used in a server.',
-        ephemeral: true,
-      });
+      await respond('**Error**: This command must be used in a server.');
+      return;
+    }
+
+    if (sessionManager.isStopping(interaction.guildId)) {
+      await respond('⏳ Meeting is already being finalized and saved. Please wait a moment...');
       return;
     }
 
     if (!sessionManager.isRecording(interaction.guildId)) {
-      await interaction.reply({
-        content: '**Error**: No meeting is currently being recorded in this server.',
-        ephemeral: true,
-      });
+      await respond('**Error**: No meeting is currently being recorded in this server.');
       return;
     }
-
-    // Public defer to allow all participants in the channel to see the result and listen to audio
-    await interaction.deferReply({ ephemeral: false });
 
     try {
       const result = await sessionManager.stopSession(interaction.guildId);
@@ -68,18 +98,14 @@ export const stopCommand = {
         const expireMinutes = Math.round(config.PREVIEW_URL_EXPIRES_IN_SECONDS / 60);
         embed.addFields({
           name: `Audio Preview (Expires in ${expireMinutes} min)`,
-          value: `[Listen to Audio Recording](${result.presignedUrl})`,
-          inline: false,
+          value: `[Click to Listen Meeting Audio](${result.presignedUrl})`,
         });
       }
 
-      await interaction.editReply({ embeds: [embed] });
+      await respond({ embeds: [embed] });
     } catch (err: any) {
-      console.error('[Command:Stop] Failed to finalize:', err);
-      const safeErrorMessage = err?.message
-        ? String(err.message).replace(/minio|s3/gi, 'storage service')
-        : 'Internal error';
-      await interaction.editReply(`Failed to finalize audio recording: ${safeErrorMessage}`);
+      console.error('[Command:Stop] Failed to stop recording session:', err);
+      await respond(`Failed to finalize meeting: ${err.message}`);
     }
   },
 };

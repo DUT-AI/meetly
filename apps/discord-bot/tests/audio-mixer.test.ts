@@ -34,8 +34,9 @@ async function testMixer() {
   fs.writeFileSync(pcmB, bufferB);
 
   try {
-    const meetingId = 'test-meeting-123';
-    const result = await AudioMixer.mixToMp3([pcmA, pcmB], testDir, meetingId, {
+    // Test 1: Multi-speaker mixing (2 inputs)
+    const meetingIdMulti = 'test-meeting-multi';
+    const resultMulti = await AudioMixer.mixToMp3([pcmA, pcmB], testDir, meetingIdMulti, {
       durationMs,
       speakers: [
         { userId: '111', username: 'Alice', totalSpokenMs: 2000, segmentsCount: 1 },
@@ -43,13 +44,27 @@ async function testMixer() {
       ],
     });
 
-    console.log('✅ Mix succeeded! Output file:', result.outputFilePath);
-    console.log('✅ File size:', fs.statSync(result.outputFilePath).size, 'bytes');
-    console.log('✅ Metadata file:', result.metadataFilePath);
+    console.log('✅ Multi-speaker mix succeeded! Output file:', resultMulti.outputFilePath);
+    console.log('✅ File size:', fs.statSync(resultMulti.outputFilePath).size, 'bytes');
 
-    // Verify file exists and is > 0 bytes
-    if (!fs.existsSync(result.outputFilePath) || fs.statSync(result.outputFilePath).size === 0) {
-      throw new Error('Mixed output file is empty or missing!');
+    if (!fs.existsSync(resultMulti.outputFilePath) || fs.statSync(resultMulti.outputFilePath).size === 0) {
+      throw new Error('Multi-speaker mixed output file is empty or missing!');
+    }
+
+    // Test 2: Single-speaker mixing (1 input)
+    const meetingIdSingle = 'test-meeting-single';
+    const resultSingle = await AudioMixer.mixToMp3([pcmA], testDir, meetingIdSingle, {
+      durationMs,
+      speakers: [
+        { userId: '111', username: 'Alice', totalSpokenMs: 2000, segmentsCount: 1 },
+      ],
+    });
+
+    console.log('✅ Single-speaker mix succeeded! Output file:', resultSingle.outputFilePath);
+    console.log('✅ File size:', fs.statSync(resultSingle.outputFilePath).size, 'bytes');
+
+    if (!fs.existsSync(resultSingle.outputFilePath) || fs.statSync(resultSingle.outputFilePath).size === 0) {
+      throw new Error('Single-speaker mixed output file is empty or missing!');
     }
   } finally {
     fs.rmSync(testDir, { recursive: true, force: true });

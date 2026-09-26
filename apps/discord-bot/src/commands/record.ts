@@ -24,35 +24,57 @@ export const recordCommand = {
   data: recordCommandBuilder,
 
   async execute(interaction: ChatInputCommandInteraction) {
+    let isInteractionValid = false;
+    // 1. Attempt to defer reply to beat Discord's strict 3-second acknowledgement deadline
+    if (!interaction.deferred && !interaction.replied) {
+      try {
+        await interaction.deferReply({ ephemeral: true });
+        isInteractionValid = true;
+      } catch (deferErr: any) {
+        console.warn('[Command:Record] Failed to defer interaction (will fallback to channel send):', deferErr.message);
+        isInteractionValid = false;
+      }
+    } else {
+      isInteractionValid = true;
+    }
+
+    const respond = async (options: { content?: string; embeds?: EmbedBuilder[] } | string) => {
+      const payload = typeof options === 'string' ? { content: options } : options;
+      if (isInteractionValid) {
+        try {
+          await interaction.editReply(payload);
+          return;
+        } catch (editErr: any) {
+          console.warn('[Command:Record] editReply failed, falling back to channel send:', editErr.message);
+          isInteractionValid = false;
+        }
+      }
+      if (interaction.channel && 'send' in interaction.channel) {
+        try {
+          await (interaction.channel as any).send(payload);
+        } catch (sendErr: any) {
+          console.error('[Command:Record] Fallback channel send failed:', sendErr.message);
+        }
+      }
+    };
+
     const member = interaction.member as GuildMember;
-    const voiceChannel = member.voice?.channel;
+    const voiceChannel = member?.voice?.channel;
 
     if (!voiceChannel) {
-      await interaction.reply({
-        content: '**Error**: You must be connected to a voice channel to start recording.',
-        ephemeral: true,
-      });
+      await respond('**Error**: You must be connected to a voice channel to start recording.');
       return;
     }
 
     if (!interaction.guildId || !interaction.channel) {
-      await interaction.reply({
-        content: '**Error**: This command can only be used within a server channel.',
-        ephemeral: true,
-      });
+      await respond('**Error**: This command can only be used within a server channel.');
       return;
     }
 
     if (sessionManager.isRecording(interaction.guildId)) {
-      await interaction.reply({
-        content: 'A meeting is already being recorded in this server. Use `/stop` to finalize it.',
-        ephemeral: true,
-      });
+      await respond('A meeting is already being recorded in this server. Use `/stop` to finalize it.');
       return;
     }
-
-    // Defer ephemerally so session details are private to initiator
-    await interaction.deferReply({ ephemeral: true });
 
     try {
       const session = await sessionManager.startSession(member, interaction.channel);
@@ -61,10 +83,10 @@ export const recordCommand = {
       if (interaction.channel && 'send' in interaction.channel) {
         try {
           await (interaction.channel as any).send(
-            `**Meeting recording has started** in <#${voiceChannel.id}> by <@${member.id}>.`
+            `🎙️ **Meeting recording has started** in <#${voiceChannel.id}> by <@${member.id}>.`
           );
         } catch {
-          // Non-fatal
+          // Non-fatal if channel send fails
         }
       }
 
@@ -82,10 +104,10 @@ export const recordCommand = {
         .setFooter({ text: 'Meetly AI Platform • Confidential' })
         .setTimestamp();
 
-      await interaction.editReply({ embeds: [embed] });
+      await respond({ embeds: [embed] });
     } catch (err: any) {
       console.error('[Command:Record] Failed to start:', err);
-      await interaction.editReply(`Failed to start recording: ${err.message}`);
+      await respond(`Failed to start recording: ${err.message}`);
     }
   },
 };

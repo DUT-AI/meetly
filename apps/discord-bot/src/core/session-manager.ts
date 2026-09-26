@@ -1,12 +1,32 @@
-import { joinVoiceChannel, VoiceConnection, VoiceConnectionStatus } from '@discordjs/voice';
+import {
+  AudioPlayer,
+  createAudioPlayer,
+  createAudioResource,
+  entersState,
+  joinVoiceChannel,
+  NoSubscriberBehavior,
+  StreamType,
+  VoiceConnection,
+  VoiceConnectionStatus,
+} from '@discordjs/voice';
 import { Guild, GuildMember, TextBasedChannel } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
+import { Readable } from 'stream';
 import { v4 as uuidv4 } from 'uuid';
 import { config } from '../config';
 import { storageClient } from '../storage/minio-client';
 import { AudioMixer } from './audio-mixer';
 import { VoiceReceiverManager } from './voice-receiver';
+
+// Standard 3-byte Opus silence frame (48kHz stereo, 20ms)
+const OPUS_SILENCE_FRAME = Buffer.from([0xf8, 0xff, 0xfe]);
+
+class OpusSilenceStream extends Readable {
+  _read() {
+    this.push(OPUS_SILENCE_FRAME);
+  }
+}
 
 export interface MeetingResult {
   meetingId: string;
@@ -26,8 +46,12 @@ export interface ActiveSession {
   connection: VoiceConnection;
   tempDir: string;
   receiver: VoiceReceiverManager;
+  silentPlayer?: AudioPlayer;
   silenceIntervalTimer?: NodeJS.Timeout;
   maxDurationTimeout?: NodeJS.Timeout;
+  emptyChannelTimeout?: NodeJS.Timeout;
+  isStopping?: boolean;
+  stopPromise?: Promise<MeetingResult>;
 }
 
 export class SessionManager {
@@ -39,6 +63,11 @@ export class SessionManager {
 
   public isRecording(guildId: string): boolean {
     return this.sessions.has(guildId);
+  }
+
+  public isStopping(guildId: string): boolean {
+    const session = this.sessions.get(guildId);
+    return Boolean(session?.isStopping);
   }
 
   /**
@@ -70,8 +99,47 @@ export class SessionManager {
       selfDeaf: false,
     });
 
+    connection.on('stateChange', (oldState, newState) => {
+      console.log(`[VoiceConnection:${guild.id}] Transition: ${oldState.status} -> ${newState.status}`);
+    });
+
+    // Ensure UDP connection is fully established before attaching receiver
+    try {
+      await entersState(connection, VoiceConnectionStatus.Ready, 15_000);
+      console.log(`[VoiceConnection:${guild.id}] Connection is READY. Initializing audio pipeline.`);
+    } catch (connErr: any) {
+      connection.destroy();
+      throw new Error(`Failed to establish voice connection within 15s: ${connErr.message}`);
+    }
+
     const startTime = Date.now();
     const receiver = new VoiceReceiverManager(connection, guild, tempDir, startTime);
+
+    // 1. Proactively subscribe to all human participants present in the voice channel
+    if (voiceChannel.members) {
+      voiceChannel.members.forEach((voiceMember) => {
+        if (!voiceMember.user.bot) {
+          const username = voiceMember.displayName || voiceMember.user.username;
+          receiver.subscribeUser(voiceMember.id, username);
+        }
+      });
+    }
+
+    // 2. Attach silent keepalive AudioPlayer to keep the Discord UDP RTC socket hot
+    let silentPlayer: AudioPlayer | undefined;
+    try {
+      silentPlayer = createAudioPlayer({
+        behaviors: { noSubscriber: NoSubscriberBehavior.Play },
+      });
+      const silentResource = createAudioResource(new OpusSilenceStream(), {
+        inputType: StreamType.Opus,
+      });
+      silentPlayer.play(silentResource);
+      connection.subscribe(silentPlayer);
+      console.log(`[SessionManager:${guild.id}] Silent UDP keepalive player started.`);
+    } catch (playerErr: any) {
+      console.warn(`[SessionManager:${guild.id}] Could not initialize silent keepalive player:`, playerErr.message);
+    }
 
     const session: ActiveSession = {
       meetingId,
@@ -82,6 +150,7 @@ export class SessionManager {
       connection,
       tempDir,
       receiver,
+      silentPlayer,
     };
 
     // Safeguard 1: Silence Timeout (Ghost-Buster)
@@ -122,6 +191,7 @@ export class SessionManager {
 
   /**
    * Stops the active session, mixes the audio, and uploads to MinIO.
+   * Completely idempotent: concurrent calls await the same promise.
    */
   public async stopSession(guildId: string): Promise<MeetingResult> {
     const session = this.sessions.get(guildId);
@@ -129,65 +199,84 @@ export class SessionManager {
       throw new Error('No active recording found for this server.');
     }
 
-    // Clean up timers
-    if (session.silenceIntervalTimer) clearInterval(session.silenceIntervalTimer);
-    if (session.maxDurationTimeout) clearTimeout(session.maxDurationTimeout);
-
-    // Remove from active registry immediately to free guild state
-    this.sessions.delete(guildId);
-
-    const sessionEndTime = Date.now();
-    const durationMs = sessionEndTime - session.startTime;
-
-    // Disconnect bot from voice
-    try {
-      session.connection.destroy();
-    } catch (e) {
-      // Ignore disconnect cleanup errors
+    if (session.stopPromise) {
+      return session.stopPromise;
     }
 
-    try {
-      // 1. Finalize PCM tracks
-      const { pcmFiles, speakers } = await session.receiver.finalizeAllTracks(sessionEndTime);
+    session.isStopping = true;
+    session.stopPromise = (async () => {
+      // Clean up timers
+      if (session.silenceIntervalTimer) clearInterval(session.silenceIntervalTimer);
+      if (session.maxDurationTimeout) clearTimeout(session.maxDurationTimeout);
+      if (session.emptyChannelTimeout) clearTimeout(session.emptyChannelTimeout);
 
-      if (pcmFiles.length === 0) {
-        throw new Error('No audio tracks were captured during this meeting.');
+      // Stop keepalive silent player if running
+      if (session.silentPlayer) {
+        try {
+          session.silentPlayer.stop();
+        } catch {
+          // Ignore stop error
+        }
       }
 
-      // 2. Mix tracks via FFmpeg
-      const mixResult = await AudioMixer.mixToMp3(pcmFiles, session.tempDir, session.meetingId, {
-        durationMs,
-        speakers,
-      });
+      const sessionEndTime = Date.now();
+      const durationMs = sessionEndTime - session.startTime;
 
-      // 3. Upload MP3 and Metadata to MinIO
-      const audioS3Key = `meetings/${session.meetingId}/audio.mp3`;
-      const metadataS3Key = `meetings/${session.meetingId}/metadata.json`;
-
-      const audioUpload = await storageClient.uploadFile(mixResult.outputFilePath, audioS3Key, 'audio/mpeg');
-      const metadataUpload = await storageClient.uploadFile(
-        mixResult.metadataFilePath,
-        metadataS3Key,
-        'application/json'
-      );
-
-      return {
-        meetingId: session.meetingId,
-        durationSeconds: mixResult.durationSeconds,
-        s3AudioUri: audioUpload.s3Uri,
-        s3MetadataUri: metadataUpload.s3Uri,
-        presignedUrl: audioUpload.presignedUrl,
-        speakerCount: speakers.length,
-      };
-    } finally {
-      // 4. Temporary disk cleanup
+      // Disconnect bot from voice
       try {
-        fs.rmSync(session.tempDir, { recursive: true, force: true });
-        console.log(`[SessionManager] Cleaned up temporary directory: ${session.tempDir}`);
-      } catch (err: any) {
-        console.warn(`[SessionManager] Failed to remove temp directory: ${err.message}`);
+        session.connection.destroy();
+      } catch (e) {
+        // Ignore disconnect cleanup errors
       }
-    }
+
+      try {
+        // 1. Finalize PCM tracks
+        const { pcmFiles, speakers } = await session.receiver.finalizeAllTracks(sessionEndTime);
+
+        if (pcmFiles.length === 0) {
+          throw new Error('No audio tracks were captured during this meeting.');
+        }
+
+        // 2. Mix tracks via FFmpeg
+        const mixResult = await AudioMixer.mixToMp3(pcmFiles, session.tempDir, session.meetingId, {
+          durationMs,
+          speakers,
+        });
+
+        // 3. Upload MP3 and Metadata to MinIO
+        const audioS3Key = `meetings/${session.meetingId}/audio.mp3`;
+        const metadataS3Key = `meetings/${session.meetingId}/metadata.json`;
+
+        const audioUpload = await storageClient.uploadFile(mixResult.outputFilePath, audioS3Key, 'audio/mpeg');
+        const metadataUpload = await storageClient.uploadFile(
+          mixResult.metadataFilePath,
+          metadataS3Key,
+          'application/json'
+        );
+
+        return {
+          meetingId: session.meetingId,
+          durationSeconds: mixResult.durationSeconds,
+          s3AudioUri: audioUpload.s3Uri,
+          s3MetadataUri: metadataUpload.s3Uri,
+          presignedUrl: audioUpload.presignedUrl,
+          speakerCount: speakers.length,
+        };
+      } finally {
+        // Remove from active registry only after finalization is complete
+        this.sessions.delete(guildId);
+
+        // 4. Temporary disk cleanup
+        try {
+          fs.rmSync(session.tempDir, { recursive: true, force: true });
+          console.log(`[SessionManager] Cleaned up temporary directory: ${session.tempDir}`);
+        } catch (err: any) {
+          console.warn(`[SessionManager] Failed to remove temp directory: ${err.message}`);
+        }
+      }
+    })();
+
+    return session.stopPromise;
   }
 }
 

@@ -1,7 +1,7 @@
-import { spawn } from "child_process";
-import fs from "fs";
-import path from "path";
-import { CHANNELS, SAMPLE_RATE, SpeakerMetadata } from "./audio-sync";
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import { CHANNELS, SAMPLE_RATE, SpeakerMetadata } from './audio-sync';
 
 export interface MixResult {
   outputFilePath: string;
@@ -11,7 +11,8 @@ export interface MixResult {
 
 export class AudioMixer {
   /**
-   * Mixes multiple synchronized PCM files into a standardized 16kHz Mono MP3.
+   * Mixes multiple synchronized PCM files into a standardized 16kHz Mono MP3
+   * with audio limiting to prevent clipping / distortion.
    */
   public static async mixToMp3(
     pcmFiles: string[],
@@ -20,7 +21,7 @@ export class AudioMixer {
     metadata: {
       durationMs: number;
       speakers: SpeakerMetadata[];
-    },
+    }
   ): Promise<MixResult> {
     const outputFilePath = path.join(outputDir, `${meetingId}.mp3`);
     const metadataFilePath = path.join(outputDir, `${meetingId}.json`);
@@ -37,12 +38,12 @@ export class AudioMixer {
           speakers: metadata.speakers,
         },
         null,
-        2,
-      ),
+        2
+      )
     );
 
     if (pcmFiles.length === 0) {
-      throw new Error("Cannot mix audio: zero PCM tracks recorded.");
+      throw new Error('Cannot mix audio: zero PCM tracks recorded.');
     }
 
     return new Promise((resolve, reject) => {
@@ -51,51 +52,56 @@ export class AudioMixer {
       // Add each input PCM file (raw 48000Hz s16le stereo)
       pcmFiles.forEach((file) => {
         args.push(
-          "-f",
-          "s16le",
-          "-ar",
+          '-f',
+          's16le',
+          '-ar',
           SAMPLE_RATE.toString(),
-          "-ac",
+          '-ac',
           CHANNELS.toString(),
-          "-i",
-          file,
+          '-i',
+          file
         );
       });
 
-      // Filter graph for mixing
+      // Filter graph for mixing & dynamic limiting (prevents clipping & buzzing without boosting silence)
       if (pcmFiles.length > 1) {
         args.push(
-          "-filter_complex",
-          `amix=inputs=${pcmFiles.length}:duration=longest:dropout_transition=2:normalize=0`,
+          '-filter_complex',
+          `amix=inputs=${pcmFiles.length}:duration=longest:dropout_transition=0:normalize=0,alimiter=limit=0.95:level=false:attack=5:release=50`
+        );
+      } else {
+        args.push(
+          '-filter_complex',
+          'alimiter=limit=0.95:level=false:attack=5:release=50'
         );
       }
 
-      // Output settings: 16kHz Mono MP3 at 48k bitrate (ideal for speech & LLM ingestion)
+      // Output settings: 16kHz Mono MP3 at 64k bitrate (high clarity speech & optimal for AI ingestion)
       args.push(
-        "-ar",
-        "16000",
-        "-ac",
-        "1",
-        "-b:a",
-        "48k",
-        "-y",
-        outputFilePath,
+        '-ar',
+        '16000',
+        '-ac',
+        '1',
+        '-b:a',
+        '64k',
+        '-y',
+        outputFilePath
       );
 
       console.log(
-        `[AudioMixer] Executing FFmpeg with ${pcmFiles.length} inputs...`,
+        `[AudioMixer] Executing FFmpeg with ${pcmFiles.length} inputs and alimiter...`
       );
-      const ffmpeg = spawn("ffmpeg", args);
+      const ffmpeg = spawn('ffmpeg', args);
 
-      let stderrLog = "";
-      ffmpeg.stderr.on("data", (data) => {
+      let stderrLog = '';
+      ffmpeg.stderr.on('data', (data) => {
         stderrLog += data.toString();
       });
 
-      ffmpeg.on("close", (code) => {
+      ffmpeg.on('close', (code) => {
         if (code === 0) {
           console.log(
-            `[AudioMixer] Output successfully created at ${outputFilePath}`,
+            `[AudioMixer] Output successfully created at ${outputFilePath}`
           );
           resolve({
             outputFilePath,
@@ -105,13 +111,13 @@ export class AudioMixer {
         } else {
           console.error(
             `[AudioMixer] FFmpeg failed (code ${code}):`,
-            stderrLog,
+            stderrLog
           );
           reject(new Error(`FFmpeg mixing failed with exit code ${code}`));
         }
       });
 
-      ffmpeg.on("error", (err) => {
+      ffmpeg.on('error', (err) => {
         reject(new Error(`Failed to spawn FFmpeg: ${err.message}`));
       });
     });
