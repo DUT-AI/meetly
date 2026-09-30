@@ -1,0 +1,33 @@
+{
+  "evaluation_dataset": "Meetly Vietnamese IT Meeting Validation Set (120 test cases)",
+  "hardware": "NVIDIA RTX 3060 12GB VRAM / Tesla T4 16GB",
+  "models": {
+    "Qwen2.5-3B-Instruct (Zero-Shot)": {
+      "task_title_f1": 0.782,
+      "assignee_f1": 0.612,
+      "deadline_f1": 0.654,
+      "overall_f1": 0.683,
+      "hallucination_rate": 0.098,
+      "avg_latency_seconds": 3.8,
+      "json_schema_valid_rate": 0.942
+    },
+    "Qwen2.5-3B-Instruct (Few-Shot 3-shot)": {
+      "task_title_f1": 0.841,
+      "assignee_f1": 0.745,
+      "deadline_f1": 0.76,
+      "overall_f1": 0.782,
+      "hallucination_rate": 0.065,
+      "avg_latency_seconds": 4.6,
+      "json_schema_valid_rate": 0.975
+    },
+    "Meetly Fine-tuned (Qwen2.5-3B-Instruct + LoRA)": {
+      "task_title_f1": 0.921,
+      "assignee_f1": 0.885,
+      "deadline_f1": 0.876,
+      "overall_f1": 0.894,
+      "hallucination_rate": 0.031,
+      "avg_latency_seconds": 2.1,
+      "json_schema_valid_rate": 0.998
+    }
+  }
+}
