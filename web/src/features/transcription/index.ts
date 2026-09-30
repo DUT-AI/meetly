@@ -5,4 +5,7 @@ export * from './api/use-get-current-session';
 export * from './api/use-transcription-subscriber';
 export * from './components/audio-timeline-player';
 export * from './components/live-transcript-panel';
+export * from './components/offline-audio-modal';
+export * from './components/speaker-identification-modal';
+export * from './components/voicebank-modal';
 export * from './hooks/use-direct-mic-streaming';

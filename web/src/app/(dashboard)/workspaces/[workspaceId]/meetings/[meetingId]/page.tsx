@@ -27,7 +27,10 @@ import { toast } from 'sonner';
 
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
+import { useQueryClient } from '@tanstack/react-query';
+
 import { ResponsiveModal } from '@/components/responsive-modal';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGetMeeting } from '@/features/meetings/api/use-get-meeting';
@@ -35,7 +38,15 @@ import { useUpdateMeeting } from '@/features/meetings/api/use-update-meeting';
 import { MeetingReportEditor } from '@/features/meetings/components/meeting-report-editor';
 import { useGetMembers } from '@/features/members/api/use-get-members';
 import { MemberAvatar } from '@/features/members/components/member-avatar';
-import { AudioTimelinePlayer, AudioTimelinePlayerRef, LiveTranscriptPanel, useGetTranscripts } from '@/features/transcription';
+import {
+  AudioTimelinePlayer,
+  AudioTimelinePlayerRef,
+  LiveTranscriptPanel,
+  OfflineAudioModal,
+  SpeakerIdentificationModal,
+  useGetTranscripts,
+  VoicebankModal,
+} from '@/features/transcription';
 import { cn } from '@/lib/utils';
 
 export default function MeetingReportPage() {
@@ -44,13 +55,22 @@ export default function MeetingReportPage() {
   const workspaceId = params.workspaceId as string;
   const meetingId = params.meetingId as string;
 
+  const queryClient = useQueryClient();
   const [isExtensionModalOpen, setIsExtensionModalOpen] = useState(false);
+  const [isOfflineModalOpen, setIsOfflineModalOpen] = useState(false);
+  const [isSpeakerModalOpen, setIsSpeakerModalOpen] = useState(false);
+  const [isVoicebankModalOpen, setIsVoicebankModalOpen] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
   const { data: meeting, isLoading: isLoadingMeeting } = useGetMeeting(workspaceId, meetingId);
   const { data: membersResponse } = useGetMembers({ workspaceId });
   const { mutate: updateMeeting, isPending: isSaving } = useUpdateMeeting(workspaceId);
   const { data: transcriptsData } = useGetTranscripts(workspaceId, meetingId);
+
+  const handleOfflineSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['meeting', workspaceId, meetingId] });
+    queryClient.invalidateQueries({ queryKey: ['transcripts', workspaceId, meetingId] });
+  };
 
   const [activeTab, setActiveTab] = useState<string>('transcript');
   const [report, setReport] = useState<Record<string, any> | null>(null);
@@ -71,6 +91,13 @@ export default function MeetingReportPage() {
   if (!meeting) return <PageError message="Không tìm thấy cuộc họp" />;
 
   const memberMap = Object.fromEntries((membersResponse?.documents ?? []).map((m) => [m.$id, m]));
+  const detectedSpeakers = Array.from(
+    new Set((transcriptsData?.segments ?? []).map((s) => s.speaker_label).filter(Boolean)),
+  );
+  const formattedMembers = (membersResponse?.documents ?? []).map((m) => ({
+    id: m.userId || m.$id,
+    name: m.name,
+  }));
 
   const handleSave = () => {
     const reportData = report ?? meeting.report ?? {};
@@ -181,14 +208,47 @@ export default function MeetingReportPage() {
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2.5 ml-auto">
+        <div className="flex items-center gap-2 ml-auto flex-wrap justify-end">
+          <Button
+            size="sm"
+            onClick={() => setIsOfflineModalOpen(true)}
+            className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white gap-1.5 text-xs font-bold h-9 shadow-md shadow-blue-500/20"
+          >
+            <Mic className="size-3.5" />
+            <span>Họp Offline / Ghi Âm</span>
+            <Badge variant="secondary" className="text-[9px] bg-white/20 text-white border-0 py-0 px-1">
+              AI 3B
+            </Badge>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsSpeakerModalOpen(true)}
+            className="rounded-xl border-purple-200 text-purple-700 bg-purple-50/50 hover:bg-purple-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+          >
+            <Users className="size-3.5 text-purple-600" />
+            <span className="hidden sm:inline">Phân Vai Diễn Giả</span>
+            <span className="sm:hidden">Diễn Giả</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsVoicebankModalOpen(true)}
+            className="rounded-xl border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+          >
+            <Sparkles className="size-3.5 text-indigo-600" />
+            <span className="hidden sm:inline">Voicebank</span>
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsExtensionModalOpen(true)}
-            className="rounded-xl border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+            className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
           >
-            <Puzzle className="size-3.5 text-indigo-600" />
+            <Puzzle className="size-3.5 text-slate-600" />
             <span className="hidden sm:inline">Cấu hình Extension</span>
             <span className="sm:hidden">Extension</span>
           </Button>
@@ -457,6 +517,32 @@ export default function MeetingReportPage() {
           </div>
         </div>
       </ResponsiveModal>
+
+      {/* ── Offline Meeting Modals ── */}
+      <OfflineAudioModal
+        isOpen={isOfflineModalOpen}
+        onClose={() => setIsOfflineModalOpen(false)}
+        workspaceId={workspaceId}
+        meetingId={meetingId}
+        onSuccess={handleOfflineSuccess}
+      />
+
+      <SpeakerIdentificationModal
+        isOpen={isSpeakerModalOpen}
+        onClose={() => setIsSpeakerModalOpen(false)}
+        workspaceId={workspaceId}
+        meetingId={meetingId}
+        speakers={detectedSpeakers}
+        members={formattedMembers}
+        onSuccess={handleOfflineSuccess}
+      />
+
+      <VoicebankModal
+        isOpen={isVoicebankModalOpen}
+        onClose={() => setIsVoicebankModalOpen(false)}
+        workspaceId={workspaceId}
+        members={formattedMembers}
+      />
     </div>
   );
 }
