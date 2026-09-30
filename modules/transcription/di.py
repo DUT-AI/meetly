@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from modules.transcription.domain.interfaces import (
     ITranscriptionSessionRepository,
     ITranscriptSegmentRepository,
+    IVoiceProfileRepository,
 )
 from modules.transcription.infrastructure.faster_whisper_engine import (
     FasterWhisperEngine,
@@ -14,6 +15,12 @@ from modules.transcription.repository.segment_repository import (
 )
 from modules.transcription.repository.session_repository import (
     SqlTranscriptionSessionRepository,
+)
+from modules.transcription.repository.voice_profile_repository import (
+    SqlVoiceProfileRepository,
+)
+from modules.transcription.use_cases.offline_meeting_use_case import (
+    OfflineMeetingUseCase,
 )
 from modules.transcription.use_cases.session_use_cases import (
     TranscriptionSessionUseCases,
@@ -61,5 +68,10 @@ class TranscriptionProvider(Provider):
     ) -> ITranscriptSegmentRepository:
         return SqlTranscriptSegmentRepository(session)
 
+    @provide
+    def provide_voice_repo(self, session: AsyncSession) -> IVoiceProfileRepository:
+        return SqlVoiceProfileRepository(session)
+
     # Use cases
     session_use_cases = provide(TranscriptionSessionUseCases)
+    offline_meeting_use_case = provide(OfflineMeetingUseCase)
