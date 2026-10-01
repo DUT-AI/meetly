@@ -122,58 +122,38 @@ def train():
     except ImportError:
         has_sft_config = False
 
-    eval_key = "eval_strategy" if "eval_strategy" in TrainingArguments.__init__.__code__.co_varnames else "evaluation_strategy"
-    eval_kwargs = {eval_key: "steps"}
-
     # 6. Training Arguments / SFTConfig
-    if has_sft_config:
-        sft_cfg_params = inspect.signature(SFTConfig.__init__).parameters
-        extra_sft_kwargs = {}
-        if "max_length" in sft_cfg_params:
-            extra_sft_kwargs["max_length"] = 2048
-        elif "max_seq_length" in sft_cfg_params:
-            extra_sft_kwargs["max_seq_length"] = 2048
+    ConfigClass = SFTConfig if has_sft_config else TrainingArguments
+    config_params = inspect.signature(ConfigClass.__init__).parameters
 
-        training_args = SFTConfig(
-            output_dir=OUTPUT_DIR,
-            per_device_train_batch_size=2,
-            gradient_accumulation_steps=4,
-            warmup_steps=15,
-            num_train_epochs=3,
-            learning_rate=2e-4,
-            lr_scheduler_type="cosine",
-            fp16=torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
-            bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
-            logging_steps=10,
-            eval_steps=50,
-            save_strategy="steps",
-            save_steps=100,
-            save_total_limit=2,
-            optim="paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
-            report_to="none",
-            **eval_kwargs,
-            **extra_sft_kwargs,
-        )
-    else:
-        training_args = TrainingArguments(
-            output_dir=OUTPUT_DIR,
-            per_device_train_batch_size=2,
-            gradient_accumulation_steps=4,
-            warmup_steps=15,
-            num_train_epochs=3,
-            learning_rate=2e-4,
-            lr_scheduler_type="cosine",
-            fp16=torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
-            bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
-            logging_steps=10,
-            eval_steps=50,
-            save_strategy="steps",
-            save_steps=100,
-            save_total_limit=2,
-            optim="paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
-            report_to="none",
-            **eval_kwargs,
-        )
+    training_kwargs = {
+        "output_dir": OUTPUT_DIR,
+        "per_device_train_batch_size": 2,
+        "gradient_accumulation_steps": 4,
+        "warmup_steps": 15,
+        "num_train_epochs": 3,
+        "learning_rate": 2e-4,
+        "lr_scheduler_type": "cosine",
+        "fp16": torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
+        "bf16": torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
+        "logging_steps": 10,
+        "eval_steps": 50,
+        "save_strategy": "steps",
+        "save_steps": 100,
+        "save_total_limit": 2,
+        "optim": "paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
+        "report_to": "none",
+    }
+    eval_key = "eval_strategy" if "eval_strategy" in config_params else "evaluation_strategy"
+    training_kwargs[eval_key] = "steps"
+
+    if has_sft_config:
+        if "max_length" in config_params:
+            training_kwargs["max_length"] = 2048
+        elif "max_seq_length" in config_params:
+            training_kwargs["max_seq_length"] = 2048
+
+    training_args = ConfigClass(**training_kwargs)
 
     # 7. SFT Trainer (Adapts dynamically to older and newer TRL versions)
     trainer_params = inspect.signature(SFTTrainer.__init__).parameters
