@@ -115,41 +115,85 @@ def train():
             output_texts.append(text)
         return output_texts
 
+    import inspect
+    try:
+        from trl import SFTConfig
+        has_sft_config = True
+    except ImportError:
+        has_sft_config = False
+
     eval_key = "eval_strategy" if "eval_strategy" in TrainingArguments.__init__.__code__.co_varnames else "evaluation_strategy"
     eval_kwargs = {eval_key: "steps"}
 
-    # 6. Training Arguments
-    training_args = TrainingArguments(
-        output_dir=OUTPUT_DIR,
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=4,
-        warmup_steps=15,
-        num_train_epochs=3,
-        learning_rate=2e-4,
-        lr_scheduler_type="cosine",
-        fp16=torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
-        bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
-        logging_steps=10,
-        eval_steps=50,
-        save_strategy="steps",
-        save_steps=100,
-        save_total_limit=2,
-        optim="paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
-        report_to="none",
-        **eval_kwargs,
-    )
+    # 6. Training Arguments / SFTConfig
+    if has_sft_config:
+        sft_cfg_params = inspect.signature(SFTConfig.__init__).parameters
+        extra_sft_kwargs = {}
+        if "max_length" in sft_cfg_params:
+            extra_sft_kwargs["max_length"] = 2048
+        elif "max_seq_length" in sft_cfg_params:
+            extra_sft_kwargs["max_seq_length"] = 2048
 
-    # 7. SFT Trainer
-    trainer = SFTTrainer(
-        model=model,
-        train_dataset=dataset["train"],
-        eval_dataset=dataset["validation"],
-        peft_config=peft_config,
-        formatting_func=formatting_prompts_func,
-        max_seq_length=2048,
-        tokenizer=tokenizer,
-        args=training_args,
-    )
+        training_args = SFTConfig(
+            output_dir=OUTPUT_DIR,
+            per_device_train_batch_size=2,
+            gradient_accumulation_steps=4,
+            warmup_steps=15,
+            num_train_epochs=3,
+            learning_rate=2e-4,
+            lr_scheduler_type="cosine",
+            fp16=torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
+            bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
+            logging_steps=10,
+            eval_steps=50,
+            save_strategy="steps",
+            save_steps=100,
+            save_total_limit=2,
+            optim="paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
+            report_to="none",
+            **eval_kwargs,
+            **extra_sft_kwargs,
+        )
+    else:
+        training_args = TrainingArguments(
+            output_dir=OUTPUT_DIR,
+            per_device_train_batch_size=2,
+            gradient_accumulation_steps=4,
+            warmup_steps=15,
+            num_train_epochs=3,
+            learning_rate=2e-4,
+            lr_scheduler_type="cosine",
+            fp16=torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
+            bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
+            logging_steps=10,
+            eval_steps=50,
+            save_strategy="steps",
+            save_steps=100,
+            save_total_limit=2,
+            optim="paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
+            report_to="none",
+            **eval_kwargs,
+        )
+
+    # 7. SFT Trainer (Adapts dynamically to older and newer TRL versions)
+    trainer_params = inspect.signature(SFTTrainer.__init__).parameters
+    trainer_kwargs = {
+        "model": model,
+        "train_dataset": dataset["train"],
+        "eval_dataset": dataset["validation"],
+        "peft_config": peft_config,
+        "formatting_func": formatting_prompts_func,
+        "args": training_args,
+    }
+    if "processing_class" in trainer_params:
+        trainer_kwargs["processing_class"] = tokenizer
+    elif "tokenizer" in trainer_params:
+        trainer_kwargs["tokenizer"] = tokenizer
+
+    if "max_seq_length" in trainer_params:
+        trainer_kwargs["max_seq_length"] = 2048
+
+    trainer = SFTTrainer(**trainer_kwargs)
 
     print("\nStarting Training...")
     trainer.train()
