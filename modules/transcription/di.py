@@ -1,6 +1,7 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from modules.transcription.ai.offline_stt import OfflineSTTProcessor
 from modules.transcription.domain.interfaces import (
     ITranscriptionSessionRepository,
     ITranscriptSegmentRepository,
@@ -43,6 +44,10 @@ class TranscriptionProvider(Provider):
     @provide(scope=Scope.APP)
     def provide_whisper_engine(self) -> FasterWhisperEngine:
         return FasterWhisperEngine()
+
+    @provide(scope=Scope.APP)
+    def provide_offline_stt(self) -> OfflineSTTProcessor:
+        return OfflineSTTProcessor()
 
     @provide(scope=Scope.APP)
     def provide_stream_ingestion_use_case(

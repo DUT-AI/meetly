@@ -2,7 +2,9 @@ from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import (
     APIRouter,
     File,
+    Form,
     HTTPException,
+    Query,
     UploadFile,
     status,
 )
@@ -81,19 +83,30 @@ async def enroll_member_voice(
     workspace_id: str,
     current_user: CurrentUser,
     use_case: FromDishka[OfflineMeetingUseCase],
-    user_id: str,
-    member_name: str,
     file: UploadFile = File(..., description="Voice sample audio file (3-10 seconds)"),
+    user_id: str | None = Query(None),
+    member_name: str | None = Query(None),
+    form_user_id: str | None = Form(None, alias="user_id"),
+    form_member_name: str | None = Form(None, alias="member_name"),
 ) -> dict:
     """
     Enrolls a team member's acoustic signature into the Workspace Centroid Voicebank.
     Extracts 192-dim ECAPA-TDNN feature embedding and computes the running centroid.
+    Supports user_id and member_name passed as query params or multipart/form-data.
     """
+    target_user_id = form_user_id or user_id
+    target_member_name = form_member_name or member_name
+    if not target_user_id or not target_member_name:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Vui lòng cung cấp đầy đủ user_id và member_name.",
+        )
+
     audio_bytes = await file.read()
     result = await use_case.enroll_member_voice(
         workspace_id=workspace_id,
-        user_id=user_id,
-        member_name=member_name,
+        user_id=target_user_id,
+        member_name=target_member_name,
         audio_samples=audio_bytes,
         actor_id=str(current_user.id),
     )
