@@ -72,17 +72,17 @@ def train():
         tokenizer.pad_token = tokenizer.eos_token
 
     # 3. Load Base Model in 4-bit
-    device_map = "auto" if torch.cuda.is_available() else "cpu"
+    device_map = {"": 0} if torch.cuda.is_available() else "cpu"
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         quantization_config=bnb_config if torch.cuda.is_available() else None,
         device_map=device_map,
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        torch_dtype=compute_dtype if "compute_dtype" in locals() else (torch.float16 if torch.cuda.is_available() else torch.float32),
         trust_remote_code=True,
     )
 
     if torch.cuda.is_available():
-        model = prepare_model_for_kbit_training(model)
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 
     # 4. LoRA Adapter Configuration
     peft_config = LoraConfig(
