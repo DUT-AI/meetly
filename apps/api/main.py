@@ -12,6 +12,7 @@ from apps.api.routers import (
     meetings_router,
     members_router,
     notifications_router,
+    offline_meetings_router,
     projects_router,
     tasks_router,
     transcription_router,
@@ -78,6 +79,7 @@ app.include_router(notifications_router)
 app.include_router(assets_router)
 app.include_router(meetings_router)
 app.include_router(transcription_router)
+app.include_router(offline_meetings_router)
 
 
 # 6. Health & Readiness Probes

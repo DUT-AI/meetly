@@ -70,3 +70,35 @@ class ITranscriptSegmentRepository(ABC):
     @abstractmethod
     async def list_by_meeting(self, meeting_id: str) -> list[TranscriptSegmentEntity]:
         pass
+
+
+class IVoiceProfileRepository(ABC):
+    """Repository interface for Member Centroid Voicebank profiles."""
+
+    @abstractmethod
+    async def get_by_user_id(
+        self, workspace_id: str, user_id: str
+    ) -> Any | None:
+        pass
+
+    @abstractmethod
+    async def list_by_workspace(
+        self, workspace_id: str
+    ) -> list[Any]:
+        pass
+
+    @abstractmethod
+    async def save(
+        self,
+        workspace_id: str,
+        user_id: str,
+        member_name: str,
+        centroid_vector: list[float],
+        sample_count: int = 1,
+    ) -> Any:
+        pass
+
+    @abstractmethod
+    async def delete(self, profile_id: str) -> bool:
+        pass
+
