@@ -8,6 +8,7 @@ Target Hardware:
 - Training Time: ~1.5 - 2.5 hours for 3 epochs (1,080 samples).
 """
 
+import inspect
 import os
 import sys
 from pathlib import Path
@@ -22,6 +23,11 @@ from transformers import (
     TrainingArguments,
 )
 from trl import SFTTrainer
+try:
+    from trl import SFTConfig
+    has_sft_config = True
+except ImportError:
+    has_sft_config = False
 
 # Base model identifier
 MODEL_ID = os.getenv("BASE_MODEL_ID", "Qwen/Qwen2.5-3B-Instruct")
@@ -104,24 +110,6 @@ def train():
         data_files={"train": train_file, "validation": val_file},
     )
 
-    def formatting_prompts_func(example):
-        output_texts = []
-        for msgs in example["messages"]:
-            text = tokenizer.apply_chat_template(
-                msgs,
-                tokenize=False,
-                add_generation_prompt=False,
-            )
-            output_texts.append(text)
-        return output_texts
-
-    import inspect
-    try:
-        from trl import SFTConfig
-        has_sft_config = True
-    except ImportError:
-        has_sft_config = False
-
     # 6. Training Arguments / SFTConfig
     ConfigClass = SFTConfig if has_sft_config else TrainingArguments
     config_params = inspect.signature(ConfigClass.__init__).parameters
@@ -155,7 +143,7 @@ def train():
 
     training_args = ConfigClass(**training_kwargs)
 
-    # 7. SFT Trainer (Safely handles PeftModel vs Base Model)
+    # 7. SFT Trainer (Safely handles PeftModel vs Base Model and native messages)
     is_already_peft = hasattr(model, "peft_config") or hasattr(model, "active_peft_config")
 
     trainer_params = inspect.signature(SFTTrainer.__init__).parameters
@@ -164,7 +152,6 @@ def train():
         "train_dataset": dataset["train"],
         "eval_dataset": dataset["validation"],
         "peft_config": None if is_already_peft else peft_config,
-        "formatting_func": formatting_prompts_func,
         "args": training_args,
     }
     if "processing_class" in trainer_params:
