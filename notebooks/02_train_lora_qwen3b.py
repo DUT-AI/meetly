@@ -116,20 +116,22 @@ def train():
 
     training_kwargs = {
         "output_dir": OUTPUT_DIR,
-        "per_device_train_batch_size": 2,
-        "gradient_accumulation_steps": 4,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
         "warmup_steps": 15,
-        "num_train_epochs": 3,
-        "learning_rate": 2e-4,
+        "num_train_epochs": 1,
+        "learning_rate": 3e-4,
         "lr_scheduler_type": "cosine",
         "fp16": torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
         "bf16": torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
         "logging_steps": 10,
-        "eval_steps": 50,
+        "eval_steps": 25,
         "save_strategy": "steps",
-        "save_steps": 100,
+        "save_steps": 50,
         "save_total_limit": 2,
         "optim": "paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
+        "gradient_checkpointing": True,
+        "gradient_checkpointing_kwargs": {"use_reentrant": False},
         "report_to": "none",
     }
     eval_key = "eval_strategy" if "eval_strategy" in config_params else "evaluation_strategy"
