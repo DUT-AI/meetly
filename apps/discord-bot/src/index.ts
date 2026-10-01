@@ -35,7 +35,7 @@ const commandMap = new Map<string, any>([
 // ── 1. BOT READY ──────────────────────────────────────────
 client.once(Events.ClientReady, async (readyClient) => {
   console.log(`=========================================`);
-  console.log(`🤖 Meetly Discord Audio Extractor Online!`);
+  console.log(`Meetly Discord Audio Extractor Online`);
   console.log(`Logged in as: ${readyClient.user.tag}`);
   console.log(`Client ID: ${readyClient.user.id}`);
   console.log(`=========================================`);
@@ -81,12 +81,12 @@ client.on(Events.InteractionCreate, async (interaction: Interaction) => {
     console.error(`Error executing command /${interaction.commandName}:`, error);
     if (interaction.replied || interaction.deferred) {
       await interaction.followUp({
-        content: `❌ An unexpected error occurred: ${error.message}`,
+        content: `Error: An unexpected error occurred: ${error.message}`,
         ephemeral: true,
       });
     } else {
       await interaction.reply({
-        content: `❌ An unexpected error occurred: ${error.message}`,
+        content: `Error: An unexpected error occurred: ${error.message}`,
         ephemeral: true,
       });
     }
@@ -111,7 +111,7 @@ client.on(Events.VoiceStateUpdate, async (oldState, newState) => {
       try {
         const textChannel = (await client.channels.fetch(session.textChannelId)) as any;
         if (textChannel && 'send' in textChannel) {
-          await textChannel.send('⏹️ **All participants left.** Auto-finalizing meeting recording...');
+          await textChannel.send('**All participants left.** Auto-finalizing meeting recording...');
         }
         await sessionManager.stopSession(guildId);
       } catch (err: any) {
@@ -134,8 +134,8 @@ process.on('SIGTERM', () => shutdown('SIGTERM'));
 // Start client
 if (config.DISCORD_BOT_TOKEN) {
   client.login(config.DISCORD_BOT_TOKEN).catch((err) => {
-    console.error('❌ Failed to login to Discord:', err.message);
+    console.error('[Discord] Failed to login to Discord:', err.message);
   });
 } else {
-  console.warn('⚠️ DISCORD_BOT_TOKEN is not configured. Bot will not login.');
+  console.warn('[Discord] DISCORD_BOT_TOKEN is not configured. Bot will not login.');
 }
