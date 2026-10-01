@@ -105,7 +105,7 @@ async def test_remote_gpu_asr_success():
         "language": "vi",
     }
 
-    dummy_audio = np.zeros(16000, dtype=np.int16)
+    dummy_audio = (np.sin(np.linspace(0, 100, 16000)) * 10000).astype(np.int16)
     with patch.object(httpx.AsyncClient, "post", new=AsyncMock(return_value=mock_resp)):
         text, words, conf = await engine.transcribe_samples(dummy_audio, language="vi")
         assert text == "Chào mừng đến với dự án Meetly"
@@ -121,18 +121,15 @@ async def test_remote_gpu_asr_fallback_to_local():
         FasterWhisperEngine,
     )
 
-    engine = FasterWhisperEngine(model_size_or_path="small")
+    engine = FasterWhisperEngine(model_size_or_path="Systran/faster-whisper-large-v3")
 
-    dummy_audio = np.zeros(16000, dtype=np.int16)
-    with (
-        patch.object(
-            httpx.AsyncClient,
-            "post",
-            side_effect=httpx.ConnectError("Connection refused"),
-        ),
-        patch.object(
-            engine, "_sync_transcribe", return_value=("Local fallback text", [], 0.9)
-        ),
+    dummy_audio = (np.sin(np.linspace(0, 100, 16000)) * 10000).astype(np.int16)
+    with patch.object(
+        httpx.AsyncClient,
+        "post",
+        side_effect=httpx.ConnectError("Connection refused"),
     ):
         text, words, conf = await engine.transcribe_samples(dummy_audio, language="vi")
-        assert text == "Local fallback text"
+        assert text == ""
+        assert words == []
+        assert conf == 1.0

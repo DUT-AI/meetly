@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 class CreateSessionRequest(BaseModel):
     source_type: str = "GOOGLE_MEET"
     sample_rate: int = 16000
-    stt_model: str = "openai/whisper-small"
+    stt_model: str = "Systran/faster-whisper-large-v3"
 
 
 class SessionResponse(BaseModel):

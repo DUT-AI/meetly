@@ -18,7 +18,7 @@ class ITranscriptionSessionRepository(ABC):
         created_by: str,
         source_type: str = "GOOGLE_MEET",
         sample_rate: int = 16000,
-        stt_model: str = "openai/whisper-small",
+        stt_model: str = "Systran/faster-whisper-large-v3",
     ) -> TranscriptionSessionEntity:
         pass
 

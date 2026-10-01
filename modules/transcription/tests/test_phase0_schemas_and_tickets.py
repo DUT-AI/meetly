@@ -66,7 +66,7 @@ def test_session_model_to_entity():
         source_type=SourceType.GOOGLE_MEET.value,
         sample_rate=16000,
         duration_samples=0,
-        stt_model="openai/whisper-small",
+        stt_model="Systran/faster-whisper-large-v3",
         recording_asset_id=None,
         created_by="user_123",
     )

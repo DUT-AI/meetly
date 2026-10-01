@@ -41,7 +41,8 @@ class FasterWhisperEngine:
 
     DEFAULT_PROMPT = "Cuộc họp trực tuyến, báo cáo tiến độ, dự án Meetly."
 
-    def __init__(self) -> None:
+    def __init__(self, model_size_or_path: str | None = None) -> None:
+        self.model_size_or_path = model_size_or_path or stt_settings.stt_model_id
         self.service_url = stt_settings.stt_service_url.rstrip("/")
         self.timeout_s = stt_settings.stt_remote_timeout_s
         self._http_client: httpx.AsyncClient | None = None

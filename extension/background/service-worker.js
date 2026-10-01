@@ -115,7 +115,7 @@ class StreamHandler {
           body: JSON.stringify({
             source_type: 'GOOGLE_MEET',
             sample_rate: 16000,
-            stt_model: 'small',
+            stt_model: 'Systran/faster-whisper-large-v3',
           }),
         }
       );

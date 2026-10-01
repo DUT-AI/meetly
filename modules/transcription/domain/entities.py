@@ -14,7 +14,7 @@ class TranscriptionSessionEntity:
     source_type: str = SourceType.GOOGLE_MEET.value
     sample_rate: int = 16000
     duration_samples: int = 0
-    stt_model: str = "openai/whisper-small"
+    stt_model: str = "Systran/faster-whisper-large-v3"
     recording_asset_id: str | None = None
     created_by: str = ""
     created_at: datetime | None = None
