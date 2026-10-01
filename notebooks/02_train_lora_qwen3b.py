@@ -155,13 +155,15 @@ def train():
 
     training_args = ConfigClass(**training_kwargs)
 
-    # 7. SFT Trainer (Adapts dynamically to older and newer TRL versions)
+    # 7. SFT Trainer (Safely handles PeftModel vs Base Model)
+    is_already_peft = hasattr(model, "peft_config") or hasattr(model, "active_peft_config")
+
     trainer_params = inspect.signature(SFTTrainer.__init__).parameters
     trainer_kwargs = {
         "model": model,
         "train_dataset": dataset["train"],
         "eval_dataset": dataset["validation"],
-        "peft_config": peft_config,
+        "peft_config": None if is_already_peft else peft_config,
         "formatting_func": formatting_prompts_func,
         "args": training_args,
     }
