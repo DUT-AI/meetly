@@ -21,7 +21,7 @@ export const transcriptionApi = {
       {
         source_type: 'GOOGLE_MEET',
         sample_rate: 16000,
-        stt_model: 'openai/whisper-small',
+        stt_model: 'Systran/faster-whisper-large-v3',
       },
     );
     return response.data?.data ?? response.data;

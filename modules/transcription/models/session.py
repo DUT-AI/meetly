@@ -31,7 +31,7 @@ class TranscriptionSessionModel(Base, ULIDPrimaryKeyMixin, TimestampMixin):
     sample_rate: Mapped[int] = mapped_column(Integer, default=16000, nullable=False)
     duration_samples: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     stt_model: Mapped[str] = mapped_column(
-        String(100), default="openai/whisper-small", nullable=False
+        String(100), default="Systran/faster-whisper-large-v3", nullable=False
     )
     recording_asset_id: Mapped[str | None] = mapped_column(
         String(26),

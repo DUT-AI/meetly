@@ -7,6 +7,7 @@ from loguru import logger
 from modules.ai_engine.infrastructure.qwen_extractor import QwenTaskExtractorService
 from modules.meetings.domain.interfaces import IMeetingRepository
 from modules.members.domain.interfaces import IMemberRepository
+from modules.transcription.ai.offline_stt import OfflineSTTProcessor
 from modules.transcription.ai.voicebank_matcher import VoicebankMatcher
 from modules.transcription.domain.enums import SessionStatus, SourceType
 from modules.transcription.domain.interfaces import (
@@ -23,7 +24,7 @@ class OfflineMeetingUseCase:
     """
     Application use case orchestrating the complete Offline Meeting processing pipeline:
     1. Single-channel audio ingestion (file upload / web mic).
-    2. VAD & ASR transcription with word-level timestamps.
+    2. VAD & ASR transcription with word-level timestamps (Faster-Whisper / PyAV).
     3. Speaker Diarization & Speaker Identification via Centroid Voicebank (Cosine similarity).
     4. Auto Task Extraction using Meetly Fine-tuned Qwen2.5-3B (SFT + GRPO).
     5. Action items & Meeting report generation.
@@ -38,6 +39,7 @@ class OfflineMeetingUseCase:
         member_repo: IMemberRepository,
         whisper_engine: FasterWhisperEngine,
         task_extractor: QwenTaskExtractorService | None = None,
+        offline_stt: OfflineSTTProcessor | None = None,
     ) -> None:
         self.session_repo = session_repo
         self.segment_repo = segment_repo
@@ -46,6 +48,7 @@ class OfflineMeetingUseCase:
         self.member_repo = member_repo
         self.whisper_engine = whisper_engine
         self.task_extractor = task_extractor or QwenTaskExtractorService()
+        self.offline_stt = offline_stt or OfflineSTTProcessor()
         self.voice_matcher = VoicebankMatcher()
 
     async def _check_member(self, workspace_id: str, user_id: str) -> None:
@@ -298,31 +301,31 @@ class OfflineMeetingUseCase:
         self, audio_bytes: bytes, voice_profiles: list[Any]
     ) -> list[dict[str, Any]]:
         """
-        Internal helper: extracts utterances and embedding features from audio stream.
+        Extracts utterances and acoustic embedding features from audio stream via OfflineSTTProcessor
+        (Faster-Whisper + PyAV decoding + Silero VAD) and Centroid Voicebank matching.
         """
-        # If valid wave or mp3 with voice sample, return structured speech segments
-        p1 = voice_profiles[0].member_name if voice_profiles else "Nguyễn Hoàng Minh"
-        p2 = (
-            voice_profiles[1].member_name
-            if len(voice_profiles) > 1
-            else "Đặng Quốc Phước"
+        raw_segments = self.offline_stt.transcribe_offline_audio(
+            audio_bytes=audio_bytes,
+            voice_profiles=voice_profiles,
         )
 
-        return [
-            {
-                "speaker": p1,
-                "start_ms": 190000,
-                "end_ms": 205000,
-                "text": f"{p2} ơi, kiểm tra lại cấu hình NGINX và deploy lên staging trước thứ Sáu nhé.",
-                "confidence": 0.96,
-                "embedding": self.voice_matcher.extract_voice_embedding(b"turn_1"),
-            },
-            {
-                "speaker": p2,
-                "start_ms": 206000,
-                "end_ms": 218000,
-                "text": f"Dạ vâng anh {p1}, em nhận việc này, thứ Năm em hoàn thành.",
-                "confidence": 0.98,
-                "embedding": self.voice_matcher.extract_voice_embedding(b"turn_2"),
-            },
-        ]
+        processed_segments: list[dict[str, Any]] = []
+        for idx, seg in enumerate(raw_segments):
+            chunk = seg.get("audio_chunk")
+            embedding = seg.get("embedding")
+            if embedding is None and chunk is not None:
+                embedding = self.voice_matcher.extract_voice_embedding(chunk)
+
+            processed_segments.append(
+                {
+                    "speaker": seg.get("speaker") or f"Diễn giả {idx + 1}",
+                    "start_ms": seg.get("start_ms", 0),
+                    "end_ms": seg.get("end_ms", 0),
+                    "text": seg.get("text", ""),
+                    "confidence": seg.get("confidence", 0.95),
+                    "words": seg.get("words", []),
+                    "embedding": embedding,
+                }
+            )
+
+        return processed_segments

@@ -210,3 +210,32 @@ async def test_offline_meeting_pipeline_flow():
     assert "assignee" in first_task
     assert "deadline" in first_task
     assert "source_timestamp_ms" in first_task
+
+
+def test_offline_stt_processor_decoding_and_fallback():
+    """Tests OfflineSTTProcessor audio waveform decoding and fallback processing."""
+    import numpy as np
+
+    from modules.transcription.ai.offline_stt import OfflineSTTProcessor
+
+    stt = OfflineSTTProcessor()
+
+    # 1. Test empty / invalid audio
+    assert stt.decode_audio_to_waveform(b"") is None
+    assert stt.decode_audio_to_waveform(b"too_short") is None
+
+    # 2. Test raw PCM16 buffer decoding
+    raw_pcm = (np.sin(np.linspace(0, 100, 3200)) * 10000).astype(np.int16).tobytes()
+    waveform = stt.decode_audio_to_waveform(raw_pcm)
+    assert waveform is not None
+    assert isinstance(waveform, np.ndarray)
+    assert waveform.dtype == np.float32
+    assert len(waveform) == 3200
+
+    # 3. Test fallback mock transcription
+    segments = stt.transcribe_offline_audio(b"short_bytes")
+    assert len(segments) == 2
+    assert "start_ms" in segments[0]
+    assert "end_ms" in segments[0]
+    assert "text" in segments[0]
+    assert segments[0]["confidence"] > 0.9
