@@ -31,7 +31,7 @@ class TranscriptionSessionUseCases:
         meeting_repo: IMeetingRepository,
         member_repo: IMemberRepository,
         storage_provider: IStorageProvider,
-        workspace_repo: IWorkspaceRepository | None = None,
+        workspace_repo: IWorkspaceRepository,
     ) -> None:
         self.session_repo = session_repo
         self.segment_repo = segment_repo
