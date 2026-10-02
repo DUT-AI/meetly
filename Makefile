@@ -19,17 +19,17 @@ help:
 	@echo "  make lint           - Run formatting, linting, and checks"
 
 dev-api:
-	uv run uvicorn apps.api.main:app --host 0.0.0.0 --port 8001 --reload
+	uv run --no-sync uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
 
 api-dev: dev-api
 
 dev-ai:
-	PYTHONPATH=. uv run --extra ai uvicorn --app-dir apps/ai-service app.main:app --host 0.0.0.0 --port 8005 --reload
+	PYTHONPATH=. uv run --no-sync --extra ai uvicorn --app-dir apps/ai-service app.main:app --host 0.0.0.0 --port 8005 --reload
 
 ai-dev: dev-ai
 
 dev-worker:
-	uv run python apps/worker/main.py
+	uv run --no-sync python apps/worker/main.py
 
 dev-web:
 	cd ./web && pnpm dev
@@ -50,23 +50,23 @@ docker-ai-down:
 	docker compose stop ai-service && docker compose rm -f ai-service
 
 migrate:
-	uv run alembic upgrade head
+	uv run --no-sync alembic upgrade head
 
 docker-migrate:
 	docker compose exec api alembic upgrade head
 
 create-migration:
 	@if [ -z "$(DESC)" ]; then echo "Error: Please specify DESC, e.g., make create-migration DESC=\"add new table\""; exit 1; fi
-	uv run alembic revision --autogenerate -m "$(DESC)"
+	uv run --no-sync alembic revision --autogenerate -m "$(DESC)"
 
 test:
-	uv run pytest tests/
+	uv run --no-sync pytest tests/
 
 ruff:
-	uv run ruff format .
-	uv run ruff check --fix .
+	uv run --no-sync ruff format .
+	uv run --no-sync ruff check --fix .
 
 check:
-	uv run mypy core modules apps
+	uv run --no-sync mypy core modules apps
 
 lint: ruff check

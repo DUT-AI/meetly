@@ -52,3 +52,6 @@ apps/api/assets/
 # Web docs
 web/AGENTS.md
 web/CLAUDE.md
+
+# Documentation directory
+docs/
