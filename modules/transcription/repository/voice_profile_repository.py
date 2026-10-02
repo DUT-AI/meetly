@@ -15,23 +15,29 @@ class SqlVoiceProfileRepository(IVoiceProfileRepository):
     async def get_by_user_id(
         self, workspace_id: str, user_id: str
     ) -> VoiceProfileEntity | None:
-        stmt = select(MemberVoiceProfileModel).where(
-            MemberVoiceProfileModel.workspace_id == workspace_id,
-            MemberVoiceProfileModel.user_id == user_id,
-        )
-        result = await self.session.execute(stmt)
-        model = result.scalar_one_or_none()
-        return model.to_entity() if model else None
+        try:
+            stmt = select(MemberVoiceProfileModel).where(
+                MemberVoiceProfileModel.workspace_id == workspace_id,
+                MemberVoiceProfileModel.user_id == user_id,
+            )
+            result = await self.session.execute(stmt)
+            model = result.scalar_one_or_none()
+            return model.to_entity() if model else None
+        except Exception as e:
+            return None
 
     async def list_by_workspace(self, workspace_id: str) -> list[VoiceProfileEntity]:
-        stmt = (
-            select(MemberVoiceProfileModel)
-            .where(MemberVoiceProfileModel.workspace_id == workspace_id)
-            .order_by(MemberVoiceProfileModel.member_name.asc())
-        )
-        result = await self.session.execute(stmt)
-        models = result.scalars().all()
-        return [m.to_entity() for m in models]
+        try:
+            stmt = (
+                select(MemberVoiceProfileModel)
+                .where(MemberVoiceProfileModel.workspace_id == workspace_id)
+                .order_by(MemberVoiceProfileModel.member_name.asc())
+            )
+            result = await self.session.execute(stmt)
+            models = result.scalars().all()
+            return [m.to_entity() for m in models]
+        except Exception as e:
+            return []
 
     async def save(
         self,

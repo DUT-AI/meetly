@@ -19,7 +19,7 @@ help:
 	@echo "  make lint           - Run formatting, linting, and checks"
 
 dev-api:
-	uv run uvicorn apps.api.main:app --host 0.0.0.0 --port 8000 --reload
+	uv run uvicorn apps.api.main:app --host 0.0.0.0 --port 8001 --reload
 
 api-dev: dev-api
 
