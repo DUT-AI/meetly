@@ -46,10 +46,10 @@ class OfflineMeetingUseCase:
         member_repo: IMemberRepository,
         whisper_engine: FasterWhisperEngine,
         task_extractor: QwenTaskExtractorService,
-        offline_stt: OfflineSTTProcessor | None = None,
-        task_repo: ITaskRepository | None = None,
-        project_repo: IProjectRepository | None = None,
-        manage_client: ManageClient | None = None,
+        offline_stt: OfflineSTTProcessor = None,  # type: ignore[assignment]
+        task_repo: ITaskRepository = None,  # type: ignore[assignment]
+        project_repo: IProjectRepository = None,  # type: ignore[assignment]
+        manage_client: ManageClient = None,  # type: ignore[assignment]
     ) -> None:
         self.session_repo = session_repo
         self.segment_repo = segment_repo

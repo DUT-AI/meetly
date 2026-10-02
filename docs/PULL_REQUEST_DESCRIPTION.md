@@ -27,7 +27,7 @@ The core orchestration is implemented in `modules/transcription/use_cases/offlin
 
 ### C3: 192-Dimensional Centroid Voicebank Matching
 - **Status:** Fully Implemented.
-- **Details:** `VoicebankMatcher` in `modules/transcription/ai/voicebank_matcher.py` extracts 192-dimensional acoustic embeddings (48 Mel filterbanks $\times$ 4 statistical moments: mean, std, min, max) and matches speaker turns against workspace member centroid profiles using Cosine similarity ($\ge 0.72$). Single-member workspace fallback is implemented to prevent generic "Diễn giả 1" labels.
+- **Details:** `VoicebankMatcher` in `modules/transcription/ai/voicebank_matcher.py` extracts 192-dimensional acoustic embeddings (48 Mel filterbanks $\times$ 4 statistical moments: mean, std, min, max) and matches speaker turns against workspace member centroid profiles using Cosine similarity ($\ge 0.65$, default `DEFAULT_SIMILARITY_THRESHOLD = 0.65`). Single-member workspace fallback is implemented to prevent generic "Diễn giả 1" labels.
 - **Files:** `modules/transcription/ai/voicebank_matcher.py`, `modules/transcription/use_cases/offline_meeting_use_case.py`.
 
 ### C4: Qwen2.5-3B Task Extraction with Multi-Assignees & Relative Deadlines
