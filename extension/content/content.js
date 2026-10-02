@@ -878,7 +878,7 @@
     try {
       const storageData = await chrome.storage.local.get('settings');
       const settings = storageData.settings || {};
-      const serverUrl = settings.serverUrl || 'https://meetly.dutai.io.vn';
+      const serverUrl = settings.serverUrl || 'http://localhost:8000';
       activeWorkspaceId = settings.workspaceId || '';
       activeMeetingId = settings.meetingId || '';
 
@@ -925,15 +925,15 @@
         }
       });
 
-      // Nếu có Workspace ID và Meeting ID, báo Service Worker khởi động phiên
-      if (activeWorkspaceId && activeMeetingId) {
-        streamPort.postMessage({
-          type: 'START_STREAMING',
-          workspaceId: activeWorkspaceId,
-          meetingId: activeMeetingId,
-          serverUrl: serverUrl,
-        });
-      }
+      // Báo Service Worker khởi động phiên streaming (kèm mã phòng Google Meet)
+      const roomCode = window.location.pathname.replace(/^\/+|\/+$/g, '');
+      streamPort.postMessage({
+        type: 'START_STREAMING',
+        workspaceId: activeWorkspaceId,
+        meetingId: activeMeetingId,
+        serverUrl: serverUrl,
+        roomCode: roomCode,
+      });
 
       const inputSampleRate = audioCtx.sampleRate;
       const streamSeqByStream = { 1: 0, 2: 0 };

@@ -1,9 +1,10 @@
 /**
- * Meetly - Popup Controller
- * Điều khiển trạng thái ghi âm và cài đặt từ Chrome Toolbar Popup
+ * Meetly - Popup Controller v1.1
+ * Giao diện hiện đại, tự động đồng bộ Workspace & Meeting từ Backend qua Service Worker
  */
 
 document.addEventListener('DOMContentLoaded', async () => {
+  // Elements
   const meetingCodeEl = document.getElementById('meetingCode');
   const statusLabelEl = document.getElementById('statusLabel');
   const statusDotEl = document.getElementById('statusDot');
@@ -13,6 +14,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnStop = document.getElementById('btnStop');
   const activeGroup = document.getElementById('activeGroup');
 
+  const btnRefresh = document.getElementById('btnRefresh');
+  const selWorkspace = document.getElementById('selWorkspace');
+  const selMeeting = document.getElementById('selMeeting');
+  const btnCreateMeeting = document.getElementById('btnCreateMeeting');
+  const btnSyncTab = document.getElementById('btnSyncTab');
+
   const chkRecordMic = document.getElementById('chkRecordMic');
   const chkAutoDownload = document.getElementById('chkAutoDownload');
   const txtServerUrl = document.getElementById('txtServerUrl');
@@ -20,101 +27,339 @@ document.addEventListener('DOMContentLoaded', async () => {
   const txtMeetingId = document.getElementById('txtMeetingId');
   const txtAuthToken = document.getElementById('txtAuthToken');
   const authStatusBadge = document.getElementById('authStatusBadge');
-
-  let activeMeetTab = null;
+  const linkWeb = document.getElementById('linkWeb');
 
   const btnPresetLocal = document.getElementById('btnPresetLocal');
   const btnPresetProd = document.getElementById('btnPresetProd');
+
+  let activeMeetTab = null;
+  let activeRoomCode = '';
+  let detectedWsFromTab = '';
+  let detectedMeetFromTab = '';
 
   // 1. Tải cài đặt đã lưu
   const { settings = {} } = await chrome.storage.local.get('settings');
   if (settings.recordMic !== undefined) chkRecordMic.checked = settings.recordMic;
   if (settings.autoDownload !== undefined) chkAutoDownload.checked = settings.autoDownload;
-  if (settings.serverUrl) {
-    txtServerUrl.value = settings.serverUrl;
-  } else {
-    txtServerUrl.value = 'http://localhost:8000';
-  }
-  if (settings.workspaceId && txtWorkspaceId) txtWorkspaceId.value = settings.workspaceId;
-  if (settings.meetingId && txtMeetingId) txtMeetingId.value = settings.meetingId;
-  if (settings.authToken && txtAuthToken) txtAuthToken.value = settings.authToken;
+  txtServerUrl.value = settings.serverUrl || 'http://localhost:8000';
+  if (settings.workspaceId) txtWorkspaceId.value = settings.workspaceId;
+  if (settings.meetingId) txtMeetingId.value = settings.meetingId;
+  if (settings.authToken) txtAuthToken.value = settings.authToken;
 
-  // Kiểm tra trạng thái xác thực
+  function updateWebLink() {
+    if (!linkWeb) return;
+    const sUrl = txtServerUrl.value.trim();
+    if (sUrl.includes('localhost') || sUrl.includes('127.0.0.1')) {
+      linkWeb.href = 'http://localhost:3000';
+    } else {
+      linkWeb.href = 'https://meetly.dutai.io.vn';
+    }
+  }
+  updateWebLink();
+
+  // 2. Phân tích tab hiện tại
+  async function detectActiveTab() {
+    const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+    const currentTab = tabs[0];
+    if (!currentTab || !currentTab.url) return;
+
+    if (currentTab.url.includes('meet.google.com')) {
+      activeMeetTab = currentTab;
+      try {
+        const urlObj = new URL(currentTab.url);
+        activeRoomCode = urlObj.pathname.replace(/^\/+|\/+$/g, '');
+        meetingCodeEl.textContent = activeRoomCode ? `Google Meet: ${activeRoomCode}` : 'Trang chủ Google Meet';
+        statusLabelEl.textContent = 'SẴN SÀNG';
+        statusDotEl.className = 'status-dot active';
+        btnStart.disabled = false;
+      } catch (e) {}
+    } else if (currentTab.url.includes('/workspaces/')) {
+      // Đang ở trên Meetly Web
+      try {
+        const urlObj = new URL(currentTab.url);
+        const parts = urlObj.pathname.split('/');
+        const wsIdx = parts.indexOf('workspaces');
+        if (wsIdx !== -1 && parts[wsIdx + 1]) {
+          detectedWsFromTab = parts[wsIdx + 1];
+        }
+        const meetIdx = parts.indexOf('meetings');
+        if (meetIdx !== -1 && parts[meetIdx + 1]) {
+          detectedMeetFromTab = parts[meetIdx + 1];
+        }
+        meetingCodeEl.textContent = `Meetly Web (Đã nhận diện tab)`;
+        statusLabelEl.textContent = 'MEETLY WEB';
+        statusDotEl.className = 'status-dot';
+      } catch (e) {}
+    } else {
+      // Tìm xem có tab Meet nào khác không
+      const meetTabs = await chrome.tabs.query({ url: 'https://meet.google.com/*' });
+      if (meetTabs.length > 0) {
+        activeMeetTab = meetTabs[0];
+        try {
+          const urlObj = new URL(activeMeetTab.url);
+          activeRoomCode = urlObj.pathname.replace(/^\/+|\/+$/g, '');
+        } catch (e) {}
+        meetingCodeEl.textContent = activeRoomCode ? `Phát hiện Meet: ${activeRoomCode}` : 'Phát hiện Google Meet ở tab khác';
+        statusLabelEl.textContent = 'CÓ MEET Ở TAB KHÁC';
+        statusDotEl.className = 'status-dot active';
+        btnStart.disabled = false;
+      } else {
+        meetingCodeEl.textContent = 'Mở Google Meet để ghi âm';
+        statusLabelEl.textContent = 'CHƯA VÀO MEET';
+        statusDotEl.className = 'status-dot';
+      }
+    }
+  }
+  await detectActiveTab();
+
+  function extractList(data) {
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.documents)) return data.documents;
+    if (data && Array.isArray(data.items)) return data.items;
+    return [];
+  }
+
+  // 3. Nạp danh sách Workspace qua Service Worker
+  function loadWorkspaces() {
+    const sUrl = txtServerUrl.value.trim() || 'http://localhost:8000';
+    selWorkspace.innerHTML = '<option value="">-- Đang nạp danh sách Workspace... --</option>';
+
+    chrome.runtime.sendMessage({ type: 'GET_WORKSPACES', serverUrl: sUrl }, (res) => {
+      try {
+        if (!res || !res.success) {
+          const errMsg = res ? res.error : 'Không nhận được phản hồi';
+          selWorkspace.innerHTML = `<option value="">-- ${errMsg} --</option>`;
+          return;
+        }
+
+        const workspaces = extractList(res.workspaces);
+        if (workspaces.length === 0) {
+          selWorkspace.innerHTML = '<option value="">-- Bạn chưa có Workspace nào --</option>';
+          return;
+        }
+
+        selWorkspace.innerHTML = '';
+        workspaces.forEach((ws) => {
+          const opt = document.createElement('option');
+          opt.value = ws.id;
+          opt.textContent = `${ws.name || ws.id}`;
+          selWorkspace.appendChild(opt);
+        });
+
+        // Ưu tiên chọn: tab hiện tại -> ID đã lưu -> workspace đầu tiên
+        const targetWs = detectedWsFromTab || txtWorkspaceId.value.trim() || workspaces[0].id;
+        const matched = workspaces.find((w) => w.id === targetWs);
+        if (matched) {
+          selWorkspace.value = matched.id;
+          txtWorkspaceId.value = matched.id;
+        } else {
+          selWorkspace.value = workspaces[0].id;
+          txtWorkspaceId.value = workspaces[0].id;
+        }
+        saveSettings();
+
+        loadMeetings(selWorkspace.value);
+      } catch (err) {
+        console.error('[Meetly Popup] Lỗi nạp workspace:', err);
+        selWorkspace.innerHTML = `<option value="">-- Lỗi hiển thị: ${err.message} --</option>`;
+      }
+    });
+  }
+
+  // 4. Nạp danh sách Meetings qua Service Worker
+  function loadMeetings(wsId) {
+    if (!wsId) return;
+    const sUrl = txtServerUrl.value.trim() || 'http://localhost:8000';
+    selMeeting.innerHTML = '<option value="">-- Đang tải danh sách cuộc họp... --</option>';
+
+    chrome.runtime.sendMessage({ type: 'GET_MEETINGS', serverUrl: sUrl, workspaceId: wsId }, (res) => {
+      try {
+        if (!res || !res.success) {
+          const errMsg = res ? res.error : 'Không nhận được phản hồi';
+          selMeeting.innerHTML = `<option value="">-- ${errMsg} --</option>`;
+          return;
+        }
+
+        const meetings = extractList(res.meetings);
+        selMeeting.innerHTML = '';
+
+        if (activeRoomCode) {
+          const newOpt = document.createElement('option');
+          newOpt.value = '__CREATE_NEW_FOR_ROOM__';
+          newOpt.textContent = `➕ Tạo cuộc họp mới: Google Meet (${activeRoomCode})`;
+          selMeeting.appendChild(newOpt);
+        }
+
+        meetings.forEach((m) => {
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = `${m.title || 'Cuộc họp không tên'}`;
+          selMeeting.appendChild(opt);
+        });
+
+        if (meetings.length === 0 && !activeRoomCode) {
+          const emptyOpt = document.createElement('option');
+          emptyOpt.value = '';
+          emptyOpt.textContent = '-- Chưa có cuộc họp nào (Bấm ➕ để tạo) --';
+          selMeeting.appendChild(emptyOpt);
+        }
+
+        // Ưu tiên chọn: tab hiện tại -> meeting trùng roomCode -> meeting đã lưu -> meeting đầu tiên
+        const targetMeet = detectedMeetFromTab || txtMeetingId.value.trim();
+        const matched = meetings.find((m) => m.id === targetMeet);
+        if (matched) {
+          selMeeting.value = matched.id;
+          txtMeetingId.value = matched.id;
+        } else if (activeRoomCode) {
+          const roomMatched = meetings.find((m) => m.title && m.title.includes(activeRoomCode));
+          if (roomMatched) {
+            selMeeting.value = roomMatched.id;
+            txtMeetingId.value = roomMatched.id;
+          } else {
+            selMeeting.value = '__CREATE_NEW_FOR_ROOM__';
+          }
+        } else if (meetings.length > 0) {
+          selMeeting.value = meetings[0].id;
+          txtMeetingId.value = meetings[0].id;
+        }
+        saveSettings();
+      } catch (err) {
+        console.error('[Meetly Popup] Lỗi nạp meetings:', err);
+        selMeeting.innerHTML = `<option value="">-- Lỗi hiển thị: ${err.message} --</option>`;
+      }
+    });
+  }
+
+  // 5. Kiểm tra trạng thái Token
   function checkAuthStatus() {
     const sUrl = txtServerUrl.value.trim() || 'http://localhost:8000';
+    updateWebLink();
     chrome.runtime.sendMessage({ type: 'CHECK_AUTH', serverUrl: sUrl }, (res) => {
       if (res && res.hasToken) {
-        authStatusBadge.textContent = '✓ Đã kết nối token';
-        authStatusBadge.style.color = '#10b981';
+        authStatusBadge.textContent = '✓ Đã kết nối Token';
+        authStatusBadge.className = 'auth-pill connected';
+        loadWorkspaces();
       } else {
-        authStatusBadge.textContent = '⚠ Chưa có token';
-        authStatusBadge.style.color = '#f59e0b';
+        authStatusBadge.textContent = '⚠ Chưa đăng nhập';
+        authStatusBadge.className = 'auth-pill missing';
+        selWorkspace.innerHTML = '<option value="">-- Vui lòng đăng nhập Meetly Web trước --</option>';
+        selMeeting.innerHTML = '<option value="">-- Chưa có phiên đăng nhập --</option>';
       }
     });
   }
   checkAuthStatus();
 
-  // Lưu cài đặt khi thay đổi
+  // 6. Lưu cài đặt
   function saveSettings() {
     chrome.storage.local.set({
       settings: {
         recordMic: chkRecordMic.checked,
         autoDownload: chkAutoDownload.checked,
         serverUrl: txtServerUrl.value.trim() || 'http://localhost:8000',
-        workspaceId: txtWorkspaceId ? txtWorkspaceId.value.trim() : '',
-        meetingId: txtMeetingId ? txtMeetingId.value.trim() : '',
-        authToken: txtAuthToken ? txtAuthToken.value.trim() : ''
+        workspaceId: txtWorkspaceId.value.trim(),
+        meetingId: txtMeetingId.value.trim(),
+        authToken: txtAuthToken.value.trim(),
       }
     });
+    updateWebLink();
+  }
+
+  // 7. Event Handlers
+  selWorkspace.addEventListener('change', () => {
+    txtWorkspaceId.value = selWorkspace.value;
+    saveSettings();
+    loadMeetings(selWorkspace.value);
+  });
+
+  selMeeting.addEventListener('change', async () => {
+    if (selMeeting.value === '__CREATE_NEW_FOR_ROOM__') {
+      await handleCreateMeeting();
+    } else {
+      txtMeetingId.value = selMeeting.value;
+      saveSettings();
+    }
+  });
+
+  async function handleCreateMeeting() {
+    const wsId = selWorkspace.value || txtWorkspaceId.value.trim();
+    if (!wsId) {
+      alert('Vui lòng chọn Workspace trước!');
+      return;
+    }
+    const sUrl = txtServerUrl.value.trim() || 'http://localhost:8000';
+    const title = activeRoomCode
+      ? `Google Meet: ${activeRoomCode}`
+      : `Google Meet (${new Date().toLocaleTimeString('vi-VN')} ${new Date().toLocaleDateString('vi-VN')})`;
+
+    btnCreateMeeting.disabled = true;
+    btnCreateMeeting.textContent = 'Đang tạo...';
+
+    chrome.runtime.sendMessage(
+      { type: 'CREATE_MEETING', serverUrl: sUrl, workspaceId: wsId, title },
+      (res) => {
+        btnCreateMeeting.disabled = false;
+        btnCreateMeeting.innerHTML = '<span>➕</span> Tạo cuộc họp mới';
+
+        if (res && res.success && res.meeting) {
+          const newId = res.meeting.id;
+          txtMeetingId.value = newId;
+          saveSettings();
+          loadMeetings(wsId);
+        } else {
+          alert('Không thể tạo cuộc họp: ' + (res ? res.error : 'Lỗi không xác định'));
+        }
+      }
+    );
+  }
+
+  btnCreateMeeting.addEventListener('click', handleCreateMeeting);
+
+  btnSyncTab.addEventListener('click', async () => {
+    await detectActiveTab();
+    if (detectedWsFromTab) {
+      txtWorkspaceId.value = detectedWsFromTab;
+      if (detectedMeetFromTab) txtMeetingId.value = detectedMeetFromTab;
+      saveSettings();
+      loadWorkspaces();
+    } else if (activeRoomCode) {
+      loadWorkspaces();
+    } else {
+      alert('Tab hiện tại không phải là Meetly Web hoặc Google Meet.');
+    }
+  });
+
+  btnRefresh.addEventListener('click', () => {
+    btnRefresh.style.transform = 'rotate(180deg)';
+    setTimeout(() => { btnRefresh.style.transform = 'none'; }, 300);
     checkAuthStatus();
-  }
+  });
 
-  if (btnPresetLocal) {
-    btnPresetLocal.addEventListener('click', () => {
-      txtServerUrl.value = 'http://localhost:8000';
-      saveSettings();
-    });
-  }
+  btnPresetLocal.addEventListener('click', () => {
+    txtServerUrl.value = 'http://localhost:8000';
+    saveSettings();
+    checkAuthStatus();
+  });
 
-  if (btnPresetProd) {
-    btnPresetProd.addEventListener('click', () => {
-      txtServerUrl.value = 'https://meetly.dutai.io.vn';
-      saveSettings();
-    });
-  }
+  btnPresetProd.addEventListener('click', () => {
+    txtServerUrl.value = 'https://meetly.dutai.io.vn';
+    saveSettings();
+    checkAuthStatus();
+  });
 
   chkRecordMic.addEventListener('change', saveSettings);
   chkAutoDownload.addEventListener('change', saveSettings);
-  txtServerUrl.addEventListener('input', saveSettings);
-  if (txtWorkspaceId) txtWorkspaceId.addEventListener('input', saveSettings);
-  if (txtMeetingId) txtMeetingId.addEventListener('input', saveSettings);
-  if (txtAuthToken) txtAuthToken.addEventListener('input', saveSettings);
+  txtServerUrl.addEventListener('input', () => { saveSettings(); checkAuthStatus(); });
+  txtWorkspaceId.addEventListener('input', () => {
+    saveSettings();
+    if (selWorkspace) selWorkspace.value = txtWorkspaceId.value.trim();
+  });
+  txtMeetingId.addEventListener('input', () => {
+    saveSettings();
+    if (selMeeting) selMeeting.value = txtMeetingId.value.trim();
+  });
+  txtAuthToken.addEventListener('input', () => { saveSettings(); checkAuthStatus(); });
 
-  // 2. Tìm tab Google Meet đang active hoặc gần nhất
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  const currentTab = tabs[0];
-
-  if (currentTab && currentTab.url && currentTab.url.includes('meet.google.com')) {
-    activeMeetTab = currentTab;
-    const urlObj = new URL(currentTab.url);
-    const roomCode = urlObj.pathname.replace(/^\/+|\/+$/g, '');
-    meetingCodeEl.textContent = roomCode ? `Phòng: ${roomCode}` : 'Trang chủ Google Meet';
-    statusDotEl.classList.add('active');
-  } else {
-    // Kiểm tra xem có tab Meet nào khác đang mở không
-    const meetTabs = await chrome.tabs.query({ url: 'https://meet.google.com/*' });
-    if (meetTabs.length > 0) {
-      activeMeetTab = meetTabs[0];
-      meetingCodeEl.textContent = 'Phát hiện Google Meet ở tab khác';
-      statusDotEl.classList.add('active');
-    } else {
-      meetingCodeEl.textContent = 'Không có tab Google Meet nào';
-      btnStart.disabled = true;
-      btnStart.title = 'Hãy mở một cuộc họp Google Meet trước';
-    }
-  }
-
-  // 3. Định dạng thời gian hiển thị
+  // 8. Trạng thái Timer & Recording
   function formatTime(totalSeconds) {
     const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
     const s = (totalSeconds % 60).toString().padStart(2, '0');
@@ -125,25 +370,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!state) return;
     const status = state.status || 'IDLE';
 
-    statusDotEl.className = 'status-dot';
-
     if (status === 'RECORDING') {
-      statusDotEl.classList.add('recording');
+      statusDotEl.className = 'status-dot recording';
       statusLabelEl.textContent = 'ĐANG GHI ÂM';
       btnStart.style.display = 'none';
       activeGroup.style.display = 'flex';
       btnPause.textContent = 'Tạm dừng';
     } else if (status === 'PAUSED') {
-      statusDotEl.classList.add('active');
+      statusDotEl.className = 'status-dot active';
       statusLabelEl.textContent = 'TẠM DỪNG';
       btnStart.style.display = 'none';
       activeGroup.style.display = 'flex';
       btnPause.textContent = 'Tiếp tục';
     } else {
-      statusLabelEl.textContent = activeMeetTab ? 'SẴN SÀNG' : 'CHƯA VÀO MEET';
+      if (activeMeetTab) {
+        statusLabelEl.textContent = 'SẴN SÀNG';
+        statusDotEl.className = 'status-dot active';
+        btnStart.disabled = false;
+      }
       btnStart.style.display = 'flex';
       activeGroup.style.display = 'none';
-      if (activeMeetTab) btnStart.disabled = false;
     }
 
     if (state.durationSeconds !== undefined) {
@@ -152,12 +398,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   chrome.runtime.sendMessage({ type: 'GET_STATE' }, (res) => {
-    if (res && res.state) {
-      renderState(res.state);
-    }
+    if (res && res.state) renderState(res.state);
   });
 
-  // 4. Lắng nghe cập nhật từ Background
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg.type === 'TIMER_TICK') {
       timerDisplayEl.textContent = formatTime(msg.durationSeconds);
@@ -170,11 +413,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // 5. Nút bấm trên Popup
   btnStart.addEventListener('click', async () => {
-    if (!activeMeetTab) return;
-    // Chuyển tới tab Google Meet để người dùng thao tác trên Floating Widget
-    await chrome.tabs.update(activeMeetTab.id, { active: true });
-    window.close();
+    if (activeMeetTab) {
+      await chrome.tabs.update(activeMeetTab.id, { active: true });
+      window.close();
+    } else {
+      alert('Vui lòng mở một tab Google Meet trước khi ghi âm!');
+    }
   });
 });
