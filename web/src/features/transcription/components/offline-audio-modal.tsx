@@ -33,13 +33,7 @@ interface OfflineAudioModalProps {
   onSuccess?: () => void;
 }
 
-export function OfflineAudioModal({
-  isOpen,
-  onClose,
-  workspaceId,
-  meetingId,
-  onSuccess,
-}: OfflineAudioModalProps) {
+export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onSuccess }: OfflineAudioModalProps) {
   const [activeTab, setActiveTab] = useState<'upload' | 'record'>('upload');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -76,7 +70,19 @@ export function OfflineAudioModal({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream);
+
+      let mimeType = 'audio/webm';
+      if (typeof MediaRecorder !== 'undefined') {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -86,7 +92,7 @@ export function OfflineAudioModal({
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
         setRecordedBlob(audioBlob);
         stream.getTracks().forEach((track) => track.stop());
       };
@@ -119,8 +125,10 @@ export function OfflineAudioModal({
         toast.error('Vui lòng thu âm trước khi xử lý');
         return;
       }
-      fileToUpload = new File([recordedBlob], `offline_meeting_rec_${Date.now()}.wav`, {
-        type: 'audio/wav',
+      const isMp4 = recordedBlob.type.includes('mp4');
+      const ext = isMp4 ? 'mp4' : 'webm';
+      fileToUpload = new File([recordedBlob], `offline_meeting_rec_${Date.now()}.${ext}`, {
+        type: recordedBlob.type || 'audio/webm',
       });
     }
 
@@ -146,7 +154,8 @@ export function OfflineAudioModal({
       if (onSuccess) onSuccess();
     } catch (err: any) {
       clearInterval(stepInterval);
-      toast.error(err.response?.data?.detail || 'Lỗi khi xử lý file cuộc họp offline.');
+      const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message || 'Lỗi khi xử lý file cuộc họp offline.';
+      toast.error(errorMsg);
       setIsProcessing(false);
     }
   };
@@ -243,9 +252,7 @@ export function OfflineAudioModal({
                         <Mic className="w-6 h-6" />
                       </div>
                     </div>
-                    <div className="text-2xl font-mono font-bold text-red-500 tracking-wider">
-                      {formatSec(recordingSeconds)}
-                    </div>
+                    <div className="text-2xl font-mono font-bold text-red-500 tracking-wider">{formatSec(recordingSeconds)}</div>
                     <p className="text-xs text-muted-foreground">Đang thu âm âm thanh phòng họp trực tiếp...</p>
                     <Button variant="destructive" onClick={stopRecording} className="gap-2">
                       <Square className="w-4 h-4 fill-current" /> Dừng thu âm
@@ -317,8 +324,8 @@ export function OfflineAudioModal({
                       isDone
                         ? 'bg-emerald-500/5 border-emerald-500/30'
                         : isCurrent
-                        ? 'bg-blue-500/10 border-blue-500/40 shadow-sm'
-                        : 'opacity-50 border-muted'
+                          ? 'bg-blue-500/10 border-blue-500/40 shadow-sm'
+                          : 'opacity-50 border-muted'
                     }`}
                   >
                     <div className="mt-0.5">
@@ -348,13 +355,10 @@ export function OfflineAudioModal({
             <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
               <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
               <div>
-                <h4 className="font-bold text-sm text-emerald-950 dark:text-emerald-100">
-                  Xử Lý Hoàn Tất Bằng Meetly AI Pipeline
-                </h4>
+                <h4 className="font-bold text-sm text-emerald-950 dark:text-emerald-100">Xử Lý Hoàn Tất Bằng Meetly AI Pipeline</h4>
                 <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                  Đã bóc băng {processedResult.segments_count} phân đoạn, định danh{' '}
-                  {processedResult.speakers?.length || 0} người nói và tự động trích xuất{' '}
-                  {processedResult.extracted_tasks?.length || 0} Action Items.
+                  Đã bóc băng {processedResult.segments_count} phân đoạn, định danh {processedResult.speakers?.length || 0} người nói và tự
+                  động trích xuất {processedResult.extracted_tasks?.length || 0} Action Items.
                 </p>
               </div>
             </div>
@@ -369,14 +373,9 @@ export function OfflineAudioModal({
               </h4>
               <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
                 {processedResult.extracted_tasks?.map((task: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-xl border bg-card hover:border-blue-500/40 transition-colors shadow-sm space-y-1.5"
-                  >
+                  <div key={idx} className="p-3 rounded-xl border bg-card hover:border-blue-500/40 transition-colors shadow-sm space-y-1.5">
                     <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-foreground line-clamp-1">
-                        {task.task_title}
-                      </p>
+                      <p className="text-sm font-semibold text-foreground line-clamp-1">{task.task_title}</p>
                       <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-200 flex-shrink-0">
                         {(task.confidence * 100).toFixed(0)}% tin cậy
                       </Badge>
@@ -392,8 +391,7 @@ export function OfflineAudioModal({
                       </span>
                       <span className="flex items-center gap-1 text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded">
                         <Clock className="w-3 h-3 text-purple-500" />
-                        {Math.floor(task.source_timestamp_ms / 60000)}m
-                        {Math.floor((task.source_timestamp_ms % 60000) / 1000)}s
+                        {Math.floor(task.source_timestamp_ms / 60000)}m{Math.floor((task.source_timestamp_ms % 60000) / 1000)}s
                       </span>
                     </div>
                   </div>

@@ -8,6 +8,7 @@ Target Hardware:
 - Training Time: ~1.5 - 2.5 hours for 3 epochs (1,080 samples).
 """
 
+import inspect
 import os
 import sys
 from pathlib import Path
@@ -22,6 +23,11 @@ from transformers import (
     TrainingArguments,
 )
 from trl import SFTTrainer
+try:
+    from trl import SFTConfig
+    has_sft_config = True
+except ImportError:
+    has_sft_config = False
 
 # Base model identifier
 MODEL_ID = os.getenv("BASE_MODEL_ID", "Qwen/Qwen2.5-3B-Instruct")
@@ -66,17 +72,17 @@ def train():
         tokenizer.pad_token = tokenizer.eos_token
 
     # 3. Load Base Model in 4-bit
-    device_map = "auto" if torch.cuda.is_available() else "cpu"
+    device_map = {"": 0} if torch.cuda.is_available() else "cpu"
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_ID,
         quantization_config=bnb_config if torch.cuda.is_available() else None,
         device_map=device_map,
-        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+        torch_dtype=compute_dtype if "compute_dtype" in locals() else (torch.float16 if torch.cuda.is_available() else torch.float32),
         trust_remote_code=True,
     )
 
     if torch.cuda.is_available():
-        model = prepare_model_for_kbit_training(model)
+        model = prepare_model_for_kbit_training(model, use_gradient_checkpointing=True)
 
     # 4. LoRA Adapter Configuration
     peft_config = LoraConfig(
@@ -104,49 +110,61 @@ def train():
         data_files={"train": train_file, "validation": val_file},
     )
 
-    def formatting_prompts_func(example):
-        output_texts = []
-        for msgs in example["messages"]:
-            text = tokenizer.apply_chat_template(
-                msgs,
-                tokenize=False,
-                add_generation_prompt=False,
-            )
-            output_texts.append(text)
-        return output_texts
+    # 6. Training Arguments / SFTConfig
+    ConfigClass = SFTConfig if has_sft_config else TrainingArguments
+    config_params = inspect.signature(ConfigClass.__init__).parameters
 
-    # 6. Training Arguments
-    training_args = TrainingArguments(
-        output_dir=OUTPUT_DIR,
-        per_device_train_batch_size=2,
-        gradient_accumulation_steps=4,
-        warmup_ratio=0.03,
-        num_train_epochs=3,
-        learning_rate=2e-4,
-        lr_scheduler_type="cosine",
-        fp16=torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
-        bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
-        logging_steps=10,
-        eval_strategy="steps",
-        eval_steps=50,
-        save_strategy="steps",
-        save_steps=100,
-        save_total_limit=2,
-        optim="paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
-        report_to="none",
-    )
+    training_kwargs = {
+        "output_dir": OUTPUT_DIR,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 8,
+        "warmup_steps": 15,
+        "num_train_epochs": 1,
+        "learning_rate": 3e-4,
+        "lr_scheduler_type": "cosine",
+        "fp16": torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
+        "bf16": torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
+        "logging_steps": 10,
+        "eval_steps": 25,
+        "save_strategy": "steps",
+        "save_steps": 50,
+        "save_total_limit": 2,
+        "optim": "paged_adamw_8bit" if torch.cuda.is_available() else "adamw_torch",
+        "gradient_checkpointing": True,
+        "gradient_checkpointing_kwargs": {"use_reentrant": False},
+        "report_to": "none",
+    }
+    eval_key = "eval_strategy" if "eval_strategy" in config_params else "evaluation_strategy"
+    training_kwargs[eval_key] = "steps"
 
-    # 7. SFT Trainer
-    trainer = SFTTrainer(
-        model=model,
-        train_dataset=dataset["train"],
-        eval_dataset=dataset["validation"],
-        peft_config=peft_config,
-        formatting_func=formatting_prompts_func,
-        max_seq_length=2048,
-        tokenizer=tokenizer,
-        args=training_args,
-    )
+    if has_sft_config:
+        if "max_length" in config_params:
+            training_kwargs["max_length"] = 2048
+        elif "max_seq_length" in config_params:
+            training_kwargs["max_seq_length"] = 2048
+
+    training_args = ConfigClass(**training_kwargs)
+
+    # 7. SFT Trainer (Safely handles PeftModel vs Base Model and native messages)
+    is_already_peft = hasattr(model, "peft_config") or hasattr(model, "active_peft_config")
+
+    trainer_params = inspect.signature(SFTTrainer.__init__).parameters
+    trainer_kwargs = {
+        "model": model,
+        "train_dataset": dataset["train"],
+        "eval_dataset": dataset["validation"],
+        "peft_config": None if is_already_peft else peft_config,
+        "args": training_args,
+    }
+    if "processing_class" in trainer_params:
+        trainer_kwargs["processing_class"] = tokenizer
+    elif "tokenizer" in trainer_params:
+        trainer_kwargs["tokenizer"] = tokenizer
+
+    if "max_seq_length" in trainer_params:
+        trainer_kwargs["max_seq_length"] = 2048
+
+    trainer = SFTTrainer(**trainer_kwargs)
 
     print("\nStarting Training...")
     trainer.train()

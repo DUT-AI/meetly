@@ -36,12 +36,12 @@ export const AudioTimelinePlayer = forwardRef<AudioTimelinePlayerRef, AudioTimel
           audioRef.current.currentTime = targetSec;
           setCurrentTime(targetSec);
           if (!isPlaying) {
-            audioRef.current.play().catch(() => { });
+            audioRef.current.play().catch(() => {});
           }
         }
       },
       play: () => {
-        audioRef.current?.play().catch(() => { });
+        audioRef.current?.play().catch(() => {});
       },
       pause: () => {
         audioRef.current?.pause();
@@ -70,7 +70,7 @@ export const AudioTimelinePlayer = forwardRef<AudioTimelinePlayerRef, AudioTimel
       if (isPlaying) {
         audioRef.current.pause();
       } else {
-        audioRef.current.play().catch(() => { });
+        audioRef.current.play().catch(() => {});
       }
     };
 

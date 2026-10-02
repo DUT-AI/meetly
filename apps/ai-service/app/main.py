@@ -10,8 +10,25 @@ from fastapi.middleware.cors import CORSMiddleware
 from loguru import logger
 from pydantic import BaseModel, Field
 
+from app.task_extractor import QwenTaskExtractor
 from modules.transcription.ai.stt import WhisperASREngine
 from modules.transcription.ai.translator import SeamlessTranslationEngine
+
+
+class ExtractTasksRequest(BaseModel):
+    transcript_text: str = Field(..., description="Full meeting transcript text")
+
+
+class ExtractedTaskDTO(BaseModel):
+    task_title: str
+    assignee: str | None = None
+    deadline: str | None = None
+    source_timestamp_ms: int = 0
+    confidence: float = 0.95
+
+
+class ExtractTasksResponse(BaseModel):
+    tasks: list[ExtractedTaskDTO]
 
 
 class TranslateRequest(BaseModel):
@@ -50,6 +67,7 @@ class TranscribeResponse(BaseModel):
     words: list[dict[str, Any]]
     confidence: float
     language: str
+    segments: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class TranscribeAndTranslateRequest(BaseModel):
@@ -76,23 +94,30 @@ class TranscribeAndTranslateResponse(BaseModel):
 
 engine: SeamlessTranslationEngine | None = None
 asr_engine: WhisperASREngine | None = None
+task_extractor: QwenTaskExtractor | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    global engine, asr_engine
-    logger.info("[SeamlessApp] Starting SeamlessTranslation & WhisperASR Service...")
+    global engine, asr_engine, task_extractor
+    logger.info("[SeamlessApp] Starting SeamlessTranslation, WhisperASR & QwenTaskExtractor...")
     engine = SeamlessTranslationEngine()
     asr_engine = WhisperASREngine()
+    task_extractor = QwenTaskExtractor(device="cuda" if torch.cuda.is_available() else "cpu")
+    try:
+        task_extractor.load_model()
+    except Exception as e:
+        logger.warning(f"[SeamlessApp] QwenTaskExtractor eager load failed (will retry lazily): {e}")
+
     yield
     logger.info(
-        "[SeamlessApp] Shutting down SeamlessTranslation & WhisperASR Service..."
+        "[SeamlessApp] Shutting down SeamlessTranslation, WhisperASR & QwenTaskExtractor..."
     )
 
 
 app = FastAPI(
-    title="Meetly AI Microservice (Whisper large-v3 & SeamlessM4T v2)",
-    description="GPU-accelerated Vietnamese ASR and Bilingual Real-time Translation microservice",
+    title="Meetly AI Microservice (Whisper large-v3 & Qwen2.5-3B Task Extractor)",
+    description="GPU-accelerated Vietnamese ASR, Translation, and Task Extraction microservice",
     version="2.0.0",
     lifespan=lifespan,
 )
@@ -117,10 +142,38 @@ async def health_check() -> dict:
         "status": "ok",
         "engine_ready": engine.is_ready() if engine else False,
         "asr_ready": asr_engine.is_ready() if asr_engine else False,
+        "task_extractor_ready": task_extractor.is_ready() if task_extractor else False,
         "gpu_available": gpu_available,
         "gpu_name": gpu_name,
         "vram_allocated_mb": vram_alloc_mb,
     }
+
+
+@app.post("/api/v1/tasks/extract", response_model=ExtractTasksResponse)
+async def extract_tasks_endpoint(payload: ExtractTasksRequest) -> ExtractTasksResponse:
+    global task_extractor
+    if not task_extractor:
+        task_extractor = QwenTaskExtractor(device="cuda" if torch.cuda.is_available() else "cpu")
+
+    loop = asyncio.get_running_loop()
+    if not task_extractor.is_ready():
+        await loop.run_in_executor(None, task_extractor.load_model)
+
+    tasks_raw = await loop.run_in_executor(
+        None, task_extractor.extract_tasks, payload.transcript_text
+    )
+    tasks_dtos = [
+        ExtractedTaskDTO(
+            task_title=str(t.get("task_title", "")).strip(),
+            assignee=str(t.get("assignee")).strip() if t.get("assignee") else None,
+            deadline=str(t.get("deadline")).strip() if t.get("deadline") else None,
+            source_timestamp_ms=int(t.get("source_timestamp_ms", 0)),
+            confidence=float(t.get("confidence", 0.95)),
+        )
+        for t in tasks_raw
+        if t.get("task_title")
+    ]
+    return ExtractTasksResponse(tasks=tasks_dtos)
 
 
 @app.post("/api/v1/translate", response_model=TranslateResponse)
@@ -166,6 +219,7 @@ async def transcribe_audio(payload: TranscribeRequest) -> TranscribeResponse:
         words=result.get("words", []),
         confidence=result.get("confidence", 1.0),
         language=result.get("language", payload.language),
+        segments=result.get("segments", []),
     )
 
 

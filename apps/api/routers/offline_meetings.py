@@ -1,3 +1,5 @@
+from typing import Any
+
 from dishka.integrations.fastapi import FromDishka, inject
 from fastapi import (
     APIRouter,
@@ -71,6 +73,39 @@ async def process_offline_meeting_audio(
         actor_id=str(current_user.id),
     )
     return {"data": result}
+
+
+class SyncTasksRequest(BaseModel):
+    action_items: list[dict[str, Any]] | None = Field(
+        None, description="Optional custom action items list to sync"
+    )
+
+
+@router.post(
+    "/api/v1/workspaces/{workspace_id}/meetings/{meeting_id}/sync-tasks",
+    status_code=status.HTTP_200_OK,
+    response_model=dict,
+)
+@inject
+async def sync_meeting_tasks_endpoint(
+    workspace_id: str,
+    meeting_id: str,
+    current_user: CurrentUser,
+    use_case: FromDishka[OfflineMeetingUseCase],
+    payload: SyncTasksRequest | None = None,
+) -> dict:
+    """
+    Syncs extracted action items from a meeting directly into the workspace's Department Tasks board.
+    If action_items are not provided in the payload, extracts them from the stored meeting report.
+    """
+    action_items = payload.action_items if payload else None
+    result = await use_case.sync_meeting_tasks_from_report(
+        workspace_id=workspace_id,
+        meeting_id=meeting_id,
+        action_items=action_items,
+        actor_id=str(current_user.id),
+    )
+    return {"data": result, "synced_count": len(result)}
 
 
 @router.post(

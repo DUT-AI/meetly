@@ -45,8 +45,67 @@ import { useEffect, useMemo, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
+export function formatContentForTipTap(content: any): any {
+  if (!content) return '';
+  if (typeof content === 'string') return content;
+  // If it's already a TipTap document with type === 'doc'
+  if (content.type === 'doc') {
+    if (!content.content || content.content.length === 0) return '';
+    return content;
+  }
+
+  // If it's a structured meeting report object from backend (offline ASR + Qwen task extraction)
+  if (typeof content === 'object') {
+    if (content.html && typeof content.html === 'string') return content.html;
+
+    const parts: string[] = [];
+
+    if (content.summary) {
+      parts.push(`<h2>1. Tóm tắt nội dung cuộc họp</h2><p>${content.summary}</p>`);
+    }
+
+    if (content.speakers && Array.isArray(content.speakers) && content.speakers.length > 0) {
+      parts.push(
+        `<h2>2. Thành viên phát biểu</h2><ul>${content.speakers.map((s: string) => `<li><strong>${s}</strong></li>`).join('')}</ul>`,
+      );
+    }
+
+    if (content.action_items && Array.isArray(content.action_items) && content.action_items.length > 0) {
+      parts.push(`<h2>3. Danh sách nhiệm vụ & Kết luận (Action Items)</h2><ul data-type="taskList">`);
+      for (const item of content.action_items) {
+        const title = item.task_title || item.title || 'Nhiệm vụ';
+        const assignee = item.assignee || 'Chưa phân công';
+        const deadline = item.deadline ? ` (Hạn: ${item.deadline})` : '';
+        parts.push(
+          `<li data-type="taskItem" data-checked="false"><p><strong>${title}</strong> — Người thực hiện: <em>${assignee}</em>${deadline}</p></li>`,
+        );
+      }
+      parts.push(`</ul>`);
+    }
+
+    if (content.aligned_transcript || content.transcript) {
+      const transcriptText = content.aligned_transcript || content.transcript;
+      const lines = typeof transcriptText === 'string' ? transcriptText.split('\n') : [];
+      if (lines.length > 0) {
+        parts.push(`<h2>4. Trích lục hội thoại cuộc họp</h2>`);
+        for (const line of lines) {
+          if (line.trim()) {
+            parts.push(`<p>${line}</p>`);
+          }
+        }
+      }
+    }
+
+    if (parts.length > 0) {
+      return parts.join('');
+    }
+  }
+
+  return content;
+}
+
 interface MeetingReportEditorProps {
-  initialContent?: Record<string, any>;
+  initialContent?: Record<string, any> | string;
   onContentChange?: (content: Record<string, any>) => void;
   onEditorReady?: (editor: any) => void;
   readOnly?: boolean;
@@ -155,7 +214,7 @@ export const MeetingReportEditor = ({
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Link.configure({ openOnClick: false }),
     ],
-    content: initialParsedContent,
+    content: formatContentForTipTap(initialContent) || normalizeReportContent(initialContent) || '',
     editable: !readOnly,
     onUpdate: ({ editor }: { editor: any }) => {
       const json = editor.getJSON();
@@ -191,6 +250,24 @@ export const MeetingReportEditor = ({
       onEditorReadyRef.current?.(editor);
     }
   }, [editor]);
+
+  const hasLoadedContentRef = useRef(false);
+
+  // Sync content when initialContent updates externally (e.g. after AI transcription finishes)
+  useEffect(() => {
+    if (editor && initialContent && !hasLoadedContentRef.current) {
+      const formatted = formatContentForTipTap(initialContent);
+      if (formatted) {
+        const currentJson = editor.getJSON();
+        const isEmpty =
+          !currentJson.content || currentJson.content.length === 0 || (currentJson.content.length === 1 && !currentJson.content[0].content);
+        if (isEmpty) {
+          hasLoadedContentRef.current = true;
+          editor.commands.setContent(formatted);
+        }
+      }
+    }
+  }, [editor, initialContent]);
 
   if (!editor) {
     return null;
