@@ -42,11 +42,6 @@ export const transcriptionApi = {
     const response = await api.post<{ data: any }>(
       `/workspaces/${workspaceId}/meetings/${meetingId}/offline-audio`,
       formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      },
     );
     return response.data?.data ?? response.data;
   },
@@ -57,11 +52,6 @@ export const transcriptionApi = {
     const response = await api.post<{ data: any }>(
       `/workspaces/${workspaceId}/voicebank/enroll?user_id=${encodeURIComponent(userId)}&member_name=${encodeURIComponent(memberName)}`,
       formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      },
     );
     return response.data?.data ?? response.data;
   },

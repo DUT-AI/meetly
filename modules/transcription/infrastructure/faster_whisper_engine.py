@@ -39,7 +39,9 @@ class FasterWhisperEngine:
         "subscribe",
     }
 
-    DEFAULT_PROMPT = "Cuộc họp trực tuyến, báo cáo tiến độ, dự án Meetly."
+    DEFAULT_PROMPT = (
+        "Cuộc họp trực tiếp, thảo luận kỹ thuật, báo cáo tiến độ dự án Meetly, phân chia công việc trong tuần này, kế hoạch tuần này, tuần sau, hoàn thành trước thời hạn."
+    )
 
     def __init__(self, model_size_or_path: str | None = None) -> None:
         self.model_size_or_path = model_size_or_path or stt_settings.stt_model_id
@@ -123,9 +125,15 @@ class FasterWhisperEngine:
             if response.status_code == 200:
                 data = response.json()
                 text = data.get("text", "").strip()
+                from modules.transcription.ai.stt import WhisperASREngine
+
+                text = WhisperASREngine.clean_vietnamese_asr_text(text)
                 if self._is_hallucination(text):
                     return "", [], 1.0
                 words = data.get("words", [])
+                for w in words:
+                    if "word" in w:
+                        w["word"] = WhisperASREngine.clean_vietnamese_asr_text(w["word"])
                 confidence = data.get("confidence", 1.0)
                 return text, words, confidence
             else:

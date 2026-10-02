@@ -7,6 +7,14 @@ export const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
+api.interceptors.request.use((config) => {
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    if (config.headers) {
+      delete config.headers['Content-Type'];
+    }
+  }
+  return config;
+});
 
 api.interceptors.response.use(
   (response) => response,

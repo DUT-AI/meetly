@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
 import { PageError } from '@/components/page-error';
@@ -67,9 +67,12 @@ export default function MeetingReportPage() {
   const { mutate: updateMeeting, isPending: isSaving } = useUpdateMeeting(workspaceId);
   const { data: transcriptsData } = useGetTranscripts(workspaceId, meetingId);
 
+  const [pendingInsertion, setPendingInsertion] = useState<string | null>(null);
+
   const handleOfflineSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['meeting', workspaceId, meetingId] });
     queryClient.invalidateQueries({ queryKey: ['transcripts', workspaceId, meetingId] });
+    setActiveTab('report');
   };
 
   const [activeTab, setActiveTab] = useState<string>('transcript');
@@ -86,6 +89,23 @@ export default function MeetingReportPage() {
   const handleContentChange = useCallback((json: Record<string, any>) => {
     setReport(json);
   }, []);
+
+  // Process pending insertion once editor instance is mounted and ready
+  useEffect(() => {
+    if (editorInstance && pendingInsertion && meeting?.id) {
+      editorInstance.chain().focus('end').insertContent(pendingInsertion).run();
+      const updatedJson = editorInstance.getJSON();
+      setReport(updatedJson);
+      updateMeeting({
+        meetingId: meeting.id,
+        payload: {
+          report: updatedJson,
+        },
+      });
+      setPendingInsertion(null);
+      toast.success('Đã chèn nội dung vào biên bản cuộc họp');
+    }
+  }, [editorInstance, pendingInsertion, meeting?.id, updateMeeting]);
 
   if (isLoadingMeeting) return <PageLoader />;
   if (!meeting) return <PageError message="Không tìm thấy cuộc họp" />;
@@ -117,11 +137,37 @@ export default function MeetingReportPage() {
   };
 
   const handleInsertToEditor = (text: string) => {
+    if (!text || !text.trim()) return;
+
+    // Convert multi-line transcript turns into clean HTML paragraphs
+    const paragraphs = text
+      .split(/\n\n+/)
+      .map((p) => p.trim())
+      .filter(Boolean)
+      .map((p) => `<p>${p.replace(/\n/g, '<br/>')}</p>`)
+      .join('');
+
+    const htmlToInsert = paragraphs || `<p>${text}</p>`;
+
+    // Switch to Report tab so the user sees the inserted transcript immediately
+    setActiveTab('report');
+
     if (editorInstance) {
-      editorInstance.chain().focus().insertContent(`<p>${text}</p>`).run();
-      toast.success('Đã chèn nội dung vào biên bản');
+      editorInstance.chain().focus('end').insertContent(htmlToInsert).run();
+      const updatedJson = editorInstance.getJSON();
+      setReport(updatedJson);
+
+      // Auto-save to database so refreshing the page preserves the content
+      updateMeeting({
+        meetingId: meeting.id,
+        payload: {
+          report: updatedJson,
+        },
+      });
+      toast.success('Đã chèn nội dung vào biên bản cuộc họp');
     } else {
-      toast.info('Trình soạn thảo biên bản đã sẵn sàng, hãy chuyển sang tab "Biên bản cuộc họp" để xem.');
+      setPendingInsertion(htmlToInsert);
+      toast.info('Đang chuyển sang tab Biên bản cuộc họp...');
     }
   };
 
@@ -311,7 +357,11 @@ export default function MeetingReportPage() {
         </div>
 
         {/* ── Tab 1: Large Dedicated Full-Width Transcript View ── */}
-        <TabsContent value="transcript" className="m-0 flex flex-col gap-4">
+        <TabsContent
+          value="transcript"
+          forceMount={true}
+          className={cn('m-0 flex flex-col gap-4', activeTab !== 'transcript' && 'hidden')}
+        >
           <LiveTranscriptPanel
             workspaceId={workspaceId}
             meetingId={meetingId}
@@ -323,7 +373,11 @@ export default function MeetingReportPage() {
         </TabsContent>
 
         {/* ── Tab 2: Google Docs Paper Meeting Report Editor ── */}
-        <TabsContent value="report" className="m-0 flex justify-center items-start">
+        <TabsContent
+          value="report"
+          forceMount={true}
+          className={cn('m-0 flex justify-center items-start', activeTab !== 'report' && 'hidden')}
+        >
           <div className="bg-white border border-slate-300/90 shadow-md rounded-xs w-full max-w-[900px] min-h-[1100px] p-8 sm:p-16 my-2 transition-all printable-paper">
             {/* Formal Document Title Header */}
             <div className="border-b-2 border-slate-900 pb-5 mb-8">
@@ -359,7 +413,11 @@ export default function MeetingReportPage() {
         </TabsContent>
 
         {/* ── Tab 3: Attendees & Participants Grid ── */}
-        <TabsContent value="attendees" className="m-0">
+        <TabsContent
+          value="attendees"
+          forceMount={true}
+          className={cn('m-0', activeTab !== 'attendees' && 'hidden')}
+        >
           <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs flex flex-col gap-6 max-w-4xl mx-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>

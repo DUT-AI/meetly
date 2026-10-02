@@ -38,8 +38,8 @@ class OfflineMeetingUseCase:
         meeting_repo: IMeetingRepository,
         member_repo: IMemberRepository,
         whisper_engine: FasterWhisperEngine,
-        task_extractor: QwenTaskExtractorService | None = None,
-        offline_stt: OfflineSTTProcessor | None = None,
+        task_extractor: QwenTaskExtractorService,
+        offline_stt: OfflineSTTProcessor,
     ) -> None:
         self.session_repo = session_repo
         self.segment_repo = segment_repo
@@ -47,8 +47,8 @@ class OfflineMeetingUseCase:
         self.meeting_repo = meeting_repo
         self.member_repo = member_repo
         self.whisper_engine = whisper_engine
-        self.task_extractor = task_extractor or QwenTaskExtractorService()
-        self.offline_stt = offline_stt or OfflineSTTProcessor()
+        self.task_extractor = task_extractor
+        self.offline_stt = offline_stt
         self.voice_matcher = VoicebankMatcher()
 
     async def _check_member(self, workspace_id: str, user_id: str) -> None:
@@ -148,8 +148,13 @@ class OfflineMeetingUseCase:
         # In production, FasterWhisperEngine transcribes audio and slices speech turns.
         t_start = time.time()
 
-        # Parse audio segments (demonstrative multi-speaker sample if test bytes, or real whisper)
+        # Parse audio segments (real faster-whisper ASR & VAD)
         segments_raw = self._extract_utterances_from_audio(audio_bytes, voice_profiles)
+        if not segments_raw:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Không phát hiện thấy giọng nói trong file ghi âm. Vui lòng kiểm tra lại micro hoặc thử nói to, rõ ràng hơn.",
+            )
 
         aligned_lines = []
         identified_speakers = set()
@@ -161,14 +166,22 @@ class OfflineMeetingUseCase:
             speaker_name = seg["speaker"]
             confidence = seg.get("confidence", 0.95)
 
-            if seg.get("embedding"):
-                matched_profile, score = self.voice_matcher.match_speaker(
-                    query_vector=seg["embedding"],
-                    profiles=voice_profiles,
-                )
-                if matched_profile:
-                    speaker_name = matched_profile.member_name
-                    confidence = score
+            if voice_profiles:
+                if seg.get("embedding") is not None:
+                    matched_profile, score = self.voice_matcher.match_speaker(
+                        query_vector=seg["embedding"],
+                        profiles=voice_profiles,
+                    )
+                    if matched_profile:
+                        speaker_name = matched_profile.member_name
+                        confidence = score
+                    elif len(voice_profiles) == 1:
+                        # If workspace currently has 1 enrolled member (current user), associate speaker with them
+                        speaker_name = voice_profiles[0].member_name
+                        confidence = max(score, 0.92)
+                elif len(voice_profiles) == 1:
+                    speaker_name = voice_profiles[0].member_name
+                    confidence = 0.95
 
             identified_speakers.add(speaker_name)
 

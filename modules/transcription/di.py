@@ -1,6 +1,7 @@
 from dishka import Provider, Scope, provide
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from modules.ai_engine.infrastructure.qwen_extractor import QwenTaskExtractorService
 from modules.transcription.ai.offline_stt import OfflineSTTProcessor
 from modules.transcription.domain.interfaces import (
     ITranscriptionSessionRepository,
@@ -48,6 +49,10 @@ class TranscriptionProvider(Provider):
     @provide(scope=Scope.APP)
     def provide_offline_stt(self) -> OfflineSTTProcessor:
         return OfflineSTTProcessor()
+
+    @provide(scope=Scope.APP)
+    def provide_task_extractor(self) -> QwenTaskExtractorService:
+        return QwenTaskExtractorService()
 
     @provide(scope=Scope.APP)
     def provide_stream_ingestion_use_case(

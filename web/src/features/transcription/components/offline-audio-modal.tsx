@@ -76,7 +76,19 @@ export function OfflineAudioModal({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
-      const mediaRecorder = new MediaRecorder(stream);
+
+      let mimeType = 'audio/webm';
+      if (typeof MediaRecorder !== 'undefined') {
+        if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+          mimeType = 'audio/webm;codecs=opus';
+        } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+          mimeType = 'audio/webm';
+        } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+          mimeType = 'audio/mp4';
+        }
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       mediaRecorderRef.current = mediaRecorder;
 
       mediaRecorder.ondataavailable = (event) => {
@@ -86,7 +98,7 @@ export function OfflineAudioModal({
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType || 'audio/webm' });
         setRecordedBlob(audioBlob);
         stream.getTracks().forEach((track) => track.stop());
       };
@@ -119,8 +131,10 @@ export function OfflineAudioModal({
         toast.error('Vui lòng thu âm trước khi xử lý');
         return;
       }
-      fileToUpload = new File([recordedBlob], `offline_meeting_rec_${Date.now()}.wav`, {
-        type: 'audio/wav',
+      const isMp4 = recordedBlob.type.includes('mp4');
+      const ext = isMp4 ? 'mp4' : 'webm';
+      fileToUpload = new File([recordedBlob], `offline_meeting_rec_${Date.now()}.${ext}`, {
+        type: recordedBlob.type || 'audio/webm',
       });
     }
 
@@ -146,7 +160,12 @@ export function OfflineAudioModal({
       if (onSuccess) onSuccess();
     } catch (err: any) {
       clearInterval(stepInterval);
-      toast.error(err.response?.data?.detail || 'Lỗi khi xử lý file cuộc họp offline.');
+      const errorMsg =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        err.message ||
+        'Lỗi khi xử lý file cuộc họp offline.';
+      toast.error(errorMsg);
       setIsProcessing(false);
     }
   };

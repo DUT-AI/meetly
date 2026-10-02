@@ -50,6 +50,7 @@ class TranscribeResponse(BaseModel):
     words: list[dict[str, Any]]
     confidence: float
     language: str
+    segments: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class TranscribeAndTranslateRequest(BaseModel):
@@ -166,6 +167,7 @@ async def transcribe_audio(payload: TranscribeRequest) -> TranscribeResponse:
         words=result.get("words", []),
         confidence=result.get("confidence", 1.0),
         language=result.get("language", payload.language),
+        segments=result.get("segments", []),
     )
 
 
