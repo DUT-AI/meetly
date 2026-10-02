@@ -31,6 +31,13 @@ chrome.runtime.onInstalled.addListener(() => {
   });
 });
 
+function extractList(data) {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.documents)) return data.documents;
+  if (data && Array.isArray(data.items)) return data.items;
+  return [];
+}
+
 /**
  * Tự động tìm token xác thực (JWT) từ Cookie của Meetly Web hoặc cài đặt lưu trong Storage
  */
@@ -113,7 +120,7 @@ class StreamHandler {
           const wsRes = await fetch(`${this.serverUrl}/api/v1/workspaces`, { headers });
           if (wsRes.ok) {
             const wsJson = await wsRes.json();
-            const workspaces = wsJson.data || [];
+            const workspaces = extractList(wsJson.data);
             if (workspaces.length > 0) {
               if (!workspaceId) {
                 workspaceId = workspaces[0].id;
@@ -124,7 +131,7 @@ class StreamHandler {
                 let foundMeetingId = null;
                 if (meetRes.ok) {
                   const meetJson = await meetRes.json();
-                  const meetings = meetJson.data?.documents || meetJson.data || [];
+                  const meetings = extractList(meetJson.data);
                   if (roomCode) {
                     const matched = meetings.find(m => m.title && m.title.includes(roomCode));
                     if (matched) foundMeetingId = matched.id;
@@ -203,7 +210,7 @@ class StreamHandler {
           const wsRes = await fetch(`${this.serverUrl}/api/v1/workspaces`, { headers });
           if (wsRes.ok) {
             const wsJson = await wsRes.json();
-            const workspaces = wsJson.data || [];
+            const workspaces = extractList(wsJson.data);
             for (const ws of workspaces) {
               if (ws.id !== workspaceId) {
                 console.log(`[Meetly Service Worker] Đang thử kết nối với Workspace: ${ws.name} (${ws.id})`);
@@ -475,7 +482,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return;
           }
           const json = await res.json();
-          sendResponse({ success: true, workspaces: json.data || [] });
+          const list = extractList(json.data);
+          sendResponse({ success: true, workspaces: list });
         } catch (e) {
           sendResponse({ success: false, error: `Lỗi kết nối máy chủ: ${e.message}` });
         }
@@ -501,7 +509,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return;
           }
           const json = await res.json();
-          const list = json.data?.documents || json.data || [];
+          const list = extractList(json.data);
           sendResponse({ success: true, meetings: list });
         } catch (e) {
           sendResponse({ success: false, error: `Lỗi kết nối máy chủ: ${e.message}` });

@@ -112,45 +112,57 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
   await detectActiveTab();
 
+  function extractList(data) {
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.documents)) return data.documents;
+    if (data && Array.isArray(data.items)) return data.items;
+    return [];
+  }
+
   // 3. Nạp danh sách Workspace qua Service Worker
   function loadWorkspaces() {
     const sUrl = txtServerUrl.value.trim() || 'http://localhost:8000';
     selWorkspace.innerHTML = '<option value="">-- Đang nạp danh sách Workspace... --</option>';
 
     chrome.runtime.sendMessage({ type: 'GET_WORKSPACES', serverUrl: sUrl }, (res) => {
-      if (!res || !res.success) {
-        const errMsg = res ? res.error : 'Không nhận được phản hồi';
-        selWorkspace.innerHTML = `<option value="">-- ${errMsg} --</option>`;
-        return;
+      try {
+        if (!res || !res.success) {
+          const errMsg = res ? res.error : 'Không nhận được phản hồi';
+          selWorkspace.innerHTML = `<option value="">-- ${errMsg} --</option>`;
+          return;
+        }
+
+        const workspaces = extractList(res.workspaces);
+        if (workspaces.length === 0) {
+          selWorkspace.innerHTML = '<option value="">-- Bạn chưa có Workspace nào --</option>';
+          return;
+        }
+
+        selWorkspace.innerHTML = '';
+        workspaces.forEach((ws) => {
+          const opt = document.createElement('option');
+          opt.value = ws.id;
+          opt.textContent = `${ws.name || ws.id}`;
+          selWorkspace.appendChild(opt);
+        });
+
+        // Ưu tiên chọn: tab hiện tại -> ID đã lưu -> workspace đầu tiên
+        const targetWs = detectedWsFromTab || txtWorkspaceId.value.trim() || workspaces[0].id;
+        const matched = workspaces.find((w) => w.id === targetWs);
+        if (matched) {
+          selWorkspace.value = matched.id;
+          txtWorkspaceId.value = matched.id;
+        } else {
+          selWorkspace.value = workspaces[0].id;
+          txtWorkspaceId.value = workspaces[0].id;
+        }
+        saveSettings();
+
+        loadMeetings(selWorkspace.value);
+      } catch (err) {
+        console.error('[Meetly Popup] Lỗi nạp workspace:', err);
+        selWorkspace.innerHTML = `<option value="">-- Lỗi hiển thị: ${err.message} --</option>`;
       }
-
-      const workspaces = res.workspaces || [];
-      if (workspaces.length === 0) {
-        selWorkspace.innerHTML = '<option value="">-- Bạn chưa có Workspace nào --</option>';
-        return;
-      }
-
-      selWorkspace.innerHTML = '';
-      workspaces.forEach((ws) => {
-        const opt = document.createElement('option');
-        opt.value = ws.id;
-        opt.textContent = `${ws.name}`;
-        selWorkspace.appendChild(opt);
-      });
-
-      // Ưu tiên chọn: tab hiện tại -> ID đã lưu -> workspace đầu tiên
-      const targetWs = detectedWsFromTab || txtWorkspaceId.value.trim() || workspaces[0].id;
-      const matched = workspaces.find((w) => w.id === targetWs);
-      if (matched) {
-        selWorkspace.value = matched.id;
-        txtWorkspaceId.value = matched.id;
-      } else {
-        selWorkspace.value = workspaces[0].id;
-        txtWorkspaceId.value = workspaces[0].id;
-      }
-      saveSettings();
-
-      loadMeetings(selWorkspace.value);
     });
   }
 
@@ -161,55 +173,60 @@ document.addEventListener('DOMContentLoaded', async () => {
     selMeeting.innerHTML = '<option value="">-- Đang tải danh sách cuộc họp... --</option>';
 
     chrome.runtime.sendMessage({ type: 'GET_MEETINGS', serverUrl: sUrl, workspaceId: wsId }, (res) => {
-      if (!res || !res.success) {
-        const errMsg = res ? res.error : 'Không nhận được phản hồi';
-        selMeeting.innerHTML = `<option value="">-- ${errMsg} --</option>`;
-        return;
-      }
-
-      const meetings = res.meetings || [];
-      selMeeting.innerHTML = '';
-
-      if (activeRoomCode) {
-        const newOpt = document.createElement('option');
-        newOpt.value = '__CREATE_NEW_FOR_ROOM__';
-        newOpt.textContent = `➕ Tạo cuộc họp mới: Google Meet (${activeRoomCode})`;
-        selMeeting.appendChild(newOpt);
-      }
-
-      meetings.forEach((m) => {
-        const opt = document.createElement('option');
-        opt.value = m.id;
-        opt.textContent = `${m.title || 'Cuộc họp không tên'}`;
-        selMeeting.appendChild(opt);
-      });
-
-      if (meetings.length === 0 && !activeRoomCode) {
-        const emptyOpt = document.createElement('option');
-        emptyOpt.value = '';
-        emptyOpt.textContent = '-- Chưa có cuộc họp nào (Bấm ➕ để tạo) --';
-        selMeeting.appendChild(emptyOpt);
-      }
-
-      // Ưu tiên chọn: tab hiện tại -> meeting trùng roomCode -> meeting đã lưu -> meeting đầu tiên
-      const targetMeet = detectedMeetFromTab || txtMeetingId.value.trim();
-      const matched = meetings.find((m) => m.id === targetMeet);
-      if (matched) {
-        selMeeting.value = matched.id;
-        txtMeetingId.value = matched.id;
-      } else if (activeRoomCode) {
-        const roomMatched = meetings.find((m) => m.title && m.title.includes(activeRoomCode));
-        if (roomMatched) {
-          selMeeting.value = roomMatched.id;
-          txtMeetingId.value = roomMatched.id;
-        } else {
-          selMeeting.value = '__CREATE_NEW_FOR_ROOM__';
+      try {
+        if (!res || !res.success) {
+          const errMsg = res ? res.error : 'Không nhận được phản hồi';
+          selMeeting.innerHTML = `<option value="">-- ${errMsg} --</option>`;
+          return;
         }
-      } else if (meetings.length > 0) {
-        selMeeting.value = meetings[0].id;
-        txtMeetingId.value = meetings[0].id;
+
+        const meetings = extractList(res.meetings);
+        selMeeting.innerHTML = '';
+
+        if (activeRoomCode) {
+          const newOpt = document.createElement('option');
+          newOpt.value = '__CREATE_NEW_FOR_ROOM__';
+          newOpt.textContent = `➕ Tạo cuộc họp mới: Google Meet (${activeRoomCode})`;
+          selMeeting.appendChild(newOpt);
+        }
+
+        meetings.forEach((m) => {
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = `${m.title || 'Cuộc họp không tên'}`;
+          selMeeting.appendChild(opt);
+        });
+
+        if (meetings.length === 0 && !activeRoomCode) {
+          const emptyOpt = document.createElement('option');
+          emptyOpt.value = '';
+          emptyOpt.textContent = '-- Chưa có cuộc họp nào (Bấm ➕ để tạo) --';
+          selMeeting.appendChild(emptyOpt);
+        }
+
+        // Ưu tiên chọn: tab hiện tại -> meeting trùng roomCode -> meeting đã lưu -> meeting đầu tiên
+        const targetMeet = detectedMeetFromTab || txtMeetingId.value.trim();
+        const matched = meetings.find((m) => m.id === targetMeet);
+        if (matched) {
+          selMeeting.value = matched.id;
+          txtMeetingId.value = matched.id;
+        } else if (activeRoomCode) {
+          const roomMatched = meetings.find((m) => m.title && m.title.includes(activeRoomCode));
+          if (roomMatched) {
+            selMeeting.value = roomMatched.id;
+            txtMeetingId.value = roomMatched.id;
+          } else {
+            selMeeting.value = '__CREATE_NEW_FOR_ROOM__';
+          }
+        } else if (meetings.length > 0) {
+          selMeeting.value = meetings[0].id;
+          txtMeetingId.value = meetings[0].id;
+        }
+        saveSettings();
+      } catch (err) {
+        console.error('[Meetly Popup] Lỗi nạp meetings:', err);
+        selMeeting.innerHTML = `<option value="">-- Lỗi hiển thị: ${err.message} --</option>`;
       }
-      saveSettings();
     });
   }
 
