@@ -12,23 +12,26 @@
     <header class="header">
       <div class="brand">
         <div class="logo-box">
-          <img src="../icons/icon48.png" width="24" height="24" style="border-radius: 6px; object-fit: cover;" alt="Meetly">
+          <img src="../icons/icon48.png" width="22" height="22" style="border-radius: 6px; object-fit: cover;" alt="Meetly">
         </div>
         <div class="brand-text">
           <h1>Meetly</h1>
           <span class="subtext">Google Meet Recorder</span>
         </div>
       </div>
-      <span class="version-badge">v1.0</span>
+      <div style="display: flex; align-items: center; gap: 6px;">
+        <button id="btnRefresh" title="Tải lại dữ liệu" class="icon-btn">🔄</button>
+        <span class="version-badge">v1.1</span>
+      </div>
     </header>
 
     <!-- Meeting status card -->
     <div class="meeting-status-card" id="meetingCard">
       <div class="status-header">
-        <span class="status-label" id="statusLabel">Chưa phát hiện Meet</span>
+        <span class="status-label" id="statusLabel">Chưa vào Meet</span>
         <div class="status-dot" id="statusDot"></div>
       </div>
-      <div class="meeting-code" id="meetingCode">Hãy mở một tab Google Meet</div>
+      <div class="meeting-code" id="meetingCode">Đang phát hiện trang...</div>
       <div class="timer" id="timerDisplay">00:00</div>
     </div>
 
@@ -44,61 +47,88 @@
       </div>
     </div>
 
-    <!-- Settings accordion/card -->
-    <div class="settings-card">
-      <div class="settings-title">Cài đặt ghi âm</div>
-      
-      <label class="setting-item">
-        <span>Ghi âm Micro (giọng của bạn)</span>
-        <input type="checkbox" id="chkRecordMic" checked>
-      </label>
-
-      <label class="setting-item">
-        <span>Tự động tải file .webm về máy</span>
-        <input type="checkbox" id="chkAutoDownload" checked>
-      </label>
-
-      <div class="server-config">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-          <label for="txtServerUrl" style="margin-bottom: 0;">Máy chủ Meetly (API):</label>
-          <div style="display: flex; gap: 4px;">
-            <button type="button" id="btnPresetLocal" style="font-size: 10px; padding: 2px 6px; background: #334155; border: 1px solid #475569; border-radius: 4px; color: #cbd5e1; cursor: pointer;">Local (8000)</button>
-            <button type="button" id="btnPresetProd" style="font-size: 10px; padding: 2px 6px; background: #334155; border: 1px solid #475569; border-radius: 4px; color: #cbd5e1; cursor: pointer;">Production</button>
-          </div>
-        </div>
-        <input type="text" id="txtServerUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
+    <!-- Workspace & Meeting Selection Card -->
+    <div class="selection-card">
+      <div class="section-title">
+        <span>Chọn phiên ghi âm</span>
+        <span id="authStatusBadge" class="auth-pill">Đang kết nối...</span>
       </div>
 
-      <div class="server-config" style="margin-top: 8px;">
-        <label for="selWorkspace">Workspace:</label>
-        <select id="selWorkspace" style="width: 100%; padding: 6px; background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; font-size: 12px; margin-bottom: 4px; box-sizing: border-box;">
+      <div class="form-group">
+        <label for="selWorkspace">🏢 Workspace (Phòng ban):</label>
+        <select id="selWorkspace" class="custom-select">
           <option value="">-- Đang nạp danh sách Workspace... --</option>
         </select>
-        <input type="text" id="txtWorkspaceId" placeholder="Hoặc dán ULID Workspace" style="font-size: 11px; color: #94a3b8;">
       </div>
 
-      <div class="server-config" style="margin-top: 8px;">
-        <label for="selMeeting">Cuộc họp (Meeting):</label>
-        <select id="selMeeting" style="width: 100%; padding: 6px; background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; font-size: 12px; margin-bottom: 4px; box-sizing: border-box;">
-          <option value="">-- Chọn cuộc họp hoặc tạo mới --</option>
+      <div class="form-group">
+        <label for="selMeeting">📅 Cuộc họp liên kết:</label>
+        <select id="selMeeting" class="custom-select">
+          <option value="">-- Đang tải danh sách cuộc họp... --</option>
         </select>
-        <input type="text" id="txtMeetingId" placeholder="Hoặc dán ULID Meeting" style="font-size: 11px; color: #94a3b8;">
       </div>
 
-      <div class="server-config" style="margin-top: 8px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-          <label for="txtAuthToken" style="margin-bottom: 0;">Auth Token (Bearer):</label>
-          <span id="authStatusBadge" style="font-size: 10px; font-weight: 600; color: #10b981;">Đang kiểm tra...</span>
-        </div>
-        <input type="password" id="txtAuthToken" placeholder="Tự động lấy từ Cookie hoặc dán Bearer token">
+      <div class="quick-actions">
+        <button type="button" id="btnCreateMeeting" class="btn-action">
+          <span>➕</span> Tạo cuộc họp mới
+        </button>
+        <button type="button" id="btnSyncTab" class="btn-action" title="Lấy ID từ tab Meetly Web đang mở">
+          <span>⚡</span> Đồng bộ từ Tab
+        </button>
       </div>
     </div>
 
+    <!-- Advanced Settings Collapsible -->
+    <details class="settings-details">
+      <summary class="settings-summary">
+        <span>⚙️ Cài đặt nâng cao & ID</span>
+        <span class="chevron">▾</span>
+      </summary>
+      
+      <div class="settings-body">
+        <label class="setting-item">
+          <span>Ghi âm Micro (giọng của bạn)</span>
+          <input type="checkbox" id="chkRecordMic" checked>
+        </label>
+
+        <label class="setting-item">
+          <span>Tự động tải file .webm về máy</span>
+          <input type="checkbox" id="chkAutoDownload" checked>
+        </label>
+
+        <div class="server-config">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <label for="txtServerUrl" style="margin-bottom: 0;">Máy chủ Backend:</label>
+            <div style="display: flex; gap: 4px;">
+              <button type="button" id="btnPresetLocal" class="preset-pill">Local (8000)</button>
+              <button type="button" id="btnPresetProd" class="preset-pill">Production</button>
+            </div>
+          </div>
+          <input type="text" id="txtServerUrl" value="http://localhost:8000" placeholder="http://localhost:8000">
+        </div>
+
+        <div class="server-config">
+          <label for="txtWorkspaceId">Workspace ID (ULID):</label>
+          <input type="text" id="txtWorkspaceId" placeholder="ULID Workspace">
+        </div>
+
+        <div class="server-config">
+          <label for="txtMeetingId">Meeting ID (ULID):</label>
+          <input type="text" id="txtMeetingId" placeholder="ULID Meeting">
+        </div>
+
+        <div class="server-config">
+          <label for="txtAuthToken">Token xác thực (Bearer):</label>
+          <input type="password" id="txtAuthToken" placeholder="Tự động lấy từ Cookie hoặc dán Bearer">
+        </div>
+      </div>
+    </details>
+
     <!-- Footer links -->
     <footer class="footer">
-      <a href="https://meet.google.com" target="_blank" class="footer-link">Mở Google Meet</a>
+      <a href="https://meet.google.com" target="_blank" class="footer-link">Google Meet</a>
       <span class="sep">•</span>
-      <a href="http://localhost:3000" id="linkWeb" target="_blank" class="footer-link">Vào Meetly Web</a>
+      <a href="http://localhost:3000" id="linkWeb" target="_blank" class="footer-link">Mở Meetly Web</a>
     </footer>
   </div>
 
