@@ -70,13 +70,19 @@
       </div>
 
       <div class="server-config" style="margin-top: 8px;">
-        <label for="txtWorkspaceId">Workspace ID:</label>
-        <input type="text" id="txtWorkspaceId" placeholder="ULID của Workspace">
+        <label for="selWorkspace">Workspace:</label>
+        <select id="selWorkspace" style="width: 100%; padding: 6px; background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; font-size: 12px; margin-bottom: 4px; box-sizing: border-box;">
+          <option value="">-- Đang nạp danh sách Workspace... --</option>
+        </select>
+        <input type="text" id="txtWorkspaceId" placeholder="Hoặc dán ULID Workspace" style="font-size: 11px; color: #94a3b8;">
       </div>
 
       <div class="server-config" style="margin-top: 8px;">
-        <label for="txtMeetingId">Meeting ID:</label>
-        <input type="text" id="txtMeetingId" placeholder="ULID của Meeting">
+        <label for="selMeeting">Cuộc họp (Meeting):</label>
+        <select id="selMeeting" style="width: 100%; padding: 6px; background: #1e293b; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; font-size: 12px; margin-bottom: 4px; box-sizing: border-box;">
+          <option value="">-- Chọn cuộc họp hoặc tạo mới --</option>
+        </select>
+        <input type="text" id="txtMeetingId" placeholder="Hoặc dán ULID Meeting" style="font-size: 11px; color: #94a3b8;">
       </div>
 
       <div class="server-config" style="margin-top: 8px;">
@@ -92,7 +98,7 @@
     <footer class="footer">
       <a href="https://meet.google.com" target="_blank" class="footer-link">Mở Google Meet</a>
       <span class="sep">•</span>
-      <a href="https://meetly.dutai.io.vn/" target="_blank" class="footer-link">Vào Meetly Web</a>
+      <a href="http://localhost:3000" id="linkWeb" target="_blank" class="footer-link">Vào Meetly Web</a>
     </footer>
   </div>
 
