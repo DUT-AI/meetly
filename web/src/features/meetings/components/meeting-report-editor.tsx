@@ -65,7 +65,9 @@ export function formatContentForTipTap(content: any): any {
     }
 
     if (content.speakers && Array.isArray(content.speakers) && content.speakers.length > 0) {
-      parts.push(`<h2>2. Thành viên phát biểu</h2><ul>${content.speakers.map((s: string) => `<li><strong>${s}</strong></li>`).join('')}</ul>`);
+      parts.push(
+        `<h2>2. Thành viên phát biểu</h2><ul>${content.speakers.map((s: string) => `<li><strong>${s}</strong></li>`).join('')}</ul>`,
+      );
     }
 
     if (content.action_items && Array.isArray(content.action_items) && content.action_items.length > 0) {
@@ -75,7 +77,7 @@ export function formatContentForTipTap(content: any): any {
         const assignee = item.assignee || 'Chưa phân công';
         const deadline = item.deadline ? ` (Hạn: ${item.deadline})` : '';
         parts.push(
-          `<li data-type="taskItem" data-checked="false"><p><strong>${title}</strong> — Người thực hiện: <em>${assignee}</em>${deadline}</p></li>`
+          `<li data-type="taskItem" data-checked="false"><p><strong>${title}</strong> — Người thực hiện: <em>${assignee}</em>${deadline}</p></li>`,
         );
       }
       parts.push(`</ul>`);
@@ -178,9 +180,7 @@ export const MeetingReportEditor = ({
       if (formatted) {
         const currentJson = editor.getJSON();
         const isEmpty =
-          !currentJson.content ||
-          currentJson.content.length === 0 ||
-          (currentJson.content.length === 1 && !currentJson.content[0].content);
+          !currentJson.content || currentJson.content.length === 0 || (currentJson.content.length === 1 && !currentJson.content[0].content);
         if (isEmpty) {
           hasLoadedContentRef.current = true;
           editor.commands.setContent(formatted);

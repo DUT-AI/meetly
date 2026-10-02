@@ -1,5 +1,6 @@
 'use client';
 
+import { useQueryClient } from '@tanstack/react-query';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import {
@@ -7,6 +8,7 @@ import {
   Calendar,
   Check,
   CheckCircle2,
+  CheckSquare,
   Clock,
   Copy,
   ExternalLink,
@@ -27,12 +29,11 @@ import { toast } from 'sonner';
 
 import { PageError } from '@/components/page-error';
 import { PageLoader } from '@/components/page-loader';
-import { useQueryClient } from '@tanstack/react-query';
-
 import { ResponsiveModal } from '@/components/responsive-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { meetingApi } from '@/features/meetings/api/meeting-api';
 import { useGetMeeting } from '@/features/meetings/api/use-get-meeting';
 import { useUpdateMeeting } from '@/features/meetings/api/use-update-meeting';
 import { MeetingReportEditor } from '@/features/meetings/components/meeting-report-editor';
@@ -44,8 +45,8 @@ import {
   LiveTranscriptPanel,
   OfflineAudioModal,
   SpeakerIdentificationModal,
-  useGetTranscripts,
   VoicebankModal,
+  useGetTranscripts,
 } from '@/features/transcription';
 import { cn } from '@/lib/utils';
 
@@ -80,7 +81,8 @@ export default function MeetingReportPage() {
   const [editorInstance, setEditorInstance] = useState<any>(null);
   const audioPlayerRef = useRef<AudioTimelinePlayerRef | null>(null);
   const [currentTimeMs, setCurrentTimeMs] = useState<number>(0);
-  const serverUrl = typeof window !== 'undefined' ? window.location.origin : (process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://meetly.dutai.io.vn');
+  const serverUrl =
+    typeof window !== 'undefined' ? window.location.origin : process.env.NEXT_PUBLIC_APP_BASE_URL || 'https://meetly.dutai.io.vn';
 
   const handleEditorReady = useCallback((editor: any) => {
     setEditorInstance(editor);
@@ -89,6 +91,8 @@ export default function MeetingReportPage() {
   const handleContentChange = useCallback((json: Record<string, any>) => {
     setReport(json);
   }, []);
+
+  const [isSyncingTasks, setIsSyncingTasks] = useState(false);
 
   // Process pending insertion once editor instance is mounted and ready
   useEffect(() => {
@@ -107,13 +111,31 @@ export default function MeetingReportPage() {
     }
   }, [editorInstance, pendingInsertion, meeting?.id, updateMeeting]);
 
+  const handleSyncTasks = async () => {
+    if (!meeting?.id) return;
+    try {
+      setIsSyncingTasks(true);
+      const res = await meetingApi.syncMeetingTasks(workspaceId, meeting.id);
+      await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      await queryClient.invalidateQueries({ queryKey: ['meeting', workspaceId, meetingId] });
+      const count = res?.synced_count ?? res?.data?.length ?? 0;
+      if (count > 0) {
+        toast.success(`Đã đồng bộ ${count} công việc vào mục "Việc phòng ban"!`);
+      } else {
+        toast.info('Các công việc trong biên bản đã có trên bảng Việc phòng ban.');
+      }
+    } catch (err: any) {
+      toast.error('Không thể đồng bộ công việc: ' + (err?.response?.data?.detail || err.message));
+    } finally {
+      setIsSyncingTasks(false);
+    }
+  };
+
   if (isLoadingMeeting) return <PageLoader />;
   if (!meeting) return <PageError message="Không tìm thấy cuộc họp" />;
 
   const memberMap = Object.fromEntries((membersResponse?.documents ?? []).map((m) => [m.$id, m]));
-  const detectedSpeakers = Array.from(
-    new Set((transcriptsData?.segments ?? []).map((s) => s.speaker_label).filter(Boolean)),
-  );
+  const detectedSpeakers = Array.from(new Set((transcriptsData?.segments ?? []).map((s) => s.speaker_label).filter(Boolean)));
   const formattedMembers = (membersResponse?.documents ?? []).map((m) => ({
     id: m.userId || m.$id,
     name: m.name,
@@ -129,8 +151,18 @@ export default function MeetingReportPage() {
         },
       },
       {
-        onSuccess: () => {
+        onSuccess: async () => {
           toast.success('Đã lưu biên bản cuộc họp');
+          // Auto sync tasks to department board
+          try {
+            const res = await meetingApi.syncMeetingTasks(workspaceId, meeting.id);
+            await queryClient.invalidateQueries({ queryKey: ['tasks'] });
+            if (res?.synced_count > 0) {
+              toast.success(`Đã tự động tạo ${res.synced_count} công việc vào "Việc phòng ban"!`);
+            }
+          } catch {
+            // silent ignore on auto-sync background
+          }
         },
       },
     );
@@ -310,6 +342,17 @@ export default function MeetingReportPage() {
           </Button>
 
           <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSyncTasks}
+            disabled={isSyncingTasks}
+            className="rounded-xl border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+          >
+            <CheckSquare className="size-3.5 text-emerald-600" />
+            <span>{isSyncingTasks ? 'Đang đồng bộ...' : 'Đồng bộ Việc phòng ban'}</span>
+          </Button>
+
+          <Button
             onClick={handleSave}
             disabled={isSaving}
             className="rounded-xl shadow-xs bg-blue-600 hover:bg-blue-700 text-white gap-2 text-xs font-extrabold transition-all h-9 px-4"
@@ -357,11 +400,7 @@ export default function MeetingReportPage() {
         </div>
 
         {/* ── Tab 1: Large Dedicated Full-Width Transcript View ── */}
-        <TabsContent
-          value="transcript"
-          forceMount={true}
-          className={cn('m-0 flex flex-col gap-4', activeTab !== 'transcript' && 'hidden')}
-        >
+        <TabsContent value="transcript" forceMount={true} className={cn('m-0 flex flex-col gap-4', activeTab !== 'transcript' && 'hidden')}>
           <LiveTranscriptPanel
             workspaceId={workspaceId}
             meetingId={meetingId}
@@ -413,11 +452,7 @@ export default function MeetingReportPage() {
         </TabsContent>
 
         {/* ── Tab 3: Attendees & Participants Grid ── */}
-        <TabsContent
-          value="attendees"
-          forceMount={true}
-          className={cn('m-0', activeTab !== 'attendees' && 'hidden')}
-        >
+        <TabsContent value="attendees" forceMount={true} className={cn('m-0', activeTab !== 'attendees' && 'hidden')}>
           <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs flex flex-col gap-6 max-w-4xl mx-auto">
             <div className="flex items-center justify-between border-b border-slate-100 pb-4">
               <div>

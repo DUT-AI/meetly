@@ -1,17 +1,6 @@
 'use client';
 
-import {
-  CheckCircle2,
-  Database,
-  Loader2,
-  Mic,
-  Play,
-  RotateCcw,
-  Sparkles,
-  Square,
-  User,
-  Users,
-} from 'lucide-react';
+import { CheckCircle2, Database, Loader2, Mic, Play, RotateCcw, Sparkles, Square, User, Users } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -29,12 +18,7 @@ interface VoicebankModalProps {
   members: Array<{ id: string; name: string }>;
 }
 
-export function VoicebankModal({
-  isOpen,
-  onClose,
-  workspaceId,
-  members,
-}: VoicebankModalProps) {
+export function VoicebankModal({ isOpen, onClose, workspaceId, members }: VoicebankModalProps) {
   const [profiles, setProfiles] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -154,9 +138,7 @@ export function VoicebankModal({
             <Database className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              Ngân Hàng Giọng Nói Thành Viên (Centroid Voicebank)
-            </h2>
+            <h2 className="text-xl font-bold flex items-center gap-2">Ngân Hàng Giọng Nói Thành Viên (Centroid Voicebank)</h2>
             <p className="text-sm text-muted-foreground">
               Lưu trữ vector âm học (192-dim ECAPA-TDNN) đại diện cho giọng nói của từng thành viên trong Workspace để nhận diện tự động.
             </p>
@@ -200,9 +182,7 @@ export function VoicebankModal({
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
                 </span>
-                <span className="text-xs font-mono font-bold text-red-500">
-                  Đang thu: 00:0{recordingSeconds} / 00:06
-                </span>
+                <span className="text-xs font-mono font-bold text-red-500">Đang thu: 00:0{recordingSeconds} / 00:06</span>
                 <Button size="sm" variant="destructive" onClick={stopRecording} className="gap-1.5 h-8">
                   <Square className="w-3.5 h-3.5 fill-current" /> Dừng
                 </Button>
@@ -258,10 +238,7 @@ export function VoicebankModal({
           ) : (
             <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
               {profiles.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex items-center justify-between p-3 rounded-xl border bg-card text-xs shadow-sm"
-                >
+                <div key={p.id} className="flex items-center justify-between p-3 rounded-xl border bg-card text-xs shadow-sm">
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-600 flex items-center justify-center font-bold">
                       {p.member_name?.charAt(0) || 'U'}

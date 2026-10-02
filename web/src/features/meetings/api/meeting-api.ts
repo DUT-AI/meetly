@@ -65,4 +65,11 @@ export const meetingApi = {
     const response = await api.delete<{ data: { id: string } }>(`/workspaces/${workspaceId}/meetings/${meetingId}`);
     return response.data?.data ?? response.data;
   },
+
+  syncMeetingTasks: async (workspaceId: string, meetingId: string, actionItems?: any[]): Promise<{ data: any[]; synced_count: number }> => {
+    const response = await api.post<any>(`/workspaces/${workspaceId}/meetings/${meetingId}/sync-tasks`, {
+      action_items: actionItems || null,
+    });
+    return response.data?.data ?? response.data;
+  },
 };

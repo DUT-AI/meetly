@@ -39,10 +39,7 @@ export const transcriptionApi = {
   uploadOfflineAudio: async (workspaceId: string, meetingId: string, file: File): Promise<any> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await api.post<{ data: any }>(
-      `/workspaces/${workspaceId}/meetings/${meetingId}/offline-audio`,
-      formData,
-    );
+    const response = await api.post<{ data: any }>(`/workspaces/${workspaceId}/meetings/${meetingId}/offline-audio`, formData);
     return response.data?.data ?? response.data;
   },
 
@@ -61,17 +58,10 @@ export const transcriptionApi = {
     return response.data?.data ?? response.data;
   },
 
-  confirmSpeakers: async (
-    workspaceId: string,
-    meetingId: string,
-    speakerMappings: Record<string, string>,
-  ): Promise<any> => {
-    const response = await api.post<{ data: any }>(
-      `/workspaces/${workspaceId}/meetings/${meetingId}/confirm-speakers`,
-      {
-        speaker_mappings: speakerMappings,
-      },
-    );
+  confirmSpeakers: async (workspaceId: string, meetingId: string, speakerMappings: Record<string, string>): Promise<any> => {
+    const response = await api.post<{ data: any }>(`/workspaces/${workspaceId}/meetings/${meetingId}/confirm-speakers`, {
+      speaker_mappings: speakerMappings,
+    });
     return response.data?.data ?? response.data;
   },
 };

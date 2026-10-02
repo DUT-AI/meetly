@@ -191,6 +191,27 @@ async def test_offline_meeting_pipeline_flow():
         task_extractor=task_extractor,
     )
 
+    use_case._extract_utterances_from_audio = MagicMock(
+        return_value=[
+            {
+                "start_ms": 0,
+                "end_ms": 5000,
+                "text": "Nguyễn Hoàng Minh: Đặng Quốc Phước ơi hoàn thành phần Back-End trước thứ Sáu nhé.",
+                "speaker_label": "Nguyễn Hoàng Minh",
+                "confidence": 0.95,
+                "words": [],
+            },
+            {
+                "start_ms": 5500,
+                "end_ms": 10000,
+                "text": "Đặng Quốc Phước: Dạ vâng, em nhận việc này.",
+                "speaker_label": "Đặng Quốc Phước",
+                "confidence": 0.95,
+                "words": [],
+            },
+        ]
+    )
+
     result = await use_case.process_offline_audio(
         workspace_id="ws_01",
         meeting_id="meet_01",
@@ -232,10 +253,6 @@ def test_offline_stt_processor_decoding_and_fallback():
     assert waveform.dtype == np.float32
     assert len(waveform) == 3200
 
-    # 3. Test fallback mock transcription
+    # 3. Test short / invalid audio returns empty list (strict anti-hallucination)
     segments = stt.transcribe_offline_audio(b"short_bytes")
-    assert len(segments) == 2
-    assert "start_ms" in segments[0]
-    assert "end_ms" in segments[0]
-    assert "text" in segments[0]
-    assert segments[0]["confidence"] > 0.9
+    assert len(segments) == 0

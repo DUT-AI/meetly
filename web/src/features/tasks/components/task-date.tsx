@@ -8,8 +8,16 @@ interface TaskDateProps {
 }
 
 export const TaskDate = ({ value, className }: TaskDateProps) => {
-  const today = new Date();
+  if (!value) {
+    return <span className={cn('text-xs text-muted-foreground italic', className)}>Chưa đặt hạn</span>;
+  }
+
   const endDate = new Date(value);
+  if (isNaN(endDate.getTime()) || endDate.getFullYear() <= 1970) {
+    return <span className={cn('text-xs text-muted-foreground italic', className)}>Chưa đặt hạn</span>;
+  }
+
+  const today = new Date();
   const diffInDays = differenceInDays(endDate, today);
 
   let textColor = 'text-muted-foreground';
@@ -24,7 +32,7 @@ export const TaskDate = ({ value, className }: TaskDateProps) => {
 
   return (
     <div className={textColor}>
-      <span className={cn('truncate', className)}>{format(value, 'PP p')}</span>
+      <span className={cn('truncate', className)}>{format(endDate, 'PP p')}</span>
     </div>
   );
 };

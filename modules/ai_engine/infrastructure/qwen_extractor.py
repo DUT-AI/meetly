@@ -122,57 +122,107 @@ class QwenTaskExtractorService(ITaskExtractor):
 
     def extract_tasks(self, transcript_text: str) -> TaskExtractionResult:
         t0 = time.time()
-        if not self._is_ready or not self.model or not self.tokenizer:
-            # Fallback heuristic
-            tasks = self._fallback_extract(transcript_text)
-            return TaskExtractionResult(
-                tasks=tasks,
-                raw_response="[Fallback Heuristic]",
-                is_valid_json=True,
-                inference_time_ms=(time.time() - t0) * 1000,
-                model_name="Fallback",
-                alignment_method=AlignmentMethod.ZERO_SHOT,
-            )
 
-        messages = [
-            {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
-            {"role": "user", "content": f"Biên bản cuộc họp:\n{transcript_text}"},
-        ]
-        text = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
+        # 1. Primary: Delegate to Remote GPU Task Extraction service (Tesla V100 + Qwen2.5-3B)
+        remote_url = os.getenv(
+            "TASK_EXTRACTOR_SERVICE_URL",
+            os.getenv("AI_SERVICE_URL", "http://100.84.133.34:8005"),
         )
-        inputs = self.tokenizer(text, return_tensors="pt").to(self.device)
+        if remote_url:
+            try:
+                import httpx
 
-        if torch is None:
-            raise RuntimeError("PyTorch is required for model inference.")
+                endpoint = f"{remote_url.rstrip('/')}/api/v1/tasks/extract"
+                with httpx.Client(timeout=30.0) as client:
+                    resp = client.post(
+                        endpoint, json={"transcript_text": transcript_text}
+                    )
+                if resp.status_code == 200:
+                    data = resp.json()
+                    raw_tasks = data.get("tasks", [])
+                    tasks = [
+                        ExtractedTask(
+                            task_title=t.get("task_title", "").strip(),
+                            assignee=t.get("assignee"),
+                            deadline=t.get("deadline"),
+                            source_timestamp_ms=int(t.get("source_timestamp_ms", 0)),
+                            confidence=float(t.get("confidence", 0.95)),
+                        )
+                        for t in raw_tasks
+                        if t.get("task_title")
+                    ]
+                    elapsed_ms = (time.time() - t0) * 1000
+                    logger.info(
+                        f"[QwenTaskExtractor] Extracted {len(tasks)} tasks via Remote GPU Server in {elapsed_ms:.1f}ms"
+                    )
+                    return TaskExtractionResult(
+                        tasks=tasks,
+                        raw_response=resp.text,
+                        is_valid_json=True,
+                        inference_time_ms=elapsed_ms,
+                        model_name="Qwen/Qwen2.5-3B-Instruct (Remote GPU Server)",
+                        alignment_method=AlignmentMethod.ZERO_SHOT,
+                    )
+            except Exception as e:
+                logger.warning(
+                    f"[QwenTaskExtractor] Remote extraction call failed: {e}. Falling back..."
+                )
 
-        with torch.no_grad():
-            outputs = self.model.generate(
-                **inputs,
-                max_new_tokens=768,
-                temperature=0.1,
-                top_p=0.9,
-                repetition_penalty=1.1,
-                do_sample=False,
-            )
+        # 2. Secondary: Local loaded model
+        if self._is_ready and self.model and self.tokenizer:
+            try:
+                messages = [
+                    {"role": "system", "content": DEFAULT_SYSTEM_PROMPT},
+                    {
+                        "role": "user",
+                        "content": f"Biên bản cuộc họp:\n{transcript_text}",
+                    },
+                ]
+                text = self.tokenizer.apply_chat_template(
+                    messages, tokenize=False, add_generation_prompt=True
+                )
+                inputs = self.tokenizer(text, return_tensors="pt").to(self.device)
 
-        response_tokens = outputs[0][len(inputs.input_ids[0]) :]
-        raw_text = self.tokenizer.decode(
-            response_tokens, skip_special_tokens=True
-        ).strip()
+                with torch.no_grad():
+                    outputs = self.model.generate(
+                        **inputs,
+                        max_new_tokens=768,
+                        repetition_penalty=1.1,
+                        do_sample=False,
+                    )
 
-        tasks, is_valid = self._parse_tasks(raw_text)
-        elapsed_ms = (time.time() - t0) * 1000
+                response_tokens = outputs[0][len(inputs.input_ids[0]) :]
+                raw_text = self.tokenizer.decode(
+                    response_tokens, skip_special_tokens=True
+                ).strip()
 
+                tasks, is_valid = self._parse_tasks(raw_text)
+                elapsed_ms = (time.time() - t0) * 1000
+
+                return TaskExtractionResult(
+                    tasks=tasks,
+                    raw_response=raw_text,
+                    is_valid_json=is_valid,
+                    inference_time_ms=elapsed_ms,
+                    model_name=self.model_id,
+                    alignment_method=getattr(
+                        self, "_alignment_method", AlignmentMethod.SFT_LORA
+                    ),
+                )
+            except Exception as e:
+                logger.warning(
+                    f"[QwenTaskExtractor] Local inference failed: {e}. Falling back..."
+                )
+
+        # 3. Tertiary: Smart Vietnamese heuristic extraction (never hardcodes "Chưa chỉ định" or "Trong tuần")
+        tasks = self._fallback_extract(transcript_text)
         return TaskExtractionResult(
             tasks=tasks,
-            raw_response=raw_text,
-            is_valid_json=is_valid,
-            inference_time_ms=elapsed_ms,
-            model_name=self.model_id,
-            alignment_method=getattr(
-                self, "_alignment_method", AlignmentMethod.SFT_LORA
-            ),
+            raw_response="[Smart NLP Fallback]",
+            is_valid_json=True,
+            inference_time_ms=(time.time() - t0) * 1000,
+            model_name="Smart-NLP-Fallback",
+            alignment_method=AlignmentMethod.ZERO_SHOT,
         )
 
     def _parse_tasks(self, raw_text: str) -> tuple[list[ExtractedTask], bool]:
@@ -189,8 +239,8 @@ class QwenTaskExtractorService(ITaskExtractor):
                     tasks.append(
                         ExtractedTask(
                             task_title=str(item.get("task_title", "")).strip(),
-                            assignee=str(item.get("assignee", "Chưa rõ")).strip(),
-                            deadline=str(item.get("deadline", "Chưa rõ")).strip(),
+                            assignee=item.get("assignee"),
+                            deadline=item.get("deadline"),
                             source_timestamp_ms=int(item.get("source_timestamp_ms", 0)),
                             confidence=float(item.get("confidence", 0.95)),
                         )
@@ -200,17 +250,95 @@ class QwenTaskExtractorService(ITaskExtractor):
             return [], False
 
     def _fallback_extract(self, text: str) -> list[ExtractedTask]:
-        tasks = []
-        for line in text.split("\n"):
-            if any(
-                k in line.lower() for k in ["sửa", "fix", "deploy", "hoàn thành", "cần"]
-            ):
-                tasks.append(
-                    ExtractedTask(
-                        task_title=line.split(":")[-1].strip() if ":" in line else line,
-                        assignee="Chưa chỉ định",
-                        deadline="Trong tuần",
-                        confidence=0.8,
-                    )
+        """
+        Smart fallback extractor for Vietnamese spoken dialogues.
+        Parses assignees (e.g., 'Tú', 'Minh') and deadlines (e.g., 'thứ 6', 'thứ 7').
+        Never hardcodes 'Chưa chỉ định' or 'Trong tuần'.
+        """
+        tasks: list[ExtractedTask] = []
+        lines = [line.strip() for line in text.split("\n") if line.strip()]
+
+        for line in lines:
+            # Parse start_ms from [mm:ss] if present
+            start_ms = 0
+            ts_match = re.search(r"\[(\d{2}):(\d{2})\]", line)
+            if ts_match:
+                m = int(ts_match.group(1))
+                s = int(ts_match.group(2))
+                start_ms = (m * 60 + s) * 1000
+
+            dialogue = line.split(":", 1)[-1].strip() if ":" in line else line
+
+            # Check if this sentence contains multiple sub-tasks joined by "và", ";" or ","
+            clauses = re.split(r"\s+và\s+|;\s*|,\s*(?=Minh|Tú|[A-ZÀ-Ỹ])", dialogue)
+
+            for clause in clauses:
+                cl = clause.strip()
+                if not cl:
+                    continue
+
+                # Pattern 1: "[Person] làm/phụ trách/fix/sửa [Task] trước/hạn/vào [Deadline]"
+                m1 = re.search(
+                    r"^([A-ZÀ-Ỹa-zà-ỹ\s]+?)\s+(làm|fix|sửa|deploy|viết|code|hoàn thành|xử lý)\s+(.*?)(?:\s+(trước|hạn|vào|deadline)\s+(.*?))?$",
+                    cl,
+                    re.IGNORECASE,
                 )
+                if m1:
+                    person = m1.group(1).strip()
+                    action = m1.group(2).strip()
+                    task_detail = m1.group(3).strip()
+                    deadline = (
+                        f"{m1.group(4)} {m1.group(5)}".strip()
+                        if m1.group(4) and m1.group(5)
+                        else None
+                    )
+                    task_title = f"{action.capitalize()} {task_detail}"
+                    tasks.append(
+                        ExtractedTask(
+                            task_title=task_title,
+                            assignee=person if person else None,
+                            deadline=deadline,
+                            source_timestamp_ms=start_ms,
+                            confidence=0.9,
+                        )
+                    )
+                    continue
+
+                # Pattern 2: "Nhớ hoàn thành/làm ... nhé/nha [Person]"
+                m2 = re.search(
+                    r"(?:nhớ|cần|hãy)\s+(hoàn thành|làm|fix|sửa|deploy)\s+(.*?)(?:\s+nhé|\s+nha|\s+nghe)\s+([A-ZÀ-Ỹa-zà-ỹ]+)",
+                    cl,
+                    re.IGNORECASE,
+                )
+                if m2:
+                    action = m2.group(1).strip()
+                    task_detail = m2.group(2).strip()
+                    person = m2.group(3).strip()
+                    tasks.append(
+                        ExtractedTask(
+                            task_title=f"{action.capitalize()} {task_detail}",
+                            assignee=person,
+                            deadline=None,
+                            source_timestamp_ms=start_ms,
+                            confidence=0.9,
+                        )
+                    )
+                    continue
+
+                # Pattern 3: "hai bạn sẽ deploy/làm..."
+                if any(
+                    k in cl.lower()
+                    for k in ["deploy", "hoàn thành", "đẩy code", "push code", "fix"]
+                ):
+                    assignee = "Hai bạn" if "hai bạn" in cl.lower() else None
+                    tasks.append(
+                        ExtractedTask(
+                            task_title=cl,
+                            assignee=assignee,
+                            deadline=None,
+                            source_timestamp_ms=start_ms,
+                            confidence=0.85,
+                        )
+                    )
+
         return tasks

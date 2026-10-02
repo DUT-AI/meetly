@@ -35,7 +35,7 @@ export function SpeakerIdentificationModal({
 
   // Distinct speaker labels to assign
   const distinctSpeakers = Array.from(new Set(speakers)).filter(
-    (s) => s.toLowerCase().startsWith('speaker') || s.toLowerCase() === 'unknown'
+    (s) => s.toLowerCase().startsWith('speaker') || s.toLowerCase() === 'unknown',
   );
 
   const colors = [
@@ -85,9 +85,7 @@ export function SpeakerIdentificationModal({
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
-              Who is speaking? (Định danh Người nói)
-            </h2>
+            <h2 className="text-xl font-bold flex items-center gap-2">Who is speaking? (Định danh Người nói)</h2>
             <p className="text-sm text-muted-foreground">
               Gán danh tính thành viên thực tế cho các đoạn thoại. Hệ thống sẽ học vector giọng nói để tự động nhận dạng các lần họp sau.
             </p>
@@ -98,9 +96,7 @@ export function SpeakerIdentificationModal({
           <div className="p-8 text-center bg-muted/20 rounded-2xl space-y-2">
             <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
             <h4 className="font-semibold text-sm">Tất cả diễn giả đã được nhận dạng chính xác</h4>
-            <p className="text-xs text-muted-foreground">
-              Không có nhãn Speaker lạ cần định danh thủ công.
-            </p>
+            <p className="text-xs text-muted-foreground">Không có nhãn Speaker lạ cần định danh thủ công.</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -117,17 +113,12 @@ export function SpeakerIdentificationModal({
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border bg-card shadow-sm"
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${colorClass}`}>
-                        {spk}
-                      </span>
+                      <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${colorClass}`}>{spk}</span>
                       <span className="text-xs text-muted-foreground">thuộc về thành viên:</span>
                     </div>
 
                     <div className="w-full sm:w-60">
-                      <Select
-                        value={mappings[spk] || ''}
-                        onValueChange={(val) => handleSelect(spk, val)}
-                      >
+                      <Select value={mappings[spk] || ''} onValueChange={(val) => handleSelect(spk, val)}>
                         <SelectTrigger className="w-full text-xs">
                           <SelectValue placeholder="Chọn thành viên..." />
                         </SelectTrigger>
@@ -150,7 +141,8 @@ export function SpeakerIdentificationModal({
         <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/20 flex items-start gap-2.5 text-xs text-blue-900 dark:text-blue-200">
           <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
           <span>
-            <strong>Học tăng cường trực tuyến (Centroid Voicebank):</strong> Sau khi bấm xác nhận, hệ thống tự động cập nhật vector trọng tâm 192 chiều của thành viên để nhận diện tự động trong các cuộc họp kế tiếp.
+            <strong>Học tăng cường trực tuyến (Centroid Voicebank):</strong> Sau khi bấm xác nhận, hệ thống tự động cập nhật vector trọng
+            tâm 192 chiều của thành viên để nhận diện tự động trong các cuộc họp kế tiếp.
           </span>
         </div>
 
