@@ -40,7 +40,7 @@ import {
   Underline as UnderlineIcon,
   Undo,
 } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -111,6 +111,72 @@ interface MeetingReportEditorProps {
   readOnly?: boolean;
 }
 
+function normalizeReportContent(content: any): any {
+  if (!content || typeof content !== 'object' || Object.keys(content).length === 0) {
+    return '';
+  }
+  if (content.type === 'doc' && Array.isArray(content.content)) {
+    return content;
+  }
+  if (typeof content === 'string') {
+    return content;
+  }
+  if (content.summary || content.action_items) {
+    const summary = content.summary || '';
+    const actionItems = Array.isArray(content.action_items) ? content.action_items : [];
+    return {
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: '📋 Tóm tắt cuộc họp' }],
+        },
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: summary }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: `✅ Nhiệm vụ & Action Items (${actionItems.length})` }],
+        },
+        {
+          type: 'taskList',
+          content:
+            actionItems.length > 0
+              ? actionItems.map((item: any) => ({
+                  type: 'taskItem',
+                  attrs: { checked: false },
+                  content: [
+                    {
+                      type: 'paragraph',
+                      content: [
+                        { type: 'text', marks: [{ type: 'bold' }], text: `${item.task_title || 'Nhiệm vụ'}: ` },
+                        { type: 'text', text: `Giao cho ${item.assignee || 'Chưa rõ'} (Hạn: ${item.deadline || 'Chưa rõ'})` },
+                      ],
+                    },
+                  ],
+                }))
+              : [
+                  {
+                    type: 'taskItem',
+                    attrs: { checked: false },
+                    content: [
+                      {
+                        type: 'paragraph',
+                        content: [{ type: 'text', text: 'Chưa có Action Item nào.' }],
+                      },
+                    ],
+                  },
+                ],
+        },
+      ],
+    };
+  }
+  return '';
+}
+
 export const MeetingReportEditor = ({
   initialContent = {},
   onContentChange,
@@ -123,10 +189,15 @@ export const MeetingReportEditor = ({
   const onEditorReadyRef = useRef(onEditorReady);
   onEditorReadyRef.current = onEditorReady;
 
+  const initialParsedContent = useMemo(() => normalizeReportContent(initialContent), [initialContent]);
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        link: false,
+        underline: false,
+      }),
       Underline,
       Subscript,
       Superscript,
@@ -143,7 +214,7 @@ export const MeetingReportEditor = ({
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
       Link.configure({ openOnClick: false }),
     ],
-    content: formatContentForTipTap(initialContent) || '',
+    content: formatContentForTipTap(initialContent) || normalizeReportContent(initialContent) || '',
     editable: !readOnly,
     onUpdate: ({ editor }: { editor: any }) => {
       const json = editor.getJSON();
@@ -158,6 +229,15 @@ export const MeetingReportEditor = ({
       },
     },
   });
+
+  useEffect(() => {
+    if (editor && initialContent) {
+      const normalized = normalizeReportContent(initialContent);
+      if (normalized && (!editor.getText() || editor.getText().trim() === '')) {
+        editor.commands.setContent(normalized);
+      }
+    }
+  }, [editor, initialContent]);
 
   useEffect(() => {
     if (editor && readOnly !== undefined) {

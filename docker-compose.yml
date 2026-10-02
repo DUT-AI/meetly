@@ -42,7 +42,7 @@ services:
     container_name: meetly-api
     restart: always
     ports:
-      - "8000:8000"
+      - "8001:8000"
     env_file:
       - ./.env
     environment:
@@ -98,7 +98,7 @@ services:
     container_name: meetly-web
     restart: always
     ports:
-      - "3000:3000"
+      - "3001:3000"
     env_file:
       - ./web/.env
     networks:
@@ -174,7 +174,8 @@ services:
     container_name: meetly-discord-bot
     restart: always
     env_file:
-      - ./apps/discord-bot/.env
+      - path: ./apps/discord-bot/.env
+        required: false
     networks:
       - meetly-net
 networks:

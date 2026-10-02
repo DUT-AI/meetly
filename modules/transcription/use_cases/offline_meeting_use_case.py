@@ -46,10 +46,10 @@ class OfflineMeetingUseCase:
         member_repo: IMemberRepository,
         whisper_engine: FasterWhisperEngine,
         task_extractor: QwenTaskExtractorService,
+        offline_stt: OfflineSTTProcessor | None = None,
         task_repo: ITaskRepository | None = None,
         project_repo: IProjectRepository | None = None,
         manage_client: ManageClient | None = None,
-        offline_stt: OfflineSTTProcessor | None = None,
     ) -> None:
         self.session_repo = session_repo
         self.segment_repo = segment_repo
@@ -260,18 +260,19 @@ class OfflineMeetingUseCase:
             f"Đã tự động trích xuất {len(action_items)} công việc và đồng bộ {len(synced_tasks)} việc vào Việc phòng ban."
         )
 
-        report_data = {
-            "summary": summary_text,
-            "action_items": action_items,
-            "speakers": list(identified_speakers),
-            "transcript_segments_count": len(segments_raw),
-            "offline_processed": True,
-            "extraction_latency_seconds": round(
-                extraction_result.inference_time_ms / 1000.0, 3
-            ),
-            "model_used": extraction_result.model_name,
-            "synced_tasks_count": len(synced_tasks),
-        }
+        report_data = self._build_tiptap_report(
+            title=meeting.title,
+            summary=summary_text,
+            speakers=list(identified_speakers),
+            tasks=action_items,
+        )
+        report_data["transcript_segments_count"] = len(segments_raw)
+        report_data["offline_processed"] = True
+        report_data["extraction_latency_seconds"] = round(
+            extraction_result.inference_time_ms / 1000.0, 3
+        )
+        report_data["model_used"] = extraction_result.model_name
+        report_data["synced_tasks_count"] = len(synced_tasks)
 
         await self.meeting_repo.update(
             meeting_id=meeting_id,
@@ -691,3 +692,126 @@ class OfflineMeetingUseCase:
             elif "content" in node and isinstance(node["content"], list):
                 extracted.extend(self._extract_tasks_from_tiptap_doc(node["content"]))
         return extracted
+
+    @staticmethod
+    def _build_tiptap_report(
+        title: str,
+        summary: str,
+        speakers: list[str],
+        tasks: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        """
+        Builds a valid ProseMirror / TipTap doc JSON representation of the meeting report
+        while maintaining top-level metadata compatibility (summary, action_items, speakers).
+        """
+        content_nodes: list[dict[str, Any]] = [
+            {
+                "type": "heading",
+                "attrs": {"level": 1},
+                "content": [{"type": "text", "text": f"Báo cáo Cuộc họp: {title}"}],
+            },
+            {
+                "type": "heading",
+                "attrs": {"level": 2},
+                "content": [{"type": "text", "text": "📋 Tóm tắt Cuộc họp"}],
+            },
+            {
+                "type": "paragraph",
+                "content": [{"type": "text", "text": summary}],
+            },
+        ]
+
+        if speakers:
+            content_nodes.extend(
+                [
+                    {
+                        "type": "heading",
+                        "attrs": {"level": 3},
+                        "content": [{"type": "text", "text": "👥 Thành viên tham gia"}],
+                    },
+                    {
+                        "type": "bulletList",
+                        "content": [
+                            {
+                                "type": "listItem",
+                                "content": [
+                                    {
+                                        "type": "paragraph",
+                                        "content": [{"type": "text", "text": spk}],
+                                    }
+                                ],
+                            }
+                            for spk in sorted(speakers)
+                        ],
+                    },
+                ]
+            )
+
+        task_items_nodes = []
+        for t in tasks:
+            assignee = t.get("assignee") or "Chưa rõ"
+            deadline = t.get("deadline") or "Chưa rõ"
+            task_title = t.get("task_title") or "Nhiệm vụ"
+            task_items_nodes.append(
+                {
+                    "type": "taskItem",
+                    "attrs": {"checked": False},
+                    "content": [
+                        {
+                            "type": "paragraph",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "marks": [{"type": "bold"}],
+                                    "text": f"{task_title}: ",
+                                },
+                                {
+                                    "type": "text",
+                                    "text": f"Giao cho {assignee} (Hạn: {deadline})",
+                                },
+                            ],
+                        }
+                    ],
+                }
+            )
+
+        content_nodes.append(
+            {
+                "type": "heading",
+                "attrs": {"level": 2},
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"✅ Nhiệm vụ & Action Items ({len(tasks)})",
+                    }
+                ],
+            }
+        )
+
+        if task_items_nodes:
+            content_nodes.append(
+                {
+                    "type": "taskList",
+                    "content": task_items_nodes,
+                }
+            )
+        else:
+            content_nodes.append(
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "Không phát hiện Action Item nào trong cuộc họp.",
+                        }
+                    ],
+                }
+            )
+
+        return {
+            "type": "doc",
+            "content": content_nodes,
+            "summary": summary,
+            "action_items": tasks,
+            "speakers": speakers,
+        }
