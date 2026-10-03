@@ -88,3 +88,24 @@ class SqlTranscriptSegmentRepository(ITranscriptSegmentRepository):
         result = await self.session.execute(stmt)
         models = result.scalars().all()
         return [m.to_entity() for m in models]
+
+    async def delete_segment(self, segment_id: str) -> bool:
+        from sqlalchemy import delete
+
+        stmt = delete(TranscriptSegmentModel).where(TranscriptSegmentModel.id == segment_id)
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return bool(result.rowcount and result.rowcount > 0)
+
+    async def clear_by_meeting(self, meeting_id: str) -> int:
+        from sqlalchemy import delete
+
+        subq = (
+            select(TranscriptionSessionModel.id)
+            .where(TranscriptionSessionModel.meeting_id == meeting_id)
+            .scalar_subquery()
+        )
+        stmt = delete(TranscriptSegmentModel).where(TranscriptSegmentModel.session_id.in_(subq))
+        result = await self.session.execute(stmt)
+        await self.session.flush()
+        return result.rowcount or 0

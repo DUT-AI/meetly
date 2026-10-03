@@ -170,13 +170,115 @@ class OfflineSTTProcessor:
             )
             self._model = None
 
+    @staticmethod
+    def _decode_via_ffmpeg(audio_bytes: bytes) -> np.ndarray | None:
+        """
+        Decodes any incoming audio container (WebM/Opus, MP3, M4A, AAC, FLAC, OGG, WAV)
+        to 16kHz mono float32 numpy array using the system FFmpeg CLI.
+        """
+        if not audio_bytes or len(audio_bytes) < 32:
+            return None
+        try:
+            import subprocess
+
+            cmd = [
+                "ffmpeg",
+                "-nostdin",
+                "-threads", "0",
+                "-i", "pipe:0",
+                "-f", "s16le",
+                "-ac", "1",
+                "-ar", "16000",
+                "pipe:1",
+            ]
+            proc = subprocess.run(
+                cmd,
+                input=audio_bytes,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                check=False,
+                timeout=45.0,
+            )
+            if proc.returncode == 0 and len(proc.stdout) >= 3200:
+                pcm16 = np.frombuffer(proc.stdout, dtype=np.int16)
+                waveform = pcm16.astype(np.float32) / 32768.0
+                logger.info(
+                    f"[OfflineSTT] Decoded {len(waveform) / 16000:.2f}s audio via FFmpeg ({len(audio_bytes)} bytes input)"
+                )
+                return waveform
+            else:
+                err_msg = proc.stderr[:300].decode("utf-8", errors="ignore")
+                logger.debug(f"[OfflineSTT] FFmpeg decode non-zero ({proc.returncode}): {err_msg}")
+        except Exception as e:
+            logger.debug(f"[OfflineSTT] FFmpeg decode exception: {e}")
+        return None
+
+    @staticmethod
+    def _decode_via_wave(audio_bytes: bytes) -> np.ndarray | None:
+        """
+        Pure Python standard library fallback to parse uncompressed RIFF/WAV audio
+        without any external dependencies.
+        """
+        if not audio_bytes or len(audio_bytes) < 44 or not audio_bytes.startswith(b"RIFF"):
+            return None
+        try:
+            import wave
+
+            with wave.open(io.BytesIO(audio_bytes), "rb") as wf:
+                channels = wf.getnchannels()
+                sample_width = wf.getsampwidth()
+                framerate = wf.getframerate()
+                n_frames = wf.getnframes()
+                if n_frames == 0:
+                    return None
+
+                raw_data = wf.readframes(n_frames)
+                if sample_width == 2:
+                    pcm = np.frombuffer(raw_data, dtype=np.int16).astype(np.float32) / 32768.0
+                elif sample_width == 1:
+                    pcm = (np.frombuffer(raw_data, dtype=np.uint8).astype(np.float32) - 128.0) / 128.0
+                elif sample_width == 4:
+                    pcm = np.frombuffer(raw_data, dtype=np.int32).astype(np.float32) / 2147483648.0
+                else:
+                    return None
+
+                if channels > 1:
+                    pcm = pcm.reshape(-1, channels).mean(axis=1)
+
+                if framerate != 16000 and len(pcm) > 0:
+                    target_length = max(1, int(len(pcm) * 16000 / framerate))
+                    pcm = np.interp(
+                        np.linspace(0, len(pcm), target_length, endpoint=False),
+                        np.arange(len(pcm)),
+                        pcm,
+                    ).astype(np.float32)
+
+                logger.info(
+                    f"[OfflineSTT] Decoded {len(pcm) / 16000:.2f}s audio via Python wave module"
+                )
+                return pcm
+        except Exception as e:
+            logger.debug(f"[OfflineSTT] Wave decode exception: {e}")
+            return None
+
     def decode_audio_to_waveform(self, audio_bytes: bytes) -> np.ndarray | None:
         """
-        Decodes any incoming audio container (MP3, WAV, M4A, etc.) to 16kHz mono float32 numpy array.
+        Decodes any incoming audio container (MP3, WAV, M4A, WebM/Opus, etc.) to 16kHz mono float32 numpy array.
+        Uses a robust multi-stage decoding pipeline:
+        1. FFmpeg CLI (handles all webm, mp3, m4a, wav).
+        2. faster_whisper.audio.decode_audio / PyAV.
+        3. Python standard library wave module.
+        4. Raw PCM16 fallback for direct byte buffers.
         """
         if not audio_bytes or len(audio_bytes) < 64:
             return None
 
+        # 1. Primary: FFmpeg CLI
+        ffmpeg_waveform = self._decode_via_ffmpeg(audio_bytes)
+        if ffmpeg_waveform is not None and len(ffmpeg_waveform) > 0:
+            return ffmpeg_waveform
+
+        # 2. PyAV / Faster-Whisper decode_audio if installed
         if decode_audio is not None:
             try:
                 buf = io.BytesIO(audio_bytes)
@@ -186,13 +288,30 @@ class OfflineSTTProcessor:
             except Exception as e:
                 logger.debug(f"[OfflineSTT] decode_audio failed on input bytes: {e}")
 
-        # Fallback raw PCM16 parser if direct WAV bytes
-        try:
-            pcm16 = np.frombuffer(audio_bytes, dtype=np.int16)
-            if len(pcm16) > 1600:
-                return pcm16.astype(np.float32) / 32768.0
-        except Exception:
-            pass
+        # 3. Standard Python wave module (for uncompressed WAV)
+        wave_waveform = self._decode_via_wave(audio_bytes)
+        if wave_waveform is not None and len(wave_waveform) > 0:
+            return wave_waveform
+
+        # 4. Fallback raw PCM16 parser ONLY if direct raw PCM bytes (even length, not starting with container headers)
+        if len(audio_bytes) % 2 == 0:
+            is_container = (
+                audio_bytes.startswith(b"RIFF")
+                or audio_bytes.startswith(b"\x1aE\xdf\xa3")  # WebM
+                or audio_bytes.startswith(b"ID3")  # MP3
+                or audio_bytes.startswith(b"\xff\xfb")  # MP3 sync
+                or audio_bytes.startswith(b"\xff\xf3")
+                or audio_bytes.startswith(b"OggS")  # OGG
+                or audio_bytes.startswith(b"fLaC")  # FLAC
+                or (len(audio_bytes) > 8 and audio_bytes[4:8] == b"ftyp")  # MP4/M4A
+            )
+            if not is_container:
+                try:
+                    pcm16 = np.frombuffer(audio_bytes, dtype=np.int16)
+                    if len(pcm16) > 1600:
+                        return pcm16.astype(np.float32) / 32768.0
+                except Exception:
+                    pass
 
         return None
 
@@ -209,7 +328,7 @@ class OfflineSTTProcessor:
         Never returns hardcoded or fabricated dialogue.
         """
         waveform = self.decode_audio_to_waveform(audio_bytes)
-        if waveform is None or len(waveform) < 3200:
+        if waveform is None or len(waveform) < 1600:  # Minimum 100ms
             return []
 
         # 1. PRIMARY: Delegate entirely to Remote GPU Whisper Large-v3 if configured
@@ -223,7 +342,10 @@ class OfflineSTTProcessor:
                 logger.info(
                     f"[OfflineSTT] Delegating {len(waveform) / 16000:.1f}s audio entirely to Remote GPU Whisper Large-v3 at {stt_settings.stt_service_url}..."
                 )
-                with httpx.Client(timeout=60.0) as client:
+                
+                # Attempt 1: Standard transcription with beam_size=5
+                results: list[dict[str, Any]] = []
+                with httpx.Client(timeout=120.0) as client:
                     resp = client.post(
                         f"{stt_settings.stt_service_url.rstrip('/')}/api/v1/asr/transcribe",
                         json={
@@ -234,54 +356,90 @@ class OfflineSTTProcessor:
                             "initial_prompt": initial_prompt or self.DEFAULT_PROMPT,
                         },
                     )
-                if resp.status_code == 200:
-                    data = resp.json()
-                    gpu_segments = data.get("segments", [])
-                    results: list[dict[str, Any]] = []
+                    if resp.status_code == 200:
+                        data = resp.json()
+                        gpu_segments = data.get("segments", [])
 
-                    if gpu_segments:
-                        for s in gpu_segments:
-                            s_text = self.clean_vietnamese_asr_text(s.get("text", "").strip())
-                            if not s_text or any(kw in s_text.lower() for kw in self.HALLUCINATION_KEYWORDS):
-                                continue
-                            start_ms = s.get("start_ms", 0)
-                            end_ms = s.get("end_ms", int(len(waveform) / 16))
-                            start_sample = max(0, int(start_ms * 16))
-                            end_sample = min(len(waveform), int(end_ms * 16))
-                            chunk = (
-                                waveform[start_sample:end_sample]
-                                if end_sample > start_sample + 320
-                                else waveform
-                            )
-                            results.append(
-                                {
-                                    "start_ms": start_ms,
-                                    "end_ms": end_ms,
-                                    "text": s_text,
-                                    "words": s.get("words", []),
-                                    "confidence": round(float(s.get("confidence", data.get("confidence", 0.95))), 2),
-                                    "audio_chunk": chunk,
-                                }
-                            )
-                    else:
-                        text = self.clean_vietnamese_asr_text(data.get("text", "").strip())
-                        if text and not any(kw in text.lower() for kw in self.HALLUCINATION_KEYWORDS):
-                            results.append(
-                                {
-                                    "start_ms": 0,
-                                    "end_ms": int(len(waveform) / 16),
-                                    "text": text,
-                                    "words": data.get("words", []),
-                                    "confidence": round(float(data.get("confidence", 0.95)), 2),
-                                    "audio_chunk": waveform,
-                                }
-                            )
+                        if gpu_segments:
+                            for s in gpu_segments:
+                                s_text = self.clean_vietnamese_asr_text(s.get("text", "").strip())
+                                if not s_text or any(kw in s_text.lower() for kw in self.HALLUCINATION_KEYWORDS):
+                                    continue
+                                
+                                # Support both start_ms and start (seconds)
+                                start_ms = s.get("start_ms")
+                                if start_ms is None:
+                                    start_ms = int(s.get("start", 0) * 1000)
+                                end_ms = s.get("end_ms")
+                                if end_ms is None:
+                                    end_ms = int(s.get("end", len(waveform) / 16000) * 1000)
 
-                    if results:
-                        logger.info(
-                            f"[OfflineSTT] Remote GPU Whisper Large-v3 transcribed {len(results)} segments successfully: '{results[0]['text'][:60]}...'"
+                                start_sample = max(0, int(start_ms * 16))
+                                end_sample = min(len(waveform), int(end_ms * 16))
+                                chunk = (
+                                    waveform[start_sample:end_sample]
+                                    if end_sample > start_sample + 320
+                                    else waveform
+                                )
+                                results.append(
+                                    {
+                                        "start_ms": start_ms,
+                                        "end_ms": end_ms,
+                                        "text": s_text,
+                                        "words": s.get("words", []),
+                                        "confidence": round(float(s.get("confidence", data.get("confidence", 0.95))), 2),
+                                        "audio_chunk": chunk,
+                                    }
+                                )
+                        
+                        # Fallback to top-level text if segments were empty
+                        if not results:
+                            text = self.clean_vietnamese_asr_text(data.get("text", "").strip())
+                            if text and not any(kw in text.lower() for kw in self.HALLUCINATION_KEYWORDS):
+                                results.append(
+                                    {
+                                        "start_ms": 0,
+                                        "end_ms": int(len(waveform) / 16),
+                                        "text": text,
+                                        "words": data.get("words", []),
+                                        "confidence": round(float(data.get("confidence", 0.95)), 2),
+                                        "audio_chunk": waveform,
+                                    }
+                                )
+
+                    # Attempt 2: If short audio (<15s) and results still empty, retry with beam_size=1 without prompt
+                    if not results and len(waveform) <= 16000 * 15:
+                        logger.info("[OfflineSTT] Retrying short audio with beam_size=1 and neutral prompt...")
+                        resp_retry = client.post(
+                            f"{stt_settings.stt_service_url.rstrip('/')}/api/v1/asr/transcribe",
+                            json={
+                                "audio_base64": b64_audio,
+                                "language": language,
+                                "beam_size": 1,
+                                "word_timestamps": False,
+                                "initial_prompt": None,
+                            },
                         )
-                        return results
+                        if resp_retry.status_code == 200:
+                            data_retry = resp_retry.json()
+                            text_retry = self.clean_vietnamese_asr_text(data_retry.get("text", "").strip())
+                            if text_retry and not any(kw in text_retry.lower() for kw in self.HALLUCINATION_KEYWORDS):
+                                results.append(
+                                    {
+                                        "start_ms": 0,
+                                        "end_ms": int(len(waveform) / 16),
+                                        "text": text_retry,
+                                        "words": data_retry.get("words", []),
+                                        "confidence": round(float(data_retry.get("confidence", 0.95)), 2),
+                                        "audio_chunk": waveform,
+                                    }
+                                )
+
+                if results:
+                    logger.info(
+                        f"[OfflineSTT] Remote GPU Whisper Large-v3 transcribed {len(results)} segments successfully: '{results[0]['text'][:60]}...'"
+                    )
+                    return results
             except Exception as e:
                 logger.warning(
                     f"[OfflineSTT] Remote GPU ASR call failed: {e}. Falling back to local model if available..."

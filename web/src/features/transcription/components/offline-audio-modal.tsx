@@ -117,12 +117,21 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
     }
   };
 
+  const audioPreviewUrl = React.useMemo(() => {
+    if (!recordedBlob) return null;
+    return URL.createObjectURL(recordedBlob);
+  }, [recordedBlob]);
+
   const handleProcess = async () => {
     let fileToUpload: File | null = selectedFile;
 
     if (activeTab === 'record') {
       if (!recordedBlob) {
         toast.error('Vui lòng thu âm trước khi xử lý');
+        return;
+      }
+      if (recordingSeconds < 2) {
+        toast.warning('Đoạn thu âm quá ngắn (dưới 2 giây). Vui lòng thu âm tối thiểu 3-5 giây và nói rõ ràng.');
         return;
       }
       const isMp4 = recordedBlob.type.includes('mp4');
@@ -264,6 +273,11 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
                       <CheckCircle2 className="w-6 h-6" />
                     </div>
                     <p className="font-semibold text-sm">Đã thu âm xong ({formatSec(recordingSeconds)})</p>
+                    {audioPreviewUrl && (
+                      <div className="w-full max-w-xs mx-auto py-1">
+                        <audio src={audioPreviewUrl} controls className="w-full h-8" />
+                      </div>
+                    )}
                     <div className="flex gap-2 justify-center">
                       <Button variant="outline" size="sm" onClick={startRecording} className="gap-1.5">
                         <RotateCcw className="w-3.5 h-3.5" /> Thu lại

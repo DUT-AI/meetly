@@ -219,3 +219,24 @@ class TranscriptionSessionUseCases:
             recording_url=None,  # Will be populated when recording asset is bound
             segments=segment_dtos,
         )
+
+    async def delete_segment(
+        self, workspace_id: str, meeting_id: str, segment_id: str, actor_id: str
+    ) -> bool:
+        await self._check_member(workspace_id, actor_id)
+        deleted = await self.segment_repo.delete_segment(segment_id)
+        logger.info(
+            f"[Session] Deleted segment {segment_id} for meeting {meeting_id} (success={deleted})"
+        )
+        return deleted
+
+    async def clear_meeting_transcripts(
+        self, workspace_id: str, meeting_id: str, actor_id: str
+    ) -> int:
+        await self._check_member(workspace_id, actor_id)
+        count = await self.segment_repo.clear_by_meeting(meeting_id)
+        logger.info(
+            f"[Session] Cleared {count} transcript segments for meeting {meeting_id}"
+        )
+        return count
+

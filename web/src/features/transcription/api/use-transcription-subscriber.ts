@@ -44,10 +44,18 @@ export const useTranscriptionSubscriber = ({
 
   // Sync initial segments when loaded
   useEffect(() => {
-    if (initialSegments.length > 0) {
+    if (initialSegments) {
       setSegments(initialSegments);
     }
   }, [initialSegments]);
+
+  const removeSegment = (segmentId: string) => {
+    setSegments((prev) => prev.filter((s) => s.id !== segmentId));
+  };
+
+  const clearSegments = () => {
+    setSegments([]);
+  };
 
   const attachWsListeners = (ws: WebSocket) => {
     ws.onopen = () => {
@@ -167,5 +175,7 @@ export const useTranscriptionSubscriber = ({
     isConnected,
     sessionStatus,
     connectToSession,
+    removeSegment,
+    clearSegments,
   };
 };

@@ -16,6 +16,7 @@ import {
   Search,
   Sparkles,
   Square,
+  Trash2,
   User,
   Volume2,
   X,
@@ -23,11 +24,22 @@ import {
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
+import { useQueryClient } from '@tanstack/react-query';
+
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
+import { transcriptionApi } from '../api/transcription-api';
 import { useGetTranscripts } from '../api/use-get-transcripts';
 import { useTranscriptionSubscriber } from '../api/use-transcription-subscriber';
 import { useDirectMicStreaming } from '../hooks/use-direct-mic-streaming';
@@ -57,9 +69,14 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
   const [autoScroll, setAutoScroll] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [copiedAll, setCopiedAll] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isClearingAll, setIsClearingAll] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const audioPlayerRef = useRef<AudioTimelinePlayerRef | null>(null);
   const [activePlayerTimeMs, setActivePlayerTimeMs] = useState<number>(currentTimeMs);
+
+  const queryClient = useQueryClient();
 
   // 1. Initial history from REST API
   const { data: transcriptsData, isLoading } = useGetTranscripts(workspaceId, meetingId);
@@ -227,6 +244,37 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
     onInsertToEditor(formatted);
   };
 
+  const handleDeleteSingle = async (segmentId: string) => {
+    try {
+      setDeletingId(segmentId);
+      subscriber.removeSegment(segmentId);
+      await transcriptionApi.deleteSegment(workspaceId, meetingId, segmentId);
+      queryClient.invalidateQueries({ queryKey: ['transcripts', workspaceId, meetingId] });
+      toast.success('Đã xóa khối hội thoại');
+    } catch (err: any) {
+      toast.error('Lỗi khi xóa khối hội thoại: ' + (err?.response?.data?.message || err?.message || 'Không thể xóa'));
+      queryClient.invalidateQueries({ queryKey: ['transcripts', workspaceId, meetingId] });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleClearAll = async () => {
+    try {
+      setIsClearingAll(true);
+      subscriber.clearSegments();
+      await transcriptionApi.clearMeetingTranscripts(workspaceId, meetingId);
+      queryClient.invalidateQueries({ queryKey: ['transcripts', workspaceId, meetingId] });
+      toast.success('Đã xóa toàn bộ các khối hội thoại test');
+      setShowClearConfirm(false);
+    } catch (err: any) {
+      toast.error('Lỗi khi xóa hội thoại: ' + (err?.response?.data?.message || err?.message || 'Không thể xóa'));
+      queryClient.invalidateQueries({ queryKey: ['transcripts', workspaceId, meetingId] });
+    } finally {
+      setIsClearingAll(false);
+    }
+  };
+
   const handleInternalSeek = (startMs: number) => {
     setActivePlayerTimeMs(startMs);
     if (audioPlayerRef.current) {
@@ -380,6 +428,24 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               <span>Chèn vào biên bản</span>
             </Button>
           )}
+
+          {/* Clear All Test Blocks Button */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowClearConfirm(true)}
+            disabled={liveSegments.length === 0 || isClearingAll}
+            className="h-9 text-xs font-bold text-rose-600 hover:bg-rose-50 hover:text-rose-700 border-rose-200 gap-1.5 px-3 rounded-xl shadow-2xs"
+            title="Xóa tất cả các khối câu thoại test trong cuộc họp"
+          >
+            {isClearingAll ? (
+              <Loader2 className="size-3.5 animate-spin text-rose-600" />
+            ) : (
+              <Trash2 className="size-3.5 text-rose-600" />
+            )}
+            <span>Xóa khối test</span>
+          </Button>
         </div>
       </div>
 
@@ -476,6 +542,20 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             <ArrowDown className="size-3.5" />
             <span className="hidden sm:inline">Tự cuộn</span>
           </Button>
+
+          {liveSegments.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowClearConfirm(true)}
+              className="h-8 px-2.5 rounded-xl text-xs font-bold gap-1 shrink-0 text-rose-600 hover:bg-rose-50 border border-rose-200/80 transition-all"
+              title="Xóa toàn bộ các khối test"
+            >
+              <Trash2 className="size-3.5 text-rose-500" />
+              <span className="hidden sm:inline">Xóa tất cả</span>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -572,7 +652,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                 </div>
 
                 {/* Floating Quick Action Toolbar */}
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white/90 border border-slate-200 p-0.5 rounded-xl shadow-2xs">
+                <div className="opacity-75 sm:opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 bg-white border border-slate-200 p-0.5 rounded-xl shadow-2xs">
                   <button
                     type="button"
                     onClick={() => handleCopySingle(seg.text, seg.id)}
@@ -597,6 +677,20 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                       <PlusCircle className="size-3.5" />
                     </button>
                   )}
+
+                  <button
+                    type="button"
+                    disabled={deletingId === seg.id}
+                    onClick={() => handleDeleteSingle(seg.id)}
+                    className="p-1.5 text-rose-500 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-all"
+                    title="Xóa khối thoại test này"
+                  >
+                    {deletingId === seg.id ? (
+                      <Loader2 className="size-3.5 animate-spin text-rose-500" />
+                    ) : (
+                      <Trash2 className="size-3.5 text-rose-500" />
+                    )}
+                  </button>
                 </div>
               </div>
 
@@ -636,6 +730,44 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
           </div>
         )}
       </div>
+
+      {/* ── Dialog Xác nhận xóa tất cả các khối test ── */}
+      <Dialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
+        <DialogContent className="max-w-md p-6 rounded-2xl bg-white border border-slate-200 shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="text-base font-extrabold text-slate-900 flex items-center gap-2">
+              <Trash2 className="size-5 text-rose-600" />
+              Xác nhận xóa các khối thoại test
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-600 mt-2 leading-relaxed">
+              Bạn có chắc chắn muốn xóa <b>toàn bộ {liveSegments.length} khối thoại</b> trong phiên này không? Thao tác này sẽ dọn dẹp sạch transcript test và không thể hoàn tác.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex items-center justify-end gap-2.5 mt-5">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setShowClearConfirm(false)}
+              className="h-9 text-xs font-semibold rounded-xl border-slate-200"
+            >
+              Hủy
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              size="sm"
+              disabled={isClearingAll}
+              onClick={handleClearAll}
+              className="h-9 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-700 text-white gap-1.5 px-4"
+            >
+              {isClearingAll && <Loader2 className="size-3.5 animate-spin" />}
+              Xác nhận xóa sạch
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
+

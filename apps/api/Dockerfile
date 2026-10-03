@@ -34,6 +34,10 @@ ENV TZ=Asia/Ho_Chi_Minh \
 
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy virtual environment from builder
 COPY --from=builder /app/.venv /app/.venv
 

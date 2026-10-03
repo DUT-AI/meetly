@@ -64,4 +64,19 @@ export const transcriptionApi = {
     });
     return response.data?.data ?? response.data;
   },
+
+  deleteSegment: async (workspaceId: string, meetingId: string, segmentId: string): Promise<any> => {
+    const response = await api.delete<{ data: any }>(
+      `/workspaces/${workspaceId}/meetings/${meetingId}/transcripts/${segmentId}`,
+    );
+    return response.data?.data ?? response.data;
+  },
+
+  clearMeetingTranscripts: async (workspaceId: string, meetingId: string): Promise<any> => {
+    const response = await api.delete<{ data: any }>(
+      `/workspaces/${workspaceId}/meetings/${meetingId}/transcripts`,
+    );
+    return response.data?.data ?? response.data;
+  },
 };
+

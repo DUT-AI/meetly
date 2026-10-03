@@ -71,6 +71,14 @@ class ITranscriptSegmentRepository(ABC):
     async def list_by_meeting(self, meeting_id: str) -> list[TranscriptSegmentEntity]:
         pass
 
+    @abstractmethod
+    async def delete_segment(self, segment_id: str) -> bool:
+        pass
+
+    @abstractmethod
+    async def clear_by_meeting(self, meeting_id: str) -> int:
+        pass
+
 
 class IVoiceProfileRepository(ABC):
     """Repository interface for Member Centroid Voicebank profiles."""

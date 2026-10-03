@@ -45,11 +45,11 @@ class OfflineMeetingUseCase:
         meeting_repo: IMeetingRepository,
         member_repo: IMemberRepository,
         whisper_engine: FasterWhisperEngine,
-        task_extractor: QwenTaskExtractorService,
-        offline_stt: OfflineSTTProcessor | None = None,
-        task_repo: ITaskRepository | None = None,
-        project_repo: IProjectRepository | None = None,
-        manage_client: ManageClient | None = None,
+        task_extractor: QwenTaskExtractorService = None,  # type: ignore[assignment]
+        offline_stt: OfflineSTTProcessor = None,  # type: ignore[assignment]
+        task_repo: ITaskRepository = None,  # type: ignore[assignment]
+        project_repo: IProjectRepository = None,  # type: ignore[assignment]
+        manage_client: ManageClient = None,  # type: ignore[assignment]
     ) -> None:
         self.session_repo = session_repo
         self.segment_repo = segment_repo
@@ -57,7 +57,7 @@ class OfflineMeetingUseCase:
         self.meeting_repo = meeting_repo
         self.member_repo = member_repo
         self.whisper_engine = whisper_engine
-        self.task_extractor = task_extractor
+        self.task_extractor = task_extractor or QwenTaskExtractorService()
         self.task_repo = task_repo
         self.project_repo = project_repo
         self.manage_client = manage_client or ManageClient()
@@ -164,6 +164,17 @@ class OfflineMeetingUseCase:
         # Parse audio segments (real faster-whisper ASR & VAD)
         segments_raw = self._extract_utterances_from_audio(audio_bytes, voice_profiles)
         if not segments_raw:
+            waveform = self.offline_stt.decode_audio_to_waveform(audio_bytes)
+            if waveform is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Không thể giải mã file âm thanh. Vui lòng kiểm tra lại định dạng tệp (hỗ trợ .mp3, .wav, .m4a, .webm).",
+                )
+            if len(waveform) < 16000 * 1.0:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="File ghi âm quá ngắn (dưới 1 giây). Vui lòng ghi âm tối thiểu 3 giây và nói rõ ràng.",
+                )
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Không phát hiện thấy giọng nói trong file ghi âm. Vui lòng kiểm tra lại micro hoặc thử nói to, rõ ràng hơn.",
@@ -394,10 +405,11 @@ class OfflineMeetingUseCase:
             for m in members:
                 try:
                     user = await self.manage_client.get_user(m.user_id)
+                    username_attr = getattr(user, "username", None) if user else None
                     if user and user.name:
                         user_names[m.id] = user.name
-                    elif user and user.username:
-                        user_names[m.id] = user.username
+                    elif username_attr:
+                        user_names[m.id] = str(username_attr)
                     else:
                         user_names[m.id] = m.user_id
                 except Exception:
@@ -509,10 +521,11 @@ class OfflineMeetingUseCase:
         for m in members:
             try:
                 user = await self.manage_client.get_user(m.user_id)
+                username_attr = getattr(user, "username", None) if user else None
                 if user and user.name:
                     user_names[m.id] = user.name
-                elif user and user.username:
-                    user_names[m.id] = user.username
+                elif username_attr:
+                    user_names[m.id] = str(username_attr)
                 else:
                     user_names[m.id] = m.user_id
             except Exception:

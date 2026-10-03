@@ -110,6 +110,46 @@ async def get_meeting_transcripts(
     return {"data": result.model_dump()}
 
 
+@router.delete(
+    "/api/v1/workspaces/{workspace_id}/meetings/{meeting_id}/transcripts/{segment_id}",
+    response_model=dict,
+)
+@inject
+async def delete_transcript_segment(
+    workspace_id: str,
+    meeting_id: str,
+    segment_id: str,
+    current_user: CurrentUser,
+    use_cases: FromDishka[TranscriptionSessionUseCases],
+) -> dict:
+    success = await use_cases.delete_segment(
+        workspace_id=workspace_id,
+        meeting_id=meeting_id,
+        segment_id=segment_id,
+        actor_id=str(current_user.id),
+    )
+    return {"data": {"deleted": success, "segment_id": segment_id}}
+
+
+@router.delete(
+    "/api/v1/workspaces/{workspace_id}/meetings/{meeting_id}/transcripts",
+    response_model=dict,
+)
+@inject
+async def clear_meeting_transcripts(
+    workspace_id: str,
+    meeting_id: str,
+    current_user: CurrentUser,
+    use_cases: FromDishka[TranscriptionSessionUseCases],
+) -> dict:
+    count = await use_cases.clear_meeting_transcripts(
+        workspace_id=workspace_id,
+        meeting_id=meeting_id,
+        actor_id=str(current_user.id),
+    )
+    return {"data": {"deleted_count": count}}
+
+
 # ─── WEBSOCKET ENDPOINTS ─────────────────────────────────────────────────────
 
 

@@ -101,6 +101,10 @@ services:
       - "3001:3000"
     env_file:
       - ./web/.env
+    environment:
+      - INTERNAL_API_URL=http://api:8000/api/v1
+    depends_on:
+      - api
     networks:
       - meetly-net
     labels:
