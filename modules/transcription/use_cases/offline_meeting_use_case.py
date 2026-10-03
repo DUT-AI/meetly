@@ -45,7 +45,7 @@ class OfflineMeetingUseCase:
         meeting_repo: IMeetingRepository,
         member_repo: IMemberRepository,
         whisper_engine: FasterWhisperEngine,
-        task_extractor: QwenTaskExtractorService = None,  # type: ignore[assignment]
+        task_extractor: QwenTaskExtractorService,
         offline_stt: OfflineSTTProcessor = None,  # type: ignore[assignment]
         task_repo: ITaskRepository = None,  # type: ignore[assignment]
         project_repo: IProjectRepository = None,  # type: ignore[assignment]

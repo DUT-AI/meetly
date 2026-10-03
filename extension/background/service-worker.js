@@ -23,13 +23,20 @@ chrome.runtime.onInstalled.addListener(() => {
     settings: {
       autoDownload: true,
       recordMic: true,
-      serverUrl: 'https://meetly.dutai.io.vn',
+      serverUrl: 'http://localhost:8000',
       workspaceId: '',
       meetingId: '',
       authToken: '',
     },
   });
 });
+
+function extractList(data) {
+  if (Array.isArray(data)) return data;
+  if (data && Array.isArray(data.documents)) return data.documents;
+  if (data && Array.isArray(data.items)) return data.items;
+  return [];
+}
 
 /**
  * Tự động tìm token xác thực (JWT) từ Cookie của Meetly Web hoặc cài đặt lưu trong Storage
@@ -40,17 +47,28 @@ async function resolveAuthToken(serverUrl) {
     return settings.authToken.trim();
   }
 
-  // Thử tìm cookie access_token trên các domain phổ biến của Meetly (Local & Production)
-  const candidateUrls = [
-    'http://localhost:3000',
-    'http://localhost:8000',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:8000',
-    'https://meetly.dutai.io.vn',
-    serverUrl,
-  ].filter(Boolean);
+  const cleanServerUrl = (serverUrl || '').trim();
+  let candidateUrls = [];
+  if (cleanServerUrl.includes('meetly.dutai.io.vn')) {
+    candidateUrls = [
+      'https://meetly.dutai.io.vn',
+      cleanServerUrl,
+    ];
+  } else {
+    // Ưu tiên các cổng của frontend (3000, 3001) và backend (8000)
+    candidateUrls = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'http://localhost:8000',
+      'http://127.0.0.1:8000',
+      cleanServerUrl,
+    ];
+  }
 
   for (const url of candidateUrls) {
+    if (!url) continue;
     try {
       const cookie = await chrome.cookies.get({ url: url, name: 'access_token' });
       if (cookie && cookie.value) {
@@ -81,22 +99,12 @@ class StreamHandler {
     this.pendingControlMessages = [];
   }
 
-  async start({ workspaceId, meetingId, serverUrl }) {
+  async start({ workspaceId, meetingId, serverUrl, roomCode }) {
     let cleanServerUrl = (serverUrl || 'http://localhost:8000').trim().replace(/\/+$/, '');
     if (!cleanServerUrl.startsWith('http://') && !cleanServerUrl.startsWith('https://')) {
       cleanServerUrl = `http://${cleanServerUrl}`;
     }
     this.serverUrl = cleanServerUrl;
-
-    if (!workspaceId || !meetingId) {
-      this.port.postMessage({
-        type: 'ERROR',
-        message: 'Thiếu Workspace ID hoặc Meeting ID. Vui lòng mở Extension Popup để cấu hình.',
-      });
-      return;
-    }
-
-    console.log(`[Meetly Service Worker] Bắt đầu phiên streaming cho WS: ${workspaceId}, Meet: ${meetingId}, Server: ${this.serverUrl}`);
 
     const token = await resolveAuthToken(this.serverUrl);
     const headers = { 'Content-Type': 'application/json' };
@@ -104,10 +112,85 @@ class StreamHandler {
       headers['Authorization'] = `Bearer ${token}`;
     }
 
+    // 0. Tự động tìm nạp Workspace & Meeting nếu thiếu
+    if (!workspaceId || !meetingId) {
+      if (token) {
+        try {
+          console.log('[Meetly Service Worker] Đang tự động tìm nạp Workspace & Meeting cho tài khoản...');
+          const wsRes = await fetch(`${this.serverUrl}/api/v1/workspaces`, { headers });
+          if (wsRes.ok) {
+            const wsJson = await wsRes.json();
+            const workspaces = extractList(wsJson.data);
+            if (workspaces.length > 0) {
+              if (!workspaceId) {
+                workspaceId = workspaces[0].id;
+                console.log(`[Meetly Service Worker] Tự động chọn Workspace: ${workspaces[0].name} (${workspaceId})`);
+              }
+              if (!meetingId) {
+                const meetRes = await fetch(`${this.serverUrl}/api/v1/workspaces/${workspaceId}/meetings`, { headers });
+                let foundMeetingId = null;
+                if (meetRes.ok) {
+                  const meetJson = await meetRes.json();
+                  const meetings = extractList(meetJson.data);
+                  if (roomCode) {
+                    const matched = meetings.find(m => m.title && m.title.includes(roomCode));
+                    if (matched) foundMeetingId = matched.id;
+                  }
+                  if (!foundMeetingId && meetings.length > 0) {
+                    foundMeetingId = meetings[0].id;
+                  }
+                }
+
+                if (!foundMeetingId) {
+                  const newMeetTitle = roomCode ? `Google Meet: ${roomCode}` : `Google Meet: ${new Date().toLocaleTimeString('vi-VN')}`;
+                  const createMeetRes = await fetch(`${this.serverUrl}/api/v1/workspaces/${workspaceId}/meetings`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                      title: newMeetTitle,
+                      workspace_id: workspaceId,
+                      start_time: new Date().toISOString(),
+                      end_time: new Date(Date.now() + 3600000).toISOString(),
+                      participants: [],
+                      report: {},
+                    }),
+                  });
+                  if (createMeetRes.ok) {
+                    const createJson = await createMeetRes.json();
+                    foundMeetingId = createJson.data?.id;
+                    console.log(`[Meetly Service Worker] Tự động tạo cuộc họp mới: ${foundMeetingId}`);
+                  }
+                }
+                meetingId = foundMeetingId;
+              }
+
+              // Lưu lại cài đặt đã tự động nhận diện
+              const { settings = {} } = await chrome.storage.local.get('settings');
+              settings.workspaceId = workspaceId;
+              settings.meetingId = meetingId;
+              chrome.storage.local.set({ settings });
+            }
+          }
+        } catch (autoErr) {
+          console.warn('[Meetly Service Worker] Không thể tự động tìm nạp workspace/meeting:', autoErr);
+        }
+      }
+    }
+
+    if (!workspaceId || !meetingId) {
+      this.port.postMessage({
+        type: 'ERROR',
+        message: 'Thiếu Workspace ID hoặc Meeting ID. Vui lòng mở Extension Popup hoặc đăng nhập Meetly Web.',
+      });
+      return;
+    }
+
+    console.log(`[Meetly Service Worker] Bắt đầu phiên streaming cho WS: ${workspaceId}, Meet: ${meetingId}, Server: ${this.serverUrl}`);
+
     // 1. Tạo Transcription Session qua REST API của Backend
     let sessionData = null;
     try {
-      const res = await fetch(
+      let res = await fetch(
         `${this.serverUrl}/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/transcription-sessions`,
         {
           method: 'POST',
@@ -119,6 +202,45 @@ class StreamHandler {
           }),
         }
       );
+
+      // Nếu trả về lỗi 403 (mismatch workspace ID cũ), tự động đồng bộ lại Workspace của tài khoản
+      if (res.status === 403 && token) {
+        console.log('[Meetly Service Worker] Gặp HTTP 403, thử tự động tìm nạp lại danh sách Workspace của user...');
+        try {
+          const wsRes = await fetch(`${this.serverUrl}/api/v1/workspaces`, { headers });
+          if (wsRes.ok) {
+            const wsJson = await wsRes.json();
+            const workspaces = extractList(wsJson.data);
+            for (const ws of workspaces) {
+              if (ws.id !== workspaceId) {
+                console.log(`[Meetly Service Worker] Đang thử kết nối với Workspace: ${ws.name} (${ws.id})`);
+                const retryRes = await fetch(
+                  `${this.serverUrl}/api/v1/workspaces/${ws.id}/meetings/${meetingId}/transcription-sessions`,
+                  {
+                    method: 'POST',
+                    headers: headers,
+                    body: JSON.stringify({
+                      source_type: 'GOOGLE_MEET',
+                      sample_rate: 16000,
+                      stt_model: 'Systran/faster-whisper-large-v3',
+                    }),
+                  }
+                );
+                if (retryRes.ok) {
+                  res = retryRes;
+                  workspaceId = ws.id;
+                  const { settings = {} } = await chrome.storage.local.get('settings');
+                  settings.workspaceId = ws.id;
+                  chrome.storage.local.set({ settings });
+                  break;
+                }
+              }
+            }
+          }
+        } catch (retryErr) {
+          console.warn('[Meetly Service Worker] Lỗi khi tự động thử lại Workspace:', retryErr);
+        }
+      }
 
       if (!res.ok) {
         const errBody = await res.text();
@@ -338,10 +460,100 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
 
     case 'CHECK_AUTH':
-      resolveAuthToken(message.serverUrl || 'https://meetly.dutai.io.vn').then((token) => {
-        sendResponse({ hasToken: !!token, tokenPreview: token ? `${token.substring(0, 10)}...` : '' });
+      resolveAuthToken(message.serverUrl || 'http://localhost:8000').then((token) => {
+        sendResponse({ hasToken: !!token, token: token, tokenPreview: token ? `${token.substring(0, 10)}...` : '' });
       });
       return true;
+
+    case 'GET_WORKSPACES': {
+      const sUrl = (message.serverUrl || 'http://localhost:8000').trim().replace(/\/+$/, '');
+      resolveAuthToken(sUrl).then(async (token) => {
+        if (!token) {
+          sendResponse({ success: false, error: 'Chưa có token xác thực. Hãy đăng nhập Meetly Web trước.' });
+          return;
+        }
+        try {
+          const res = await fetch(`${sUrl}/api/v1/workspaces`, {
+            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+          });
+          if (!res.ok) {
+            const err = await res.text();
+            sendResponse({ success: false, error: `Lỗi HTTP ${res.status}: ${err}` });
+            return;
+          }
+          const json = await res.json();
+          const list = extractList(json.data);
+          sendResponse({ success: true, workspaces: list });
+        } catch (e) {
+          sendResponse({ success: false, error: `Lỗi kết nối máy chủ: ${e.message}` });
+        }
+      });
+      return true;
+    }
+
+    case 'GET_MEETINGS': {
+      const sUrl = (message.serverUrl || 'http://localhost:8000').trim().replace(/\/+$/, '');
+      const wsId = message.workspaceId;
+      if (!wsId) {
+        sendResponse({ success: false, error: 'Thiếu workspaceId' });
+        return true;
+      }
+      resolveAuthToken(sUrl).then(async (token) => {
+        try {
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+          const res = await fetch(`${sUrl}/api/v1/workspaces/${wsId}/meetings`, { headers });
+          if (!res.ok) {
+            const err = await res.text();
+            sendResponse({ success: false, error: `Lỗi HTTP ${res.status}: ${err}` });
+            return;
+          }
+          const json = await res.json();
+          const list = extractList(json.data);
+          sendResponse({ success: true, meetings: list });
+        } catch (e) {
+          sendResponse({ success: false, error: `Lỗi kết nối máy chủ: ${e.message}` });
+        }
+      });
+      return true;
+    }
+
+    case 'CREATE_MEETING': {
+      const sUrl = (message.serverUrl || 'http://localhost:8000').trim().replace(/\/+$/, '');
+      const wsId = message.workspaceId;
+      if (!wsId) {
+        sendResponse({ success: false, error: 'Thiếu workspaceId' });
+        return true;
+      }
+      resolveAuthToken(sUrl).then(async (token) => {
+        try {
+          const headers = { 'Content-Type': 'application/json' };
+          if (token) headers['Authorization'] = `Bearer ${token}`;
+          const res = await fetch(`${sUrl}/api/v1/workspaces/${wsId}/meetings`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+              title: message.title || 'Cuộc họp Google Meet',
+              workspace_id: wsId,
+              start_time: new Date().toISOString(),
+              end_time: new Date(Date.now() + 3600000).toISOString(),
+              participants: [],
+              report: {},
+            }),
+          });
+          if (!res.ok) {
+            const err = await res.text();
+            sendResponse({ success: false, error: `Lỗi HTTP ${res.status}: ${err}` });
+            return;
+          }
+          const json = await res.json();
+          sendResponse({ success: true, meeting: json.data });
+        } catch (e) {
+          sendResponse({ success: false, error: `Lỗi kết nối máy chủ: ${e.message}` });
+        }
+      });
+      return true;
+    }
 
     case 'STATE_CHANGED':
       if (message.state) {
