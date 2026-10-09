@@ -120,6 +120,7 @@ function getCollabColor(name: string = 'User'): string {
 export function formatContentForTipTap(content: any): any {
   if (!content) return '';
   if (typeof content === 'string') return content;
+  if (typeof content === 'object' && Object.keys(content).length === 0) return '';
   // If it's already a TipTap document with type === 'doc'
   if (content.type === 'doc') {
     if (!content.content || content.content.length === 0) return '';
@@ -171,9 +172,10 @@ export function formatContentForTipTap(content: any): any {
     if (parts.length > 0) {
       return parts.join('');
     }
+    return '';
   }
 
-  return content;
+  return '';
 }
 
 export interface MeetingReportEditorProps {
@@ -440,13 +442,17 @@ export const MeetingReportEditor = ({
   useEffect(() => {
     if (editor && initialContent && !hasLoadedContentRef.current) {
       const formatted = formatContentForTipTap(initialContent);
-      if (formatted) {
+      if (formatted && (typeof formatted === 'string' ? formatted.trim() !== '' : Boolean(formatted.type))) {
         const currentJson = editor.getJSON();
         const isEmpty =
           !currentJson.content || currentJson.content.length === 0 || (currentJson.content.length === 1 && !currentJson.content[0].content);
         if (isEmpty) {
           hasLoadedContentRef.current = true;
-          editor.commands.setContent(formatted);
+          try {
+            editor.commands.setContent(formatted);
+          } catch (e) {
+            console.warn('Failed to set initial TipTap content', e);
+          }
         }
       }
     }
