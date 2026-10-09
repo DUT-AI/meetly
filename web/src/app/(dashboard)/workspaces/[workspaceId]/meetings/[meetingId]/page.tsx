@@ -11,10 +11,13 @@ import {
   CheckSquare,
   Clock,
   Copy,
+  Expand,
   ExternalLink,
   FileText,
   Mail,
+  Maximize2,
   Mic,
+  Minimize2,
   Printer,
   Puzzle,
   Save,
@@ -33,6 +36,7 @@ import { ResponsiveModal } from '@/components/responsive-modal';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCurrent } from '@/features/auth/api/use-current';
 import { meetingApi } from '@/features/meetings/api/meeting-api';
 import { useGetMeeting } from '@/features/meetings/api/use-get-meeting';
 import { useUpdateMeeting } from '@/features/meetings/api/use-update-meeting';
@@ -63,6 +67,7 @@ export default function MeetingReportPage() {
   const [isVoicebankModalOpen, setIsVoicebankModalOpen] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  const { data: currentUser } = useCurrent();
   const { data: meeting, isLoading: isLoadingMeeting } = useGetMeeting(workspaceId, meetingId);
   const { data: membersResponse } = useGetMembers({ workspaceId });
   const { mutate: updateMeeting, isPending: isSaving } = useUpdateMeeting(workspaceId);
@@ -93,6 +98,18 @@ export default function MeetingReportPage() {
   }, []);
 
   const [isSyncingTasks, setIsSyncingTasks] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const [isWideWidth, setIsWideWidth] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFullScreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Process pending insertion once editor instance is mounted and ready
   useEffect(() => {
@@ -352,6 +369,32 @@ export default function MeetingReportPage() {
             <span>{isSyncingTasks ? 'Đang đồng bộ...' : 'Đồng bộ Việc phòng ban'}</span>
           </Button>
 
+          {activeTab === 'report' && (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsWideWidth(!isWideWidth)}
+                className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+                title={isWideWidth ? 'Thu hẹp về khổ A4 tiêu chuẩn' : 'Mở rộng chiều ngang biên bản'}
+              >
+                <Expand className="size-3.5 text-slate-600" />
+                <span className="hidden sm:inline">{isWideWidth ? 'Khổ A4' : 'Mở rộng chiều ngang'}</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFullScreen(true)}
+                className="rounded-xl border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100/70 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+                title="Mở toàn màn hình biên bản cuộc họp"
+              >
+                <Maximize2 className="size-3.5 text-blue-600" />
+                <span className="hidden sm:inline">Toàn màn hình</span>
+              </Button>
+            </>
+          )}
+
           <Button
             onClick={handleSave}
             disabled={isSaving}
@@ -415,9 +458,122 @@ export default function MeetingReportPage() {
         <TabsContent
           value="report"
           forceMount={true}
-          className={cn('m-0 flex justify-center items-start', activeTab !== 'report' && 'hidden')}
+          className={cn(
+            'm-0 flex flex-col items-center justify-start transition-all',
+            activeTab !== 'report' && 'hidden',
+            isFullScreen && 'fixed inset-0 z-50 bg-slate-100/95 backdrop-blur-md overflow-y-auto p-4 sm:p-8'
+          )}
         >
-          <div className="bg-white border border-slate-300/90 shadow-md rounded-xs w-full max-w-[900px] min-h-[1100px] p-8 sm:p-16 my-2 transition-all printable-paper">
+          {/* Controls Bar on top of paper */}
+          <div
+            className={cn(
+              'w-full flex items-center justify-between mb-4 px-2 print:hidden no-print transition-all',
+              isFullScreen
+                ? 'sticky top-0 z-30 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-3 shadow-md mb-6 max-w-6xl mx-auto'
+                : isWideWidth
+                  ? 'max-w-6xl'
+                  : 'max-w-[900px]'
+            )}
+          >
+            <div className="flex items-center gap-2">
+              {isFullScreen && (
+                <div className="flex items-center gap-2 mr-2">
+                  <Badge variant="outline" className="text-xs font-bold text-blue-700 bg-blue-50 border-blue-200">
+                    Toàn màn hình
+                  </Badge>
+                  <span className="text-xs text-slate-600 font-semibold truncate max-w-xs hidden md:inline">
+                    {meeting.title}
+                  </span>
+                </div>
+              )}
+              <div className="inline-flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200/80 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setIsWideWidth(false)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg transition-all',
+                    !isWideWidth ? 'bg-white text-slate-900 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                  )}
+                  title="Khổ giấy tiêu chuẩn A4 (900px)"
+                >
+                  Khổ A4
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsWideWidth(true)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5',
+                    isWideWidth ? 'bg-white text-blue-600 shadow-2xs font-bold' : 'text-slate-600 hover:text-slate-900'
+                  )}
+                  title="Mở rộng chiều ngang biên bản (1200px)"
+                >
+                  <Expand className="size-3.5" />
+                  <span>Mở rộng chiều ngang</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsFullScreen(!isFullScreen)}
+                className={cn(
+                  'h-8 px-3 rounded-xl gap-1.5 text-xs font-bold transition-all',
+                  isFullScreen
+                    ? 'bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100'
+                    : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                )}
+                title={isFullScreen ? 'Thoát toàn màn hình (Esc)' : 'Mở toàn màn hình'}
+              >
+                {isFullScreen ? (
+                  <>
+                    <Minimize2 className="size-3.5" />
+                    <span>Thoát toàn màn hình (Esc)</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="size-3.5" />
+                    <span>Toàn màn hình</span>
+                  </>
+                )}
+              </Button>
+
+              {isFullScreen && (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.print()}
+                    className="h-8 px-3 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 gap-1.5 text-xs font-bold bg-white"
+                  >
+                    <Printer className="size-3.5" />
+                    <span className="hidden sm:inline">In / Xuất PDF</span>
+                  </Button>
+
+                  <Button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="h-8 px-3.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white gap-1.5 text-xs font-bold"
+                  >
+                    <Save className="size-3.5" />
+                    <span>{isSaving ? 'Đang lưu...' : 'Lưu biên bản'}</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div
+            className={cn(
+              'bg-white border border-slate-300/90 shadow-md rounded-xs w-full min-h-[1100px] transition-all printable-paper',
+              isWideWidth
+                ? 'max-w-6xl p-6 sm:p-12'
+                : 'max-w-[900px] p-8 sm:p-16 my-2',
+              isFullScreen && 'shadow-xl'
+            )}
+          >
             {/* Formal Document Title Header */}
             <div className="border-b-2 border-slate-900 pb-5 mb-8">
               <div className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1.5">BIÊN BẢN CUỘC HỌP CHÍNH THỨC</div>
@@ -442,11 +598,16 @@ export default function MeetingReportPage() {
               </div>
             </div>
 
-            {/* TipTap Rich Text Editor Body */}
+            {/* TipTap Rich Text Editor Body with Real-time Collaboration */}
             <MeetingReportEditor
               initialContent={meeting.report || {}}
               onContentChange={handleContentChange}
               onEditorReady={handleEditorReady}
+              meetingId={meeting.id}
+              currentUser={{
+                name: currentUser?.name || 'Thành viên',
+              }}
+              collabEnabled={true}
             />
           </div>
         </TabsContent>

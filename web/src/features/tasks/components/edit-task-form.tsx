@@ -101,10 +101,16 @@ export const EditTaskForm = ({ onCancel, memberOptions, projectOptions, initialV
                 name="dueDate"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Due Date</FormLabel>
+                    <FormLabel>Due Date (Hạn chót - Tùy chọn)</FormLabel>
 
                     <FormControl>
-                      <DateTimePicker {...field} disabled={isPending} placeholder="Select due date and time" />
+                      <DateTimePicker
+                        value={field.value ?? undefined}
+                        onChange={field.onChange}
+                        disabled={isPending}
+                        showReset={true}
+                        placeholder="Chọn hạn chót (tùy chọn)"
+                      />
                     </FormControl>
 
                     <FormMessage />
