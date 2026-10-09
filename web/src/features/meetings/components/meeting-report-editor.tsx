@@ -27,6 +27,7 @@ import {
   Bold,
   CheckSquare,
   Code,
+  Expand,
   Heading1,
   Heading2,
   Heading3,
@@ -35,8 +36,11 @@ import {
   Link as LinkIcon,
   List,
   ListOrdered,
+  Maximize2,
+  Minimize2,
   Quote,
   Redo,
+  Shrink,
   Strikethrough,
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
@@ -141,6 +145,10 @@ export interface MeetingReportEditorProps {
   meetingId?: string;
   currentUser?: { name: string; color?: string; avatar?: string };
   collabEnabled?: boolean;
+  isFullScreen?: boolean;
+  onToggleFullScreen?: () => void;
+  isWideWidth?: boolean;
+  onToggleWideWidth?: () => void;
 }
 
 function normalizeReportContent(content: any): any {
@@ -217,6 +225,10 @@ export const MeetingReportEditor = ({
   meetingId,
   currentUser,
   collabEnabled = true,
+  isFullScreen = false,
+  onToggleFullScreen,
+  isWideWidth = false,
+  onToggleWideWidth,
 }: MeetingReportEditorProps) => {
   const onContentChangeRef = useRef(onContentChange);
   onContentChangeRef.current = onContentChange;
@@ -750,29 +762,74 @@ export const MeetingReportEditor = ({
             <Code className="size-4" />
           </Button>
 
-          {shouldCollab && (
-            <div className="flex items-center gap-2 ml-auto pl-2 border-l border-slate-300">
-              <span
-                className={cn('size-2 rounded-full', isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400')}
-                title={isConnected ? 'Đã kết nối cộng tác thời gian thực' : 'Đang kết nối máy chủ cộng tác...'}
-              />
-              <span className="text-[11px] font-semibold text-slate-500 hidden sm:inline">
-                {isConnected ? `${activeUsers.length} người đang xem/sửa` : 'Đang kết nối...'}
-              </span>
-              <div className="flex -space-x-1.5 overflow-hidden">
-                {activeUsers.slice(0, 4).map((u, i) => (
-                  <div
-                    key={i}
-                    className="size-5.5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-1.5 ring-white shadow-2xs"
-                    style={{ backgroundColor: u.color }}
-                    title={u.name}
-                  >
-                    {u.name.charAt(0).toUpperCase()}
-                  </div>
-                ))}
+          <div className="flex items-center gap-1 ml-auto">
+            {shouldCollab && (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-300">
+                <span
+                  className={cn('size-2 rounded-full', isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400')}
+                  title={isConnected ? 'Đã kết nối cộng tác thời gian thực' : 'Đang kết nối máy chủ cộng tác...'}
+                />
+                <span className="text-[11px] font-semibold text-slate-500 hidden md:inline">
+                  {isConnected ? `${activeUsers.length} người đang xem/sửa` : 'Đang kết nối...'}
+                </span>
+                <div className="flex -space-x-1.5 overflow-hidden">
+                  {activeUsers.slice(0, 4).map((u, i) => (
+                    <div
+                      key={i}
+                      className="size-5.5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-1.5 ring-white shadow-2xs"
+                      style={{ backgroundColor: u.color }}
+                      title={u.name}
+                    >
+                      {u.name.charAt(0).toUpperCase()}
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+
+            {/* Layout controls: Width & Fullscreen toggle */}
+            {(onToggleWideWidth || onToggleFullScreen) && (
+              <div className="flex items-center gap-1 pl-2 border-l border-slate-300">
+                {onToggleWideWidth && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onToggleWideWidth}
+                    className={cn(
+                      'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
+                      isWideWidth && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+                    )}
+                    title={isWideWidth ? 'Chuyển về khổ A4 tiêu chuẩn (900px)' : 'Mở rộng chiều ngang biên bản (1200px)'}
+                  >
+                    {isWideWidth ? <Shrink className="size-4" /> : <Expand className="size-4" />}
+                    <span className="hidden xl:inline text-xs font-semibold ml-1">
+                      {isWideWidth ? 'Khổ A4' : 'Mở rộng'}
+                    </span>
+                  </Button>
+                )}
+
+                {onToggleFullScreen && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onToggleFullScreen}
+                    className={cn(
+                      'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
+                      isFullScreen && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+                    )}
+                    title={isFullScreen ? 'Thoát toàn màn hình (Esc)' : 'Toàn màn hình'}
+                  >
+                    {isFullScreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                    <span className="hidden xl:inline text-xs font-semibold ml-1">
+                      {isFullScreen ? 'Thu nhỏ' : 'Toàn màn hình'}
+                    </span>
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
       <EditorContent editor={editor} />

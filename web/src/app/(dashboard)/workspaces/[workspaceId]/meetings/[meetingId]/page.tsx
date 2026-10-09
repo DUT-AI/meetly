@@ -608,6 +608,10 @@ export default function MeetingReportPage() {
                 name: currentUser?.name || 'Thành viên',
               }}
               collabEnabled={true}
+              isFullScreen={isFullScreen}
+              onToggleFullScreen={() => setIsFullScreen(!isFullScreen)}
+              isWideWidth={isWideWidth}
+              onToggleWideWidth={() => setIsWideWidth(!isWideWidth)}
             />
           </div>
         </TabsContent>
