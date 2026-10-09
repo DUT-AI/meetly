@@ -1,0 +1,14 @@
+{
+  "name": "meetly-collab",
+  "version": "1.0.0",
+  "description": "Meetly Real-time Collaboration Service using Yjs and y-websocket",
+  "main": "server.js",
+  "scripts": {
+    "start": "node ./node_modules/y-websocket/bin/server.cjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "y-websocket": "2.1.0",
+    "yjs": "^13.6.33"
+  }
+}

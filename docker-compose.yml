@@ -178,6 +178,25 @@ services:
         required: false
     networks:
       - meetly-net
+
+  collab:
+    build:
+      context: ./apps/collab
+      dockerfile: Dockerfile
+    container_name: meetly-collab
+    restart: always
+    ports:
+      - "1234:1234"
+    networks:
+      - meetly-net
+    labels:
+      - "traefik.enable=true"
+      - "traefik.constraint-label=meetly"
+      - "traefik.http.routers.meetly-collab.rule=PathPrefix(`/collab`)"
+      - "traefik.http.routers.meetly-collab.entrypoints=web"
+      - "traefik.http.routers.meetly-collab.priority=30"
+      - "traefik.http.routers.meetly-collab.service=meetly-collab"
+      - "traefik.http.services.meetly-collab.loadbalancer.server.port=1234"
 networks:
   meetly-net:
     driver: bridge

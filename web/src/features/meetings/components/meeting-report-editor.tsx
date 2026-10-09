@@ -1,5 +1,7 @@
 'use client';
 
+import { Collaboration } from '@tiptap/extension-collaboration';
+import { CollaborationCursor } from '@tiptap/extension-collaboration-cursor';
 import { Highlight } from '@tiptap/extension-highlight';
 import { Link } from '@tiptap/extension-link';
 import { Placeholder } from '@tiptap/extension-placeholder';
@@ -15,6 +17,8 @@ import { TextAlign } from '@tiptap/extension-text-align';
 import { Underline } from '@tiptap/extension-underline';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import * as Y from 'yjs';
+import { WebsocketProvider } from 'y-websocket';
 import {
   AlignCenter,
   AlignJustify,
@@ -23,6 +27,7 @@ import {
   Bold,
   CheckSquare,
   Code,
+  Expand,
   Heading1,
   Heading2,
   Heading3,
@@ -31,8 +36,11 @@ import {
   Link as LinkIcon,
   List,
   ListOrdered,
+  Maximize2,
+  Minimize2,
   Quote,
   Redo,
+  Shrink,
   Strikethrough,
   Subscript as SubscriptIcon,
   Superscript as SuperscriptIcon,
@@ -40,10 +48,35 @@ import {
   Underline as UnderlineIcon,
   Undo,
 } from 'lucide-react';
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+function getCollabWsUrl(): string {
+  if (process.env.NEXT_PUBLIC_COLLAB_WS_URL) {
+    return process.env.NEXT_PUBLIC_COLLAB_WS_URL;
+  }
+  if (typeof window !== 'undefined') {
+    const isHttps = window.location.protocol === 'https:';
+    const host = window.location.hostname;
+    if (host.includes('dutai.io.vn')) {
+      return `${isHttps ? 'wss:' : 'ws:'}//${window.location.host}/collab`;
+    }
+    return `${isHttps ? 'wss:' : 'ws:'}//${host}:1234`;
+  }
+  return 'ws://localhost:1234';
+}
+
+const COLLAB_COLORS = ['#2563eb', '#7c3aed', '#db2777', '#ea580c', '#059669', '#0891b2', '#d97706', '#4f46e5'];
+
+function getCollabColor(name: string = 'User'): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) {
+    hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return COLLAB_COLORS[Math.abs(hash) % COLLAB_COLORS.length];
+}
 
 export function formatContentForTipTap(content: any): any {
   if (!content) return '';
@@ -104,11 +137,18 @@ export function formatContentForTipTap(content: any): any {
   return content;
 }
 
-interface MeetingReportEditorProps {
+export interface MeetingReportEditorProps {
   initialContent?: Record<string, any> | string;
   onContentChange?: (content: Record<string, any>) => void;
   onEditorReady?: (editor: any) => void;
   readOnly?: boolean;
+  meetingId?: string;
+  currentUser?: { name: string; color?: string; avatar?: string };
+  collabEnabled?: boolean;
+  isFullScreen?: boolean;
+  onToggleFullScreen?: () => void;
+  isWideWidth?: boolean;
+  onToggleWideWidth?: () => void;
 }
 
 function normalizeReportContent(content: any): any {
@@ -182,6 +222,13 @@ export const MeetingReportEditor = ({
   onContentChange,
   onEditorReady,
   readOnly = false,
+  meetingId,
+  currentUser,
+  collabEnabled = true,
+  isFullScreen = false,
+  onToggleFullScreen,
+  isWideWidth = false,
+  onToggleWideWidth,
 }: MeetingReportEditorProps) => {
   const onContentChangeRef = useRef(onContentChange);
   onContentChangeRef.current = onContentChange;
@@ -189,55 +236,152 @@ export const MeetingReportEditor = ({
   const onEditorReadyRef = useRef(onEditorReady);
   onEditorReadyRef.current = onEditorReady;
 
-  const initialParsedContent = useMemo(() => normalizeReportContent(initialContent), [initialContent]);
+  const [activeUsers, setActiveUsers] = useState<Array<{ name: string; color: string }>>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const shouldCollab = Boolean(collabEnabled && meetingId && typeof window !== 'undefined');
 
-  const editor = useEditor({
-    immediatelyRender: false,
-    extensions: [
-      StarterKit.configure({
-        link: false,
-        underline: false,
-      }),
-      Underline,
-      Subscript,
-      Superscript,
-      Highlight.configure({ multicolor: true }),
-      Placeholder.configure({
-        placeholder: 'Nhập nội dung biên bản cuộc họp, ghi chú công việc hoặc kết luận tại đây...',
-      }),
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      TextAlign.configure({ types: ['heading', 'paragraph'] }),
-      Link.configure({ openOnClick: false }),
-    ],
-    content: formatContentForTipTap(initialContent) || normalizeReportContent(initialContent) || '',
-    editable: !readOnly,
-    onUpdate: ({ editor }: { editor: any }) => {
-      const json = editor.getJSON();
-      onContentChangeRef.current?.(json);
-    },
-    editorProps: {
-      attributes: {
-        class: cn(
-          'prose prose-slate max-w-none focus:outline-none text-slate-800 text-base leading-relaxed font-sans tiptap',
-          readOnly ? 'min-h-[200px]' : 'min-h-[750px]',
-        ),
-      },
-    },
-  });
+  const { ydoc, provider } = useMemo(() => {
+    if (!shouldCollab) {
+      return { ydoc: null, provider: null };
+    }
+    const doc = new Y.Doc();
+    const wsUrl = getCollabWsUrl();
+    const roomName = `meeting-report-${meetingId}`;
+    const wsProvider = new WebsocketProvider(wsUrl, roomName, doc, { connect: true });
+
+    const userColor = currentUser?.color || getCollabColor(currentUser?.name || 'User');
+    wsProvider.awareness.setLocalStateField('user', {
+      name: currentUser?.name || 'Thành viên',
+      color: userColor,
+    });
+
+    return { ydoc: doc, provider: wsProvider };
+  }, [shouldCollab, meetingId, currentUser?.name, currentUser?.color]);
 
   useEffect(() => {
-    if (editor && initialContent) {
+    if (!provider) return;
+
+    const onStatus = (event: { status: 'connected' | 'connecting' | 'disconnected' }) => {
+      setIsConnected(event.status === 'connected');
+    };
+
+    const onAwarenessChange = () => {
+      const states = Array.from(provider.awareness.getStates().values());
+      const users = states
+        .map((s: any) => s.user)
+        .filter((u): u is { name: string; color: string } => Boolean(u && u.name));
+      setActiveUsers(users);
+    };
+
+    provider.on('status', onStatus);
+    provider.awareness.on('change', onAwarenessChange);
+
+    return () => {
+      provider.off('status', onStatus);
+      provider.awareness.off('change', onAwarenessChange);
+      provider.destroy();
+      if (ydoc) {
+        ydoc.destroy();
+      }
+    };
+  }, [provider, ydoc]);
+
+  const userColor = useMemo(
+    () => currentUser?.color || getCollabColor(currentUser?.name || 'User'),
+    [currentUser?.color, currentUser?.name]
+  );
+
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const editor = useEditor(
+    {
+      immediatelyRender: false,
+      extensions: [
+        StarterKit.configure({
+          link: false,
+          underline: false,
+          undoRedo: shouldCollab && ydoc ? false : undefined,
+        }),
+        Underline,
+        Subscript,
+        Superscript,
+        Highlight.configure({ multicolor: true }),
+        Placeholder.configure({
+          placeholder: 'Nhập nội dung biên bản cuộc họp, ghi chú công việc hoặc kết luận tại đây...',
+        }),
+        TaskList,
+        TaskItem.configure({ nested: true }),
+        Table.configure({ resizable: true }),
+        TableRow,
+        TableHeader,
+        TableCell,
+        TextAlign.configure({ types: ['heading', 'paragraph'] }),
+        Link.configure({ openOnClick: false }),
+        ...(shouldCollab && ydoc && provider
+          ? [
+              Collaboration.configure({
+                document: ydoc,
+              }),
+              CollaborationCursor.configure({
+                provider: provider,
+                user: {
+                  name: currentUser?.name || 'Thành viên',
+                  color: userColor,
+                },
+              }),
+            ]
+          : []),
+      ],
+      content: shouldCollab && ydoc ? undefined : formatContentForTipTap(initialContent) || normalizeReportContent(initialContent) || '',
+      editable: !readOnly,
+      onUpdate: ({ editor }: { editor: any }) => {
+        if (debounceTimerRef.current) {
+          clearTimeout(debounceTimerRef.current);
+        }
+        debounceTimerRef.current = setTimeout(() => {
+          const json = editor.getJSON();
+          onContentChangeRef.current?.(json);
+        }, 1500);
+      },
+      editorProps: {
+        attributes: {
+          class: cn(
+            'prose prose-slate max-w-none focus:outline-none text-slate-800 text-base leading-relaxed font-sans tiptap',
+            readOnly ? 'min-h-[200px]' : 'min-h-[750px]',
+          ),
+        },
+      },
+    },
+    [shouldCollab, ydoc, provider, userColor]
+  );
+
+  // Sync initial content once when collaborative room is first initialized and empty
+  useEffect(() => {
+    if (!shouldCollab || !provider || !editor) return;
+
+    const onSynced = (isSynced: boolean) => {
+      if (isSynced && editor.isEmpty && initialContent) {
+        const formatted = formatContentForTipTap(initialContent) || normalizeReportContent(initialContent);
+        if (formatted) {
+          editor.commands.setContent(formatted);
+        }
+      }
+    };
+
+    provider.on('sync', onSynced);
+    return () => {
+      provider.off('sync', onSynced);
+    };
+  }, [shouldCollab, provider, editor, initialContent]);
+
+  useEffect(() => {
+    if (!shouldCollab && editor && initialContent) {
       const normalized = normalizeReportContent(initialContent);
       if (normalized && (!editor.getText() || editor.getText().trim() === '')) {
         editor.commands.setContent(normalized);
       }
     }
-  }, [editor, initialContent]);
+  }, [editor, initialContent, shouldCollab]);
 
   useEffect(() => {
     if (editor && readOnly !== undefined) {
@@ -617,6 +761,75 @@ export const MeetingReportEditor = ({
           >
             <Code className="size-4" />
           </Button>
+
+          <div className="flex items-center gap-1 ml-auto">
+            {shouldCollab && (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-300">
+                <span
+                  className={cn('size-2 rounded-full', isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-400')}
+                  title={isConnected ? 'Đã kết nối cộng tác thời gian thực' : 'Đang kết nối máy chủ cộng tác...'}
+                />
+                <span className="text-[11px] font-semibold text-slate-500 hidden md:inline">
+                  {isConnected ? `${activeUsers.length} người đang xem/sửa` : 'Đang kết nối...'}
+                </span>
+                <div className="flex -space-x-1.5 overflow-hidden">
+                  {activeUsers.slice(0, 4).map((u, i) => (
+                    <div
+                      key={i}
+                      className="size-5.5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ring-1.5 ring-white shadow-2xs"
+                      style={{ backgroundColor: u.color }}
+                      title={u.name}
+                    >
+                      {u.name.charAt(0).toUpperCase()}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Layout controls: Width & Fullscreen toggle */}
+            {(onToggleWideWidth || onToggleFullScreen) && (
+              <div className="flex items-center gap-1 pl-2 border-l border-slate-300">
+                {onToggleWideWidth && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onToggleWideWidth}
+                    className={cn(
+                      'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
+                      isWideWidth && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+                    )}
+                    title={isWideWidth ? 'Chuyển về khổ A4 tiêu chuẩn (900px)' : 'Mở rộng chiều ngang biên bản (1200px)'}
+                  >
+                    {isWideWidth ? <Shrink className="size-4" /> : <Expand className="size-4" />}
+                    <span className="hidden xl:inline text-xs font-semibold ml-1">
+                      {isWideWidth ? 'Khổ A4' : 'Mở rộng'}
+                    </span>
+                  </Button>
+                )}
+
+                {onToggleFullScreen && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onToggleFullScreen}
+                    className={cn(
+                      'h-8 px-2 rounded-xl text-slate-700 hover:bg-white hover:text-blue-600',
+                      isFullScreen && 'bg-white text-blue-600 shadow-2xs border border-slate-200'
+                    )}
+                    title={isFullScreen ? 'Thoát toàn màn hình (Esc)' : 'Toàn màn hình'}
+                  >
+                    {isFullScreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
+                    <span className="hidden xl:inline text-xs font-semibold ml-1">
+                      {isFullScreen ? 'Thu nhỏ' : 'Toàn màn hình'}
+                    </span>
+                  </Button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       )}
       <EditorContent editor={editor} />

@@ -16,15 +16,17 @@ Fullstack task and workspace management platform inspired by Jira, refactored in
     - `modules/members`: Workspace role permissions and team management
     - `modules/projects`: Projects and per-project analytics
     - `modules/tasks`: Tasks, kanban board, bulk positional updates
+    - `modules/meetings`: Meeting scheduling, audio capture, transcription pipeline, and report generation
   - **Applications**:
     - `apps/api`: REST API gateway with versioned endpoints (`/api/v1/...`)
     - `apps/worker`: Background task worker
+    - `apps/collab`: Node.js Yjs WebSocket microservice (`y-websocket`) for real-time collaborative document editing
 
 - **Frontend**: Next.js 14 App Router (`web/`)
   - **State & Server Queries**: TanStack React Query v5
   - **HTTP Clients**: Axios (`@/lib/api.ts` for client with HttpOnly cookies), `serverFetch` (`@/lib/api-server.ts` for Next.js SSR/Server Components)
   - **UI & Styling**: TailwindCSS + Radix UI + Lucide Icons + Sonner + Nuqs
-  - **Features**: `features/auth`, `features/workspaces`, `features/projects`, `features/members`, `features/tasks`
+  - **Features**: `features/auth`, `features/workspaces`, `features/projects`, `features/members`, `features/tasks`, `features/meetings` (Meeting Reports & Real-time Collaborative Editor)
 
 ## Quick Start
 

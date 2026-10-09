@@ -34,6 +34,9 @@ dev-worker:
 dev-web:
 	cd ./web && pnpm dev
 
+dev-collab:
+	HOST=0.0.0.0 PORT=1234 npx y-websocket
+
 dev-mobile:
 	cd ./mobile && flutter run -d web-server --web-port 8085 --web-hostname 0.0.0.0 --dart-define=API_BASE_URL=http://127.0.0.1:8888
 

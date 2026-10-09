@@ -85,6 +85,7 @@ jira-clone/
       |--- index.ts
     |-- features/
       |--- auth/
+      |--- meetings/
       |--- members/
       |--- projects/
       |--- tasks/
@@ -116,6 +117,15 @@ jira-clone/
   |- vercel.ts
 ```
 <!--- FOLDER_STRUCTURE_END --->
+
+<br />
+
+## :sparkles: Core Features & Meeting Reports Module
+
+- **Meeting Reports & Transcription**: Audio playback, timestamped segment sync, AI transcription, and official meeting minutes.
+- **Real-Time Collaborative Editing**: Google Docs-style simultaneous editing powered by TipTap, Yjs CRDT, and WebSockets (`y-websocket`) with live cursor indicators and presence badges.
+- **Dynamic Layout & Display**: Fullscreen distraction-free mode, paper width controls (Standard A4 900px vs Wide 1200px), and one-click PDF export / print layout.
+- **Task & Backlog Management**: Kanban boards, backlog creation with optional due dates, and automatic synchronization from meeting action items.
 
 <br />
 
