@@ -43,7 +43,7 @@ export class MinioStorageClient {
           await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
           console.log(`[Storage] Created bucket '${this.bucket}'.`);
         } catch (createErr: any) {
-          console.warn(`[Storage] ⚠️ Could not auto-create bucket '${this.bucket}': ${createErr.message}`);
+          console.warn(`[Storage] Could not auto-create bucket '${this.bucket}': ${createErr.message}`);
           console.warn(`[Storage] Please ensure bucket '${this.bucket}' is created in MinIO Console / Web UI.`);
         }
       } else {

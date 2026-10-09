@@ -93,7 +93,7 @@ export class SessionManager {
         console.log(`[Ghost-Buster] Silence timeout exceeded in guild ${guild.id}. Auto-stopping...`);
         try {
           if ('send' in textChannel) {
-            await (textChannel as any).send('⚠️ **Meeting auto-saved:** No speech activity detected for 5 minutes.');
+            await (textChannel as any).send('**Meeting auto-saved:** No speech activity detected for 5 minutes.');
           }
           await this.stopSession(guild.id);
         } catch (e: any) {
@@ -108,7 +108,7 @@ export class SessionManager {
       console.log(`[SafetyCap] Max duration reached for meeting ${meetingId}. Auto-stopping...`);
       try {
         if ('send' in textChannel) {
-          await (textChannel as any).send('⏱️ **Meeting duration cap reached (3 hours).** Finalizing recording...');
+          await (textChannel as any).send('**Meeting duration cap reached (3 hours).** Finalizing recording...');
         }
         await this.stopSession(guild.id);
       } catch (e: any) {
