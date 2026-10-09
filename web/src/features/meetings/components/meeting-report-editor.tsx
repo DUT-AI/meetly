@@ -1,7 +1,8 @@
 'use client';
 
+import { Extension } from '@tiptap/core';
 import { Collaboration } from '@tiptap/extension-collaboration';
-import { CollaborationCursor } from '@tiptap/extension-collaboration-cursor';
+import { yCursorPlugin } from '@tiptap/y-tiptap';
 import { Highlight } from '@tiptap/extension-highlight';
 import { Link } from '@tiptap/extension-link';
 import { Placeholder } from '@tiptap/extension-placeholder';
@@ -52,6 +53,44 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+const CollaborationCursor = Extension.create<{
+  provider: any;
+  user: { name?: string; color?: string };
+  render?: (user: any) => HTMLElement;
+}>({
+  name: 'collaborationCursor',
+  addOptions() {
+    return {
+      provider: null,
+      user: {
+        name: 'Thành viên',
+        color: '#2563eb',
+      },
+      render: (user: any) => {
+        const cursor = document.createElement('span');
+        cursor.classList.add('collaboration-cursor__caret');
+        cursor.setAttribute('style', `border-color: ${user.color || '#2563eb'}`);
+        const label = document.createElement('div');
+        label.classList.add('collaboration-cursor__label');
+        label.setAttribute('style', `background-color: ${user.color || '#2563eb'}`);
+        label.insertBefore(document.createTextNode(user.name || 'Thành viên'), null);
+        cursor.insertBefore(label, null);
+        return cursor;
+      },
+    };
+  },
+  addProseMirrorPlugins() {
+    if (!this.options.provider?.awareness) {
+      return [];
+    }
+    return [
+      yCursorPlugin(this.options.provider.awareness, {
+        cursorBuilder: this.options.render,
+      }),
+    ];
+  },
+});
 
 function getCollabWsUrl(): string {
   if (process.env.NEXT_PUBLIC_COLLAB_WS_URL) {
@@ -300,7 +339,7 @@ export const MeetingReportEditor = ({
         StarterKit.configure({
           link: false,
           underline: false,
-          undoRedo: shouldCollab && ydoc ? false : undefined,
+          undoRedo: shouldCollab && ydoc ? false : {},
         }),
         Underline,
         Subscript,
