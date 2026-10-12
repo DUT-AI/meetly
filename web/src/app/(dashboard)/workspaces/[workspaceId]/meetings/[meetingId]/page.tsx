@@ -310,9 +310,9 @@ export default function MeetingReportPage() {
             className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white gap-1.5 text-xs font-bold h-9 shadow-md shadow-blue-500/20"
           >
             <Mic className="size-3.5" />
-            <span>Họp Offline / Ghi Âm</span>
+            <span>Ghi Âm Cuộc Họp</span>
             <Badge variant="secondary" className="text-[9px] bg-white/20 text-white border-0 py-0 px-1">
-              AI 3B
+              Tự Động
             </Badge>
           </Button>
 
@@ -323,8 +323,8 @@ export default function MeetingReportPage() {
             className="rounded-xl border-purple-200 text-purple-700 bg-purple-50/50 hover:bg-purple-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
           >
             <Users className="size-3.5 text-purple-600" />
-            <span className="hidden sm:inline">Phân Vai Diễn Giả</span>
-            <span className="sm:hidden">Diễn Giả</span>
+            <span className="hidden sm:inline">Xác Nhận Người Nói</span>
+            <span className="sm:hidden">Người Nói</span>
           </Button>
 
           <Button
@@ -334,7 +334,7 @@ export default function MeetingReportPage() {
             className="rounded-xl border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
           >
             <Sparkles className="size-3.5 text-indigo-600" />
-            <span className="hidden sm:inline">Voicebank</span>
+            <span className="hidden sm:inline">Mẫu Giọng Nói</span>
           </Button>
 
           <Button
@@ -344,8 +344,8 @@ export default function MeetingReportPage() {
             className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
           >
             <Puzzle className="size-3.5 text-slate-600" />
-            <span className="hidden sm:inline">Cấu hình Extension</span>
-            <span className="sm:hidden">Extension</span>
+            <span className="hidden sm:inline">Tiện Ích Ghi Âm</span>
+            <span className="sm:hidden">Tiện Ích</span>
           </Button>
 
           <Button

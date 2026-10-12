@@ -169,8 +169,9 @@ async def list_workspace_voicebank(
                 "user_id": p.user_id,
                 "member_name": p.member_name,
                 "sample_count": p.sample_count,
-                "vector_dimension": len(p.centroid_vector),
-                "updated_at": p.updated_at.isoformat(),
+                "vector_dimension": len(p.centroid_vector) if p.centroid_vector else 0,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
             }
             for p in profiles
         ]

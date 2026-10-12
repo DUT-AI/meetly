@@ -1,6 +1,8 @@
+from loguru import logger
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from core.utils.id_generator import generate_ulid
 from modules.transcription.domain.interfaces import IVoiceProfileRepository
 from modules.transcription.domain.voice_profile import VoiceProfileEntity
 from modules.transcription.models.voice_profile import MemberVoiceProfileModel
@@ -24,6 +26,9 @@ class SqlVoiceProfileRepository(IVoiceProfileRepository):
             model = result.scalar_one_or_none()
             return model.to_entity() if model else None
         except Exception as e:
+            logger.warning(
+                f"[SqlVoiceProfileRepository] Could not fetch voice profile for user {user_id} in workspace {workspace_id}: {e}"
+            )
             return None
 
     async def list_by_workspace(self, workspace_id: str) -> list[VoiceProfileEntity]:
@@ -37,6 +42,9 @@ class SqlVoiceProfileRepository(IVoiceProfileRepository):
             models = result.scalars().all()
             return [m.to_entity() for m in models]
         except Exception as e:
+            logger.warning(
+                f"[SqlVoiceProfileRepository] Could not list voice profiles for workspace {workspace_id}: {e}"
+            )
             return []
 
     async def save(
@@ -54,16 +62,19 @@ class SqlVoiceProfileRepository(IVoiceProfileRepository):
         result = await self.session.execute(stmt)
         model = result.scalar_one_or_none()
 
+        clean_vector = [float(x) for x in centroid_vector] if centroid_vector else []
+
         if model:
             model.member_name = member_name
-            model.centroid_vector = centroid_vector
+            model.centroid_vector = clean_vector
             model.sample_count = sample_count
         else:
             model = MemberVoiceProfileModel(
+                id=generate_ulid(),
                 workspace_id=workspace_id,
                 user_id=user_id,
                 member_name=member_name,
-                centroid_vector=centroid_vector,
+                centroid_vector=clean_vector,
                 sample_count=sample_count,
             )
             self.session.add(model)

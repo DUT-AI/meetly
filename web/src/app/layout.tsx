@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import type { PropsWithChildren } from 'react';
 
+import { AgentationDev } from '@/components/agentation-client';
 import { QueryProvider } from '@/components/query-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { siteConfig } from '@/config';
@@ -54,6 +55,7 @@ const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {
             <Toaster theme="light" richColors closeButton />
 
             {children}
+            <AgentationDev />
           </NuqsAdapter>
         </QueryProvider>
       </body>

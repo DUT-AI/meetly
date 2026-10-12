@@ -52,10 +52,10 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
   const [processedResult, setProcessedResult] = useState<any | null>(null);
 
   const steps = [
-    { title: 'Tiền xử lý & VAD', desc: 'Silero VAD tách khoảng lặng và phân đoạn phát ngôn' },
-    { title: 'Faster-Whisper ASR', desc: 'Nhận dạng giọng nói tiếng Việt độ chính xác cao (>95%)' },
-    { title: 'Định danh Diễn giả', desc: 'So khớp Cosine Similarity với Ngân hàng Giọng nói Centroid' },
-    { title: 'Trích xuất Action Items', desc: 'Mô hình Meetly Qwen2.5-3B (SFT + GRPO) tự động bóc tách việc' },
+    { title: 'Chuẩn bị âm thanh', desc: 'Lọc tạp âm và phân đoạn giọng nói' },
+    { title: 'Chuyển thành văn bản', desc: 'Nhận dạng giọng nói tiếng Việt với độ chính xác cao' },
+    { title: 'Nhận diện người nói', desc: 'Tự động gán tên theo mẫu giọng đã lưu' },
+    { title: 'Tổng hợp việc cần làm', desc: 'Tự động trích xuất các công việc và người phụ trách' },
   ];
 
   // File upload handlers
@@ -150,7 +150,7 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
       clearInterval(stepInterval);
       setCurrentStep(4);
       setProcessedResult(res);
-      toast.success('Đã xử lý xong cuộc họp offline và trích xuất thành công các Action Items!');
+      toast.success('Đã xử lý xong cuộc họp và trích xuất thành công các công việc cần làm!');
       if (onSuccess) onSuccess();
     } catch (err: any) {
       clearInterval(stepInterval);
@@ -179,8 +179,8 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
     <ResponsiveModal
       open={isOpen}
       onOpenChange={onClose}
-      title="Họp Offline & Trích Xuất Nhiệm Vụ"
-      description="Tải lên hoặc thu âm âm thanh cuộc họp offline để hệ thống phân tích và trích xuất Action Items."
+      title="Ghi Âm & Phân Tích Cuộc Họp"
+      description="Tải lên hoặc thu âm cuộc họp để hệ thống phân tích nội dung và trích xuất việc cần làm."
     >
       <div className="p-6 max-h-[85vh] overflow-y-auto">
         <div className="flex items-center gap-3 mb-5 border-b pb-4">
@@ -189,13 +189,13 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
           </div>
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
-              Họp Offline & Trích Xuất Nhiệm Vụ Tự Động
+              Ghi Âm & Phân Tích Cuộc Họp
               <Badge variant="outline" className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 text-blue-600 border-blue-200 text-xs">
-                <Sparkles className="w-3 h-3 mr-1 inline" /> Qwen2.5-3B + Voicebank
+                <Sparkles className="w-3 h-3 mr-1 inline" /> AI Tự Động
               </Badge>
             </h2>
             <p className="text-sm text-muted-foreground">
-              Tải file ghi âm hoặc thu âm trực tiếp cuộc họp phòng họp. Hệ thống tự động nhận dạng diễn giả và bóc tách Action Items.
+              Tải file ghi âm hoặc thu âm trực tiếp cuộc họp. Hệ thống sẽ tự động chuyển thành văn bản, nhận diện người nói và tổng hợp việc cần làm.
             </p>
           </div>
         </div>
@@ -294,7 +294,7 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
                 className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20"
               >
                 <Sparkles className="w-4 h-4" />
-                Bắt đầu Xử lý với Meetly AI
+                Bắt đầu Xử lý Cuộc Họp
               </Button>
             </div>
           </Tabs>
@@ -306,9 +306,9 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
               <div className="inline-flex p-3 rounded-full bg-blue-500/10 text-blue-600 animate-pulse">
                 <Loader2 className="w-8 h-8 animate-spin" />
               </div>
-              <h3 className="font-bold text-lg">Đang Phân Tích Cuộc Họp Offline</h3>
+              <h3 className="font-bold text-lg">Đang Phân Tích Cuộc Họp</h3>
               <p className="text-xs text-muted-foreground">
-                Hệ thống đang chạy qua chuỗi xử lý GPU (Faster-Whisper, Voicebank, và Qwen2.5-3B)
+                Hệ thống đang tiến hành bóc băng ghi âm và tổng hợp nội dung cuộc họp...
               </p>
             </div>
 
@@ -355,10 +355,10 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
             <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-3">
               <CheckCircle2 className="w-6 h-6 text-emerald-600 flex-shrink-0" />
               <div>
-                <h4 className="font-bold text-sm text-emerald-950 dark:text-emerald-100">Xử Lý Hoàn Tất Bằng Meetly AI Pipeline</h4>
+                <h4 className="font-bold text-sm text-emerald-950 dark:text-emerald-100">Xử Lý Cuộc Họp Hoàn Tất</h4>
                 <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                  Đã bóc băng {processedResult.segments_count} phân đoạn, định danh {processedResult.speakers?.length || 0} người nói và tự
-                  động trích xuất {processedResult.extracted_tasks?.length || 0} Action Items.
+                  Đã chuyển ngữ {processedResult.segments_count} đoạn hội thoại, nhận diện {processedResult.speakers?.length || 0} người nói và tổng
+                  hợp {processedResult.extracted_tasks?.length || 0} công việc cần làm.
                 </p>
               </div>
             </div>
@@ -366,9 +366,9 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
             {/* Extracted Tasks Preview */}
             <div className="space-y-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
-                <span>Action Items Tự Động Trích Xuất ({processedResult.extracted_tasks?.length || 0})</span>
+                <span>Công Việc Cần Làm Tự Động Trích Xuất ({processedResult.extracted_tasks?.length || 0})</span>
                 <Badge variant="secondary" className="text-[10px]">
-                  Qwen2.5-3B Fine-Tuned
+                  Tự động tổng hợp
                 </Badge>
               </h4>
               <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
@@ -387,7 +387,7 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
                       </span>
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5 text-amber-500" />
-                        <span>{task.deadline || 'Chưa rõ'}</span>
+                        <span>{task.deadline || 'Chưa rõ hạn'}</span>
                       </span>
                       <span className="flex items-center gap-1 text-[11px] font-mono bg-muted px-1.5 py-0.5 rounded">
                         <Clock className="w-3 h-3 text-purple-500" />
