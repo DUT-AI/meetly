@@ -19,14 +19,42 @@ from apps.api.routers import (
     users_router,
     workspaces_router,
 )
+from contextlib import asynccontextmanager
+from loguru import logger
 from core.config import settings
 from core.exceptions import setup_exception_handlers
 from core.telemetry import setup_telemetry
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Auto-heal any missing tables (e.g. member_voice_profiles) on service startup
+    try:
+        from core.database.session import engine
+        from core.database.base import Base
+        import modules.assets.models  # noqa: F401
+        import modules.identity.models  # noqa: F401
+        import modules.meetings.models  # noqa: F401
+        import modules.members.models  # noqa: F401
+        import modules.notifications.models  # noqa: F401
+        import modules.projects.models  # noqa: F401
+        import modules.tasks.models  # noqa: F401
+        import modules.transcription.models  # noqa: F401
+        import modules.workspaces.models  # noqa: F401
+
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        logger.info("[Database] Verified all DB tables exist.")
+    except Exception as exc:
+        logger.warning(f"[Database] Startup create_all check skipped: {exc}")
+    yield
+
 
 app = FastAPI(
     title="Meetly API",
     description="Modular Monolith Backend API for Meetly",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 # 1. Setup Logging

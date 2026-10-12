@@ -144,7 +144,7 @@ export function formatContentForTipTap(content: any): any {
     }
 
     if (content.action_items && Array.isArray(content.action_items) && content.action_items.length > 0) {
-      parts.push(`<h2>3. Danh sách nhiệm vụ & Kết luận (Action Items)</h2><ul data-type="taskList">`);
+      parts.push(`<h2>3. Danh sách công việc cần làm</h2><ul data-type="taskList">`);
       for (const item of content.action_items) {
         const title = item.task_title || item.title || 'Nhiệm vụ';
         const assignee = item.assignee || 'Chưa phân công';
@@ -220,7 +220,7 @@ function normalizeReportContent(content: any): any {
         {
           type: 'heading',
           attrs: { level: 2 },
-          content: [{ type: 'text', text: `✅ Nhiệm vụ & Action Items (${actionItems.length})` }],
+          content: [{ type: 'text', text: `✅ Danh sách việc cần làm (${actionItems.length})` }],
         },
         {
           type: 'taskList',

@@ -14,7 +14,6 @@ import {
   PlusCircle,
   Radio,
   Search,
-  Sparkles,
   Square,
   User,
   Volume2,
@@ -259,7 +258,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             />
             <span className="text-xs font-bold text-slate-800">
               {isConnected
-                ? 'WebSocket Realtime Kết nối'
+                ? 'Đã kết nối trực tiếp'
                 : isRecording
                   ? 'Đang phát sóng ghi âm...'
                   : hasSession
@@ -276,13 +275,13 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             <Badge
               variant="secondary"
               className={cn(
-                'text-[11px] uppercase font-bold px-2.5 py-1 tracking-wider',
+                'text-[11px] font-bold px-2.5 py-1 tracking-wider',
                 sessionStatus === 'STREAMING'
                   ? 'bg-emerald-100 text-emerald-800 border-emerald-200 animate-pulse'
                   : 'bg-blue-100 text-blue-800 border-blue-200',
               )}
             >
-              {sessionStatus}
+              {sessionStatus === 'STREAMING' ? 'Đang phát trực tiếp' : sessionStatus}
             </Badge>
           )}
         </div>
@@ -332,9 +331,10 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               showTranslation ? 'bg-indigo-50 text-indigo-700 border-indigo-200' : 'text-slate-600 hover:bg-slate-100',
             )}
             title="Bật/Tắt hiển thị bản dịch tiếng Anh"
+            aria-label={showTranslation ? 'Tắt bản dịch tiếng Anh' : 'Bật bản dịch tiếng Anh'}
           >
             <Languages className="size-3.5 text-indigo-600" />
-            <span>{showTranslation ? 'Bản dịch EN: Bật' : 'Bản dịch EN: Tắt'}</span>
+            <span>{showTranslation ? 'Bản dịch tiếng Anh: Bật' : 'Bản dịch tiếng Anh: Tắt'}</span>
           </Button>
 
           {/* Copy All */}
@@ -346,6 +346,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             disabled={liveSegments.length === 0}
             className="h-9 text-xs font-bold text-slate-700 hover:bg-slate-100 border-slate-200 gap-1.5 px-3 rounded-xl"
             title="Sao chép toàn bộ nội dung transcript"
+            aria-label="Sao chép toàn bộ nội dung transcript"
           >
             {copiedAll ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5 text-slate-600" />}
             <span>{copiedAll ? 'Đã chép' : 'Sao chép tất cả'}</span>
@@ -360,9 +361,10 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             disabled={liveSegments.length === 0}
             className="h-9 text-xs font-bold text-slate-700 hover:bg-slate-100 border-slate-200 gap-1.5 px-3 rounded-xl"
             title="Tải transcript về máy (.txt)"
+            aria-label="Tải tệp văn bản"
           >
             <Download className="size-3.5 text-slate-600" />
-            <span>Tải .TXT</span>
+            <span>Tải tệp văn bản</span>
           </Button>
 
           {/* Insert All to Editor */}
@@ -375,6 +377,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               disabled={liveSegments.length === 0}
               className="h-9 text-xs font-bold text-blue-700 hover:bg-blue-50 border-blue-200 gap-1.5 px-3.5 rounded-xl shadow-2xs"
               title="Chèn toàn bộ hội thoại vào biên bản cuộc họp"
+              aria-label="Chèn toàn bộ hội thoại vào biên bản cuộc họp"
             >
               <PlusCircle className="size-3.5 text-blue-600" />
               <span>Chèn vào biên bản</span>
@@ -417,6 +420,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
             <button
               type="button"
               onClick={() => setSearchQuery('')}
+              aria-label="Xóa tìm kiếm"
               className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
               <X className="size-3.5" />
@@ -472,6 +476,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               autoScroll ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200' : 'text-slate-400 hover:text-slate-600',
             )}
             title={autoScroll ? 'Đang tự cuộn theo lời thoại mới' : 'Bật tự cuộn'}
+            aria-label={autoScroll ? 'Tắt tự cuộn' : 'Bật tự cuộn'}
           >
             <ArrowDown className="size-3.5" />
             <span className="hidden sm:inline">Tự cuộn</span>
@@ -488,7 +493,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
               <Radio className="size-8" />
             </div>
             <div>
-              <h4 className="text-base font-extrabold text-slate-900">Chưa có phiên bóc băng trực tiếp</h4>
+              <h4 className="text-base font-extrabold text-slate-900">Chưa có phiên chuyển văn bản trực tiếp</h4>
               <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                 Bạn có thể bấm nút <b>"Bật Mic thu âm trực tiếp"</b> ở trên để nói thử vào microphone và xem AI chuyển giọng nói thành văn
                 bản thời gian thực kèm dịch tiếng Anh, hoặc sử dụng <b>Meetly Extension</b> khi họp trên Google Meet.
@@ -563,6 +568,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                   <button
                     type="button"
                     onClick={() => handleInternalSeek(seg.start_ms)}
+                    aria-label={`Phát âm thanh từ ${formatMs(seg.start_ms)}`}
                     className="flex items-center gap-1 font-mono text-[11px] font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200/80 px-2 py-0.5 rounded-lg transition-all"
                     title="Bấm để phát âm thanh từ mốc thời gian này"
                   >
@@ -576,6 +582,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                   <button
                     type="button"
                     onClick={() => handleCopySingle(seg.text, seg.id)}
+                    aria-label="Sao chép đoạn hội thoại"
                     className="p-1.5 text-slate-500 hover:text-slate-900 rounded-lg hover:bg-slate-100 transition-all"
                     title="Sao chép câu nói"
                   >
@@ -591,6 +598,7 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
                         );
                         toast.success('Đã chèn câu thoại vào biên bản');
                       }}
+                      aria-label="Chèn câu này vào biên bản cuộc họp"
                       className="p-1.5 text-blue-600 hover:text-blue-800 rounded-lg hover:bg-blue-50 transition-all"
                       title="Chèn câu này vào biên bản cuộc họp"
                     >
@@ -623,8 +631,8 @@ export const LiveTranscriptPanel: React.FC<LiveTranscriptPanelProps> = ({
         {partialText && (
           <div className="rounded-2xl border-2 border-dashed border-blue-400 bg-blue-50/70 p-4 sm:p-5 flex flex-col gap-2 animate-pulse shadow-xs">
             <div className="flex items-center gap-2 text-xs font-bold text-blue-700">
-              <Sparkles className="size-4 text-blue-600 animate-spin" />
-              <span>Đang bóc băng trực tiếp ({getSpeakerDisplay(partialSpeaker).name})...</span>
+              <Loader2 className="size-4 text-blue-600 animate-spin" />
+              <span>Đang chuyển văn bản trực tiếp ({getSpeakerDisplay(partialSpeaker).name})...</span>
             </div>
             <p className="text-sm font-semibold text-blue-950 italic leading-relaxed">"{partialText}"</p>
             {showTranslation && partialTranslation && (

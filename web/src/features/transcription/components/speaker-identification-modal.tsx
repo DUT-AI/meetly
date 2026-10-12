@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, CheckCircle2, Loader2, Sparkles, User, Users } from 'lucide-react';
+import { Check, CheckCircle2, Info, Loader2, User, Users } from 'lucide-react';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -62,11 +62,11 @@ export function SpeakerIdentificationModal({
     setIsSubmitting(true);
     try {
       await transcriptionApi.confirmSpeakers(workspaceId, meetingId, mappings);
-      toast.success('Đã xác nhận diễn giả và cập nhật Ngân hàng Giọng nói Centroid!');
+      toast.success('Đã xác nhận người phát biểu thành công!');
       if (onSuccess) onSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.response?.data?.detail || 'Lỗi khi cập nhật danh tính diễn giả');
+      toast.error(err.response?.data?.detail || 'Lỗi khi cập nhật người phát biểu');
     } finally {
       setIsSubmitting(false);
     }
@@ -76,8 +76,8 @@ export function SpeakerIdentificationModal({
     <ResponsiveModal
       open={isOpen}
       onOpenChange={onClose}
-      title="Who is speaking? (Định danh Người nói)"
-      description="Gán danh tính thành viên cho các đoạn hội thoại chưa nhận diện để cập nhật Voicebank."
+      title="Xác Nhận Người Phát Biểu"
+      description="Chọn thành viên tương ứng với từng giọng nói trong cuộc họp để hệ thống ghi nhớ."
     >
       <div className="p-6 max-h-[85vh] overflow-y-auto space-y-5">
         <div className="flex items-center gap-3 border-b pb-4">
@@ -85,9 +85,9 @@ export function SpeakerIdentificationModal({
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">Who is speaking? (Định danh Người nói)</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2">Xác Nhận Người Phát Biểu</h2>
             <p className="text-sm text-muted-foreground">
-              Gán danh tính thành viên thực tế cho các đoạn thoại. Hệ thống sẽ học vector giọng nói để tự động nhận dạng các lần họp sau.
+              Chọn thành viên tương ứng với từng giọng nói trong cuộc họp. Hệ thống sẽ ghi nhớ để tự động nhận diện trong các cuộc họp sau.
             </p>
           </div>
         </div>
@@ -95,13 +95,13 @@ export function SpeakerIdentificationModal({
         {distinctSpeakers.length === 0 ? (
           <div className="p-8 text-center bg-muted/20 rounded-2xl space-y-2">
             <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto" />
-            <h4 className="font-semibold text-sm">Tất cả diễn giả đã được nhận dạng chính xác</h4>
-            <p className="text-xs text-muted-foreground">Không có nhãn Speaker lạ cần định danh thủ công.</p>
+            <h4 className="font-semibold text-sm">Tất cả người phát biểu đã được nhận diện</h4>
+            <p className="text-xs text-muted-foreground">Không còn giọng nói nào cần xác nhận thủ công.</p>
           </div>
         ) : (
           <div className="space-y-4">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Danh sách diễn giả cần xác thực ({distinctSpeakers.length})
+              Danh sách giọng nói cần xác nhận ({distinctSpeakers.length})
             </p>
 
             <div className="space-y-3">
@@ -114,12 +114,12 @@ export function SpeakerIdentificationModal({
                   >
                     <div className="flex items-center gap-2.5">
                       <span className={`px-2.5 py-1 rounded-lg text-xs font-bold border ${colorClass}`}>{spk}</span>
-                      <span className="text-xs text-muted-foreground">thuộc về thành viên:</span>
+                      <span className="text-xs text-muted-foreground">là thành viên:</span>
                     </div>
 
                     <div className="w-full sm:w-60">
                       <Select value={mappings[spk] || ''} onValueChange={(val) => handleSelect(spk, val)}>
-                        <SelectTrigger className="w-full text-xs">
+                        <SelectTrigger className="w-full text-xs" aria-label={`Chọn thành viên cho ${spk}`}>
                           <SelectValue placeholder="Chọn thành viên..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -139,10 +139,9 @@ export function SpeakerIdentificationModal({
         )}
 
         <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/20 flex items-start gap-2.5 text-xs text-blue-900 dark:text-blue-200">
-          <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
           <span>
-            <strong>Học tăng cường trực tuyến (Centroid Voicebank):</strong> Sau khi bấm xác nhận, hệ thống tự động cập nhật vector trọng
-            tâm 192 chiều của thành viên để nhận diện tự động trong các cuộc họp kế tiếp.
+            <strong>Tự động ghi nhớ:</strong> Sau khi bấm xác nhận, hệ thống sẽ lưu mẫu giọng nói này để tự động nhận diện thành viên trong các cuộc họp tiếp theo mà không cần chọn lại.
           </span>
         </div>
 
@@ -151,9 +150,10 @@ export function SpeakerIdentificationModal({
             Hủy bỏ
           </Button>
           <Button
+            variant="default"
             onClick={handleConfirm}
             disabled={isSubmitting || distinctSpeakers.length === 0}
-            className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs font-semibold"
           >
             {isSubmitting ? (
               <>
@@ -161,7 +161,7 @@ export function SpeakerIdentificationModal({
               </>
             ) : (
               <>
-                <Check className="w-4 h-4" /> Xác nhận & Cập nhật Voicebank
+                <Check className="w-4 h-4" /> Xác Nhận Người Nói
               </>
             )}
           </Button>

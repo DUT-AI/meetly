@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Database, Loader2, Mic, Play, RotateCcw, Sparkles, Square, User, Users } from 'lucide-react';
+import { CheckCircle2, Database, Loader2, Mic, Play, RotateCcw, Square, User, Users } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -38,7 +38,7 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
       const res = await transcriptionApi.getVoicebank(workspaceId);
       setProfiles(res || []);
     } catch (err) {
-      toast.error('Không thể tải danh sách Ngân hàng Giọng nói');
+      toast.error('Không thể tải danh sách mẫu giọng nói');
     } finally {
       setIsLoading(false);
     }
@@ -129,8 +129,8 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
     <ResponsiveModal
       open={isOpen}
       onOpenChange={onClose}
-      title="Ngân Hàng Giọng Nói Thành Viên"
-      description="Quản lý và đăng ký vector đặc trưng giọng nói (Centroid Voicebank) của thành viên workspace."
+      title="Nhận Diện Giọng Nói Thành Viên"
+      description="Đăng ký và quản lý mẫu giọng nói của các thành viên để tự động nhận diện người phát biểu trong cuộc họp."
     >
       <div className="p-6 max-h-[85vh] overflow-y-auto space-y-6">
         <div className="flex items-center gap-3 border-b pb-4">
@@ -138,9 +138,9 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
             <Database className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">Ngân Hàng Giọng Nói Thành Viên (Centroid Voicebank)</h2>
+            <h2 className="text-xl font-bold flex items-center gap-2">Nhận Diện Giọng Nói Thành Viên</h2>
             <p className="text-sm text-muted-foreground">
-              Lưu trữ vector âm học (192-dim ECAPA-TDNN) đại diện cho giọng nói của từng thành viên trong Workspace để nhận diện tự động.
+              Lưu mẫu giọng nói của từng thành viên trong nhóm để hệ thống tự động nhận diện và gán tên chính xác khi phát biểu.
             </p>
           </div>
         </div>
@@ -149,13 +149,13 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
         <div className="p-4 rounded-2xl border bg-muted/20 space-y-3">
           <h4 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
             <Mic className="w-4 h-4 text-indigo-600" />
-            Đăng Ký Mẫu Giọng Nói Mới (5 giây)
+            Đăng Ký Mẫu Giọng Nói Mới (khoảng 5 giây)
           </h4>
 
           <div className="space-y-2">
             <label className="text-xs text-muted-foreground font-medium">Chọn thành viên:</label>
             <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-              <SelectTrigger className="w-full text-xs">
+              <SelectTrigger className="w-full text-xs" aria-label="Chọn thành viên để thu âm mẫu giọng">
                 <SelectValue placeholder="Chọn thành viên để thu âm..." />
               </SelectTrigger>
               <SelectContent>
@@ -171,7 +171,7 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
           <div className="p-3 bg-card rounded-xl border text-xs text-muted-foreground">
             <p className="font-semibold text-foreground mb-1">Mẫu câu đọc thử:</p>
             <p className="italic">
-              &quot;Tôi là thành viên của Meetly, đang thực hiện đăng ký mẫu nhận diện giọng nói cho các cuộc họp offline.&quot;
+              &quot;Tôi là thành viên của Meetly, đang thực hiện đăng ký mẫu nhận diện giọng nói cho cuộc họp.&quot;
             </p>
           </div>
 
@@ -198,18 +198,19 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
               </div>
             ) : (
               <Button size="sm" onClick={startRecording} disabled={!selectedMemberId} className="gap-1.5 h-8">
-                <Play className="w-3.5 h-3.5 fill-current" /> Bắt đầu đọc mẫu (5s)
+                <Play className="w-3.5 h-3.5 fill-current" /> Bắt đầu ghi âm mẫu (5s)
               </Button>
             )}
 
             <Button
               size="sm"
+              variant="default"
               onClick={handleEnroll}
               disabled={!recordedBlob || isEnrolling}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 h-8"
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-8 shadow-xs font-semibold"
             >
-              {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-              Lưu Vector Centroid
+              {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+              Lưu mẫu giọng nói
             </Button>
           </div>
         </div>
@@ -219,21 +220,21 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
           <div className="flex items-center justify-between">
             <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
               <Users className="w-4 h-4" />
-              Hồ Sơ Giọng Nói Đã Lưu ({profiles.length})
+              Mẫu Giọng Nói Đã Lưu ({profiles.length})
             </h4>
-            <Badge variant="outline" className="text-[10px]">
-              pgvector 192-dim
+            <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-200">
+              Nhận diện tự động
             </Badge>
           </div>
 
           {isLoading ? (
             <div className="py-6 text-center text-xs text-muted-foreground">
               <Loader2 className="w-5 h-5 animate-spin mx-auto mb-1 text-indigo-600" />
-              Đang tải danh sách hồ sơ...
+              Đang tải danh sách mẫu giọng...
             </div>
           ) : profiles.length === 0 ? (
             <div className="p-6 text-center bg-muted/10 rounded-2xl text-xs text-muted-foreground">
-              Chưa có thành viên nào đăng ký mẫu giọng. Hãy thu âm mẫu đầu tiên ở trên!
+              Chưa có thành viên nào đăng ký mẫu giọng. Hãy chọn thành viên và thu âm mẫu ở trên để bắt đầu!
             </div>
           ) : (
             <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
@@ -246,12 +247,12 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
                     <div>
                       <p className="font-semibold text-foreground">{p.member_name}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        Vector: {p.vector_dimension} chiều • Cập nhật: {new Date(p.updated_at).toLocaleDateString('vi-VN')}
+                        Đã xác thực • Cập nhật: {p.updated_at ? new Date(p.updated_at).toLocaleDateString('vi-VN') : 'Mới tạo'}
                       </p>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="text-[10px] font-mono">
-                    {p.sample_count} mẫu tích lũy
+                  <Badge variant="secondary" className="text-[10px]">
+                    {p.sample_count} lần ghi nhận
                   </Badge>
                 </div>
               ))}

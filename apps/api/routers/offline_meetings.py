@@ -138,6 +138,12 @@ async def enroll_member_voice(
         )
 
     audio_bytes = await file.read()
+    if len(audio_bytes) == 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File âm thanh rỗng.",
+        )
+
     result = await use_case.enroll_member_voice(
         workspace_id=workspace_id,
         user_id=target_user_id,
@@ -157,10 +163,12 @@ async def list_workspace_voicebank(
     workspace_id: str,
     current_user: CurrentUser,
     voice_repo: FromDishka[IVoiceProfileRepository],
+    use_case: FromDishka[OfflineMeetingUseCase],
 ) -> dict:
     """
     Lists all enrolled member voice profiles in the workspace.
     """
+    await use_case._check_member(workspace_id, str(current_user.id))
     profiles = await voice_repo.list_by_workspace(workspace_id)
     return {
         "data": [
@@ -169,8 +177,9 @@ async def list_workspace_voicebank(
                 "user_id": p.user_id,
                 "member_name": p.member_name,
                 "sample_count": p.sample_count,
-                "vector_dimension": len(p.centroid_vector),
-                "updated_at": p.updated_at.isoformat(),
+                "vector_dimension": len(p.centroid_vector) if p.centroid_vector else 0,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "updated_at": p.updated_at.isoformat() if p.updated_at else None,
             }
             for p in profiles
         ]

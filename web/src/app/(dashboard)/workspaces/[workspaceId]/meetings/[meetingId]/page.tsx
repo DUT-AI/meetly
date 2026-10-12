@@ -22,8 +22,8 @@ import {
   Puzzle,
   Save,
   ShieldCheck,
-  Sparkles,
   Users,
+  Volume2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
@@ -305,56 +305,54 @@ export default function MeetingReportPage() {
         {/* Action Buttons */}
         <div className="flex items-center gap-2 ml-auto flex-wrap justify-end">
           <Button
+            variant="outline"
             size="sm"
             onClick={() => setIsOfflineModalOpen(true)}
-            className="rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white gap-1.5 text-xs font-bold h-9 shadow-md shadow-blue-500/20"
+            className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-semibold h-9 shadow-2xs"
           >
-            <Mic className="size-3.5" />
-            <span>Họp Offline / Ghi Âm</span>
-            <Badge variant="secondary" className="text-[9px] bg-white/20 text-white border-0 py-0 px-1">
-              AI 3B
-            </Badge>
+            <Mic className="size-3.5 text-slate-600" />
+            <span>Ghi Âm Cuộc Họp</span>
           </Button>
 
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsSpeakerModalOpen(true)}
-            className="rounded-xl border-purple-200 text-purple-700 bg-purple-50/50 hover:bg-purple-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+            className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-semibold h-9 shadow-2xs"
           >
-            <Users className="size-3.5 text-purple-600" />
-            <span className="hidden sm:inline">Phân Vai Diễn Giả</span>
-            <span className="sm:hidden">Diễn Giả</span>
+            <Users className="size-3.5 text-slate-600" />
+            <span className="hidden sm:inline">Xác Nhận Người Nói</span>
+            <span className="sm:hidden">Người Nói</span>
           </Button>
 
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsVoicebankModalOpen(true)}
-            className="rounded-xl border-indigo-200 text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+            className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-semibold h-9 shadow-2xs"
           >
-            <Sparkles className="size-3.5 text-indigo-600" />
-            <span className="hidden sm:inline">Voicebank</span>
+            <Volume2 className="size-3.5 text-slate-600" />
+            <span className="hidden sm:inline">Mẫu Giọng Nói</span>
           </Button>
 
           <Button
             variant="outline"
             size="sm"
             onClick={() => setIsExtensionModalOpen(true)}
-            className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+            className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-semibold h-9 shadow-2xs"
           >
             <Puzzle className="size-3.5 text-slate-600" />
-            <span className="hidden sm:inline">Cấu hình Extension</span>
-            <span className="sm:hidden">Extension</span>
+            <span className="hidden sm:inline">Tiện Ích Ghi Âm</span>
+            <span className="sm:hidden">Tiện Ích</span>
           </Button>
 
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.print()}
-            className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 gap-1.5 text-xs font-bold h-9 bg-white shadow-2xs"
+            className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-semibold h-9 shadow-2xs"
           >
-            <Printer className="size-3.5" />
+            <Printer className="size-3.5 text-slate-600" />
             <span>In / Xuất PDF</span>
           </Button>
 
@@ -363,9 +361,9 @@ export default function MeetingReportPage() {
             size="sm"
             onClick={handleSyncTasks}
             disabled={isSyncingTasks}
-            className="rounded-xl border-emerald-200 text-emerald-700 bg-emerald-50/50 hover:bg-emerald-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+            className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-semibold h-9 shadow-2xs"
           >
-            <CheckSquare className="size-3.5 text-emerald-600" />
+            <CheckSquare className="size-3.5 text-slate-600" />
             <span>{isSyncingTasks ? 'Đang đồng bộ...' : 'Đồng bộ Việc phòng ban'}</span>
           </Button>
 
@@ -375,7 +373,7 @@ export default function MeetingReportPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsWideWidth(!isWideWidth)}
-                className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+                className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-semibold h-9 shadow-2xs"
                 title={isWideWidth ? 'Thu hẹp về khổ A4 tiêu chuẩn' : 'Mở rộng chiều ngang biên bản'}
               >
                 <Expand className="size-3.5 text-slate-600" />
@@ -386,19 +384,20 @@ export default function MeetingReportPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => setIsFullScreen(true)}
-                className="rounded-xl border-blue-200 text-blue-700 bg-blue-50/50 hover:bg-blue-100/70 gap-1.5 text-xs font-bold h-9 shadow-2xs"
+                className="rounded-xl border-slate-200 text-slate-700 bg-white hover:bg-slate-50 gap-1.5 text-xs font-semibold h-9 shadow-2xs"
                 title="Mở toàn màn hình biên bản cuộc họp"
               >
-                <Maximize2 className="size-3.5 text-blue-600" />
+                <Maximize2 className="size-3.5 text-slate-600" />
                 <span className="hidden sm:inline">Toàn màn hình</span>
               </Button>
             </>
           )}
 
           <Button
+            variant="default"
             onClick={handleSave}
             disabled={isSaving}
-            className="rounded-xl shadow-xs bg-blue-600 hover:bg-blue-700 text-white gap-2 text-xs font-extrabold transition-all h-9 px-4"
+            className="rounded-xl shadow-xs bg-blue-600 hover:bg-blue-700 text-white gap-2 text-xs font-bold transition-all h-9 px-4"
           >
             <Save className="size-3.5" />
             <span>{isSaving ? 'Đang lưu...' : 'Lưu biên bản'}</span>
@@ -415,8 +414,7 @@ export default function MeetingReportPage() {
               value="transcript"
               className="rounded-xl text-xs sm:text-sm font-extrabold gap-2 px-4 sm:px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all shadow-2xs"
             >
-              <Sparkles className="size-4" />
-              <span>Transcript & Bóc băng trực tiếp</span>
+              <span>Nội dung hội thoại</span>
               {segmentCount > 0 && (
                 <span className="ml-1 text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-mono data-[state=active]:bg-white/20 data-[state=active]:text-white">
                   {segmentCount}
@@ -429,7 +427,7 @@ export default function MeetingReportPage() {
               className="rounded-xl text-xs sm:text-sm font-extrabold gap-2 px-4 sm:px-6 py-2.5 data-[state=active]:bg-blue-600 data-[state=active]:text-white transition-all shadow-2xs"
             >
               <FileText className="size-4" />
-              <span>Biên bản cuộc họp (Report)</span>
+              <span>Biên bản cuộc họp</span>
             </TabsTrigger>
 
             <TabsTrigger

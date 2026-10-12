@@ -310,6 +310,13 @@ class OfflineMeetingUseCase:
         """
         await self._check_member(workspace_id, actor_id)
 
+        meeting = await self.meeting_repo.get_by_id(meeting_id)
+        if not meeting or str(meeting.workspace_id) != str(workspace_id):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cuộc họp không tồn tại trong workspace này.",
+            )
+
         segments = await self.segment_repo.list_by_meeting(meeting_id)
         updated_count = 0
 
@@ -606,10 +613,10 @@ class OfflineMeetingUseCase:
 
         items_to_sync = action_items or []
         meeting = await self.meeting_repo.get_by_id(meeting_id)
-        if not meeting:
+        if not meeting or str(meeting.workspace_id) != str(workspace_id):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Không tìm thấy cuộc họp.",
+                detail="Không tìm thấy cuộc họp trong workspace này.",
             )
 
         if not items_to_sync and meeting.report:
