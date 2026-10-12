@@ -40,8 +40,8 @@ class ListTaskCommentsUseCase:
         # Populate user info
         user_info_map: dict[str, dict[str, str | None]] = {}
         try:
-            manage_resp = await self.manage_client.list_users(page=1, page_size=200)
-            for u in manage_resp.items:
+            users = await self.manage_client.list_users()
+            for u in users:
                 user_info_map[str(u.id)] = {
                     "name": u.name,
                     "email": u.email,

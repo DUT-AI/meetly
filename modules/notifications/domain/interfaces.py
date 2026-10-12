@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from collections.abc import Sequence
 
-from modules.identity.dtos.manage_dtos import ManageUserDTO
+from modules.identity.dtos.user_dtos import UserProfileDetailDTO
 from modules.notifications.domain.entities import (
     NotificationEntity,
     NotificationMessage,
@@ -64,6 +64,8 @@ class INotificationChannel(ABC):
 
     @abstractmethod
     async def send(
-        self, recipient: ManageUserDTO, message: NotificationMessage
+        self,
+        recipient: UserProfileDetailDTO,
+        message: NotificationMessage,
     ) -> bool:
         """Send notification to the recipient. Returns True if successfully sent."""

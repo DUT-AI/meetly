@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from modules.identity.dtos.manage_dtos import ManageUserDTO
+from modules.identity.dtos.user_dtos import UserProfileDetailDTO
 from modules.notifications.channels.zalo_channel import ZaloBotChannel
 from modules.notifications.domain.entities import NotificationMessage
 
@@ -21,12 +21,11 @@ class TestZaloUseCase:
         payload_value: text content, image URL, or sticker ID
         """
         # Create a mock user
-        recipient = ManageUserDTO(
-            id=user_id,
+        recipient = UserProfileDetailDTO(
+            id=int(user_id) if str(user_id).isdigit() else 1,
             email="test@meetly.io",
             name="Test User",
             status="ACTIVE",
-            roles=[],
             zalo_bot_id=zalo_bot_id,
         )
 

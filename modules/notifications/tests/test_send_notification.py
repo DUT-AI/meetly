@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from modules.identity.client.manage_client import ManageClient
-from modules.identity.dtos.manage_dtos import ManageUserDTO
+from modules.identity.dtos.user_dtos import UserProfileDetailDTO
 from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.domain.interfaces import INotificationChannel
 from modules.notifications.use_cases.send_notification import (
@@ -12,9 +12,9 @@ from modules.notifications.use_cases.send_notification import (
 
 
 @pytest.fixture
-def mock_recipient() -> ManageUserDTO:
-    return ManageUserDTO(
-        id="user_123",
+def mock_recipient() -> UserProfileDetailDTO:
+    return UserProfileDetailDTO(
+        id=123,
         name="John Doe",
         email="john@example.com",
         avatar_url="https://example.com/avatar.jpg",
@@ -24,7 +24,7 @@ def mock_recipient() -> ManageUserDTO:
 
 
 @pytest.mark.asyncio
-async def test_send_notification_all_channels(mock_recipient: ManageUserDTO) -> None:
+async def test_send_notification_all_channels(mock_recipient: UserProfileDetailDTO) -> None:
     # Arrange
     manage_client = AsyncMock(spec=ManageClient)
     manage_client.get_user.return_value = mock_recipient
@@ -63,7 +63,7 @@ async def test_send_notification_all_channels(mock_recipient: ManageUserDTO) -> 
 
 @pytest.mark.asyncio
 async def test_send_notification_channel_filtering(
-    mock_recipient: ManageUserDTO,
+    mock_recipient: UserProfileDetailDTO,
 ) -> None:
     # Arrange: message only targets 'website' and 'zalo'
     manage_client = AsyncMock(spec=ManageClient)

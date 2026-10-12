@@ -1,7 +1,7 @@
 from loguru import logger
 
 from core.config.notification import notification_settings
-from modules.identity.dtos.manage_dtos import ManageUserDTO
+from modules.identity.dtos.user_dtos import UserProfileDetailDTO
 from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.domain.interfaces import INotificationChannel
 from modules.notifications.services.zalo_bot_client import ZaloBotClient
@@ -19,7 +19,9 @@ class ZaloBotChannel(INotificationChannel):
         self.zalo_client = zalo_client
 
     async def send(
-        self, recipient: ManageUserDTO, message: NotificationMessage
+        self,
+        recipient: UserProfileDetailDTO,
+        message: NotificationMessage,
     ) -> bool:
         if not recipient.zalo_bot_id:
             return False

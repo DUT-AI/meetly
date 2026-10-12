@@ -27,7 +27,6 @@ export const AddMemberDialog = () => {
   const { data: membersData } = useGetMembers({ workspaceId });
   const { data: usersData, isLoading: isLoadingUsers } = useGetUsers({
     search: debouncedSearch,
-    pageSize: 20,
   });
 
   const { mutate: addMember, isPending: isAddingMember } = useAddMember();

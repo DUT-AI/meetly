@@ -2,13 +2,11 @@ from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from core.config.auth import auth_settings
-
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 
 
 class ManageSettings(BaseSettings):
-    """Manage Client Configuration matching dut-ai-data-platform."""
+    """Manage Client Configuration loaded directly from .env without fallback."""
 
     model_config = SettingsConfigDict(
         env_file=(ROOT_DIR / ".env",),
@@ -17,7 +15,8 @@ class ManageSettings(BaseSettings):
         case_sensitive=False,
     )
 
-    user_endpoint: str = ""
+    user_options_endpoint: str = ""
+    user_detail_endpoint: str = ""
     manage_api_token: str = ""
     auth_api_key: str = ""
     api_timeout: float = 10.0
@@ -29,14 +28,12 @@ class ManageSettings(BaseSettings):
         return self.manage_api_token or self.auth_api_key
 
     @property
-    def users_url(self) -> str:
-        if self.user_endpoint:
-            return self.user_endpoint
+    def users_options_url(self) -> str:
+        return self.user_options_endpoint
 
-        base = auth_settings.auth_server_url.rstrip("/")
-        if "/auth" in base:
-            base = base.split("/auth")[0]
-        return f"{base}/users"
+    @property
+    def users_detail_url(self) -> str:
+        return self.user_detail_endpoint
 
 
 manage_settings = ManageSettings()

@@ -2,7 +2,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from modules.identity.dtos.manage_dtos import ManageUserDTO
+from modules.identity.dtos.user_dtos import UserProfileDetailDTO
 from modules.notifications.channels.zalo_channel import ZaloBotChannel
 from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.services.zalo_bot_client import ZaloBotClient
@@ -80,12 +80,11 @@ def test_loto_cluster_drawing():
 
 @pytest.fixture
 def mock_recipient():
-    return ManageUserDTO(
-        id="user_123",
+    return UserProfileDetailDTO(
+        id=123,
         email="test@meetly.io",
         name="Test User",
         status="ACTIVE",
-        roles=[],
         zalo_bot_id="zalo_chat_999",
     )
 

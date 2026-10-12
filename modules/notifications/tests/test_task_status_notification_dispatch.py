@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from modules.identity.client.manage_client import ManageClient
-from modules.identity.dtos.manage_dtos import ManageUserDTO
+from modules.identity.dtos.user_dtos import UserProfileDetailDTO
 from modules.members.domain.entities import MemberEntity
 from modules.members.domain.enums import MemberRole
 from modules.members.domain.interfaces import IMemberRepository
@@ -81,8 +81,8 @@ async def test_dispatch_when_all_notifications_enabled() -> None:
         actor_member,
     ]
 
-    manage_client.get_user.return_value = ManageUserDTO(
-        id="user_assignee",
+    manage_client.get_user.return_value = UserProfileDetailDTO(
+        id=1,
         name="Assignee Name",
         email="assignee@example.com",
     )
@@ -224,8 +224,8 @@ async def test_dispatch_when_only_discord_enabled() -> None:
     )
     member_repo.get_by_id.return_value = assignee_member
     member_repo.list_by_workspace.return_value = [assignee_member]
-    manage_client.get_user.return_value = ManageUserDTO(
-        id="user_assignee",
+    manage_client.get_user.return_value = UserProfileDetailDTO(
+        id=1,
         name="Assignee",
         email="a@example.com",
     )

@@ -1,28 +1,49 @@
-from datetime import datetime
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class UserReadDTO(BaseModel):
-    """Meetly User representation combining Manage User info with local Last Login timestamp."""
+class UserOptionDTO(BaseModel):
+    """Lightweight user projection for selector inputs and dropdowns."""
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
 
     id: int | str
     name: str
     email: str
-    status: str = "ACTIVE"
     avatar_url: str | None = None
+
+
+class UserProfileDetailDTO(BaseModel):
+    """Full user profile details returned by Manage Service."""
+
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+
+    id: int
+    name: str
+    email: str
+    phone_number: str | None = None
+    status: str = "ACTIVE"
+    role_ids: list[int | str] = Field(default_factory=list)
+    discord_id: str | None = None
+    avatar_url: str | None = None
+    zalo_bot_id: str | None = None
     role_names: list[str] = Field(default_factory=list)
-    last_login_at: datetime | None = None
+    permissions: list[str] = Field(default_factory=list)
+    check_in_card_code_configured: bool = False
+
+    @property
+    def user_id(self) -> int:
+        return self.id
 
 
-class UsersListResponseDTO(BaseModel):
-    """Paginated response containing Meetly users and total count."""
+class UserProfileEnvelopeDTO(BaseModel):
+    """Standardized response envelope for user profile detail."""
 
     model_config = ConfigDict(from_attributes=True)
 
-    items: list[UserReadDTO] = Field(default_factory=list)
-    total: int = 0
-    page: int = 1
-    page_size: int = 20
+    is_success: bool = True
+    status_code: int = 200
+    data: UserProfileDetailDTO | None = None
+    message: str = "Fetched user profile"
+    pagination: Any | None = None

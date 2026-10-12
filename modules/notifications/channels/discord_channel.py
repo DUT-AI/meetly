@@ -1,7 +1,7 @@
 from loguru import logger
 
 from core.config.notification import notification_settings
-from modules.identity.dtos.manage_dtos import ManageUserDTO
+from modules.identity.dtos.user_dtos import UserProfileDetailDTO
 from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.domain.interfaces import INotificationChannel
 from modules.notifications.services.discord_service import DiscordService
@@ -16,7 +16,9 @@ class DiscordChannel(INotificationChannel):
         self.discord_service = discord_service
 
     async def send(
-        self, recipient: ManageUserDTO, message: NotificationMessage
+        self,
+        recipient: UserProfileDetailDTO,
+        message: NotificationMessage,
     ) -> bool:
         if not recipient.discord_id:
             return False
@@ -28,7 +30,7 @@ class DiscordChannel(INotificationChannel):
                 path = message.action_url.lstrip("/")
                 embed_url = f"{base_url}/{path}"
 
-            embed = {
+            embed: dict[str, str | int | dict] = {
                 "title": message.title,
                 "description": message.content,
                 "color": 0x2563EB,  # Blue color

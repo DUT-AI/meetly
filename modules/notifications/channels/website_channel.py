@@ -1,6 +1,6 @@
 from loguru import logger
 
-from modules.identity.dtos.manage_dtos import ManageUserDTO
+from modules.identity.dtos.user_dtos import UserProfileDetailDTO
 from modules.notifications.domain.entities import NotificationMessage
 from modules.notifications.domain.interfaces import (
     INotificationChannel,
@@ -17,7 +17,9 @@ class WebsiteInAppChannel(INotificationChannel):
         self.notification_repo = notification_repo
 
     async def send(
-        self, recipient: ManageUserDTO, message: NotificationMessage
+        self,
+        recipient: UserProfileDetailDTO,
+        message: NotificationMessage,
     ) -> bool:
         try:
             await self.notification_repo.create(

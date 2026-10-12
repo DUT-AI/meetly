@@ -3,7 +3,7 @@ from modules.identity.client.manage_client import ManageClient
 from modules.members.domain.enums import MemberRole
 from modules.members.domain.interfaces import IMemberRepository
 from modules.members.dtos.member_dtos import MemberResponseDTO
-
+from loguru import logger
 
 class ListMembersUseCase:
     """List all members of a workspace populated with user profile."""
@@ -30,16 +30,14 @@ class ListMembersUseCase:
         # Fetch users from manage client to populate name/email
         user_info_map: dict[str, dict[str, str | None]] = {}
         try:
-            manage_resp = await self.manage_client.list_users(page=1, page_size=200)
-            for u in manage_resp.items:
+            users = await self.manage_client.list_users()
+            for u in users:
                 user_info_map[str(u.id)] = {
                     "name": u.name,
                     "email": u.email,
                     "avatar_url": u.avatar_url,
                 }
         except Exception as exc:
-            from loguru import logger
-
             logger.warning(
                 f"Failed to fetch users from ManageClient in ListMembersUseCase: {exc}"
             )
@@ -179,7 +177,7 @@ class AddMemberUseCase:
         return MemberResponseDTO(
             id=new_member.id,
             workspace_id=new_member.workspace_id,
-            user_id=new_member.user_id,
+            user_id=str(user_info.id),
             name=user_info.name or f"User {new_member.user_id}",
             email=user_info.email or "",
             avatar_url=user_info.avatar_url,
