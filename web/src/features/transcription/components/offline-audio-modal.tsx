@@ -10,7 +10,6 @@ import {
   Mic,
   Play,
   RotateCcw,
-  Sparkles,
   Square,
   UploadCloud,
   User,
@@ -140,20 +139,13 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
     setIsProcessing(true);
     setCurrentStep(1);
 
-    // Simulate animated step transitions for realistic AI processing visualization
-    const stepInterval = setInterval(() => {
-      setCurrentStep((prev) => (prev < 4 ? prev + 1 : prev));
-    }, 1800);
-
     try {
       const res = await transcriptionApi.uploadOfflineAudio(workspaceId, meetingId, fileToUpload);
-      clearInterval(stepInterval);
       setCurrentStep(4);
       setProcessedResult(res);
       toast.success('Đã xử lý xong cuộc họp và trích xuất thành công các công việc cần làm!');
       if (onSuccess) onSuccess();
     } catch (err: any) {
-      clearInterval(stepInterval);
       const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message || 'Lỗi khi xử lý file cuộc họp offline.';
       toast.error(errorMsg);
       setIsProcessing(false);
@@ -190,8 +182,8 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
           <div>
             <h2 className="text-xl font-bold flex items-center gap-2">
               Ghi Âm & Phân Tích Cuộc Họp
-              <Badge variant="outline" className="bg-gradient-to-r from-blue-500/10 to-indigo-500/10 text-blue-600 border-blue-200 text-xs">
-                <Sparkles className="w-3 h-3 mr-1 inline" /> AI Tự Động
+              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs font-semibold">
+                Tự động hóa
               </Badge>
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -213,8 +205,17 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
 
             <TabsContent value="upload" className="space-y-4">
               <div
+                role="button"
+                tabIndex={0}
+                aria-label="Tải lên tệp âm thanh cuộc họp"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
                 onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-muted-foreground/30 hover:border-blue-500/60 rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 bg-muted/20 hover:bg-blue-500/5 group"
+                className="border-2 border-dashed border-muted-foreground/30 hover:border-blue-500/60 rounded-2xl p-8 text-center cursor-pointer transition-all duration-200 bg-muted/20 hover:bg-blue-500/5 group focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
               >
                 <input
                   type="file"
@@ -291,10 +292,9 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
               <Button
                 onClick={handleProcess}
                 disabled={(!selectedFile && !recordedBlob) || isRecording}
-                className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20"
+                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs font-semibold"
               >
-                <Sparkles className="w-4 h-4" />
-                Bắt đầu Xử lý Cuộc Họp
+                Bắt đầu phân tích cuộc họp
               </Button>
             </div>
           </Tabs>
@@ -308,7 +308,7 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
               </div>
               <h3 className="font-bold text-lg">Đang Phân Tích Cuộc Họp</h3>
               <p className="text-xs text-muted-foreground">
-                Hệ thống đang tiến hành bóc băng ghi âm và tổng hợp nội dung cuộc họp...
+                Hệ thống đang tiến hành chuyển giọng nói thành văn bản và tổng hợp nội dung cuộc họp...
               </p>
             </div>
 
@@ -357,7 +357,7 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
               <div>
                 <h4 className="font-bold text-sm text-emerald-950 dark:text-emerald-100">Xử Lý Cuộc Họp Hoàn Tất</h4>
                 <p className="text-xs text-emerald-800 dark:text-emerald-300">
-                  Đã chuyển ngữ {processedResult.segments_count} đoạn hội thoại, nhận diện {processedResult.speakers?.length || 0} người nói và tổng
+                  Đã chuyển thành văn bản {processedResult.segments_count} đoạn hội thoại, nhận diện {processedResult.speakers?.length || 0} người nói và tổng
                   hợp {processedResult.extracted_tasks?.length || 0} công việc cần làm.
                 </p>
               </div>
@@ -376,9 +376,6 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
                   <div key={idx} className="p-3 rounded-xl border bg-card hover:border-blue-500/40 transition-colors shadow-sm space-y-1.5">
                     <div className="flex items-start justify-between gap-2">
                       <p className="text-sm font-semibold text-foreground line-clamp-1">{task.task_title}</p>
-                      <Badge variant="outline" className="text-[10px] text-emerald-600 border-emerald-200 flex-shrink-0">
-                        {(task.confidence * 100).toFixed(0)}% tin cậy
-                      </Badge>
                     </div>
                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">

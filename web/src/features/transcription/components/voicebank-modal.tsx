@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2, Database, Loader2, Mic, Play, RotateCcw, Sparkles, Square, User, Users } from 'lucide-react';
+import { CheckCircle2, Database, Loader2, Mic, Play, RotateCcw, Square, User, Users } from 'lucide-react';
 import React, { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -155,7 +155,7 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
           <div className="space-y-2">
             <label className="text-xs text-muted-foreground font-medium">Chọn thành viên:</label>
             <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
-              <SelectTrigger className="w-full text-xs">
+              <SelectTrigger className="w-full text-xs" aria-label="Chọn thành viên để thu âm mẫu giọng">
                 <SelectValue placeholder="Chọn thành viên để thu âm..." />
               </SelectTrigger>
               <SelectContent>
@@ -204,11 +204,12 @@ export function VoicebankModal({ isOpen, onClose, workspaceId, members }: Voiceb
 
             <Button
               size="sm"
+              variant="default"
               onClick={handleEnroll}
               disabled={!recordedBlob || isEnrolling}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 h-8"
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5 h-8 shadow-xs font-semibold"
             >
-              {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+              {isEnrolling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
               Lưu mẫu giọng nói
             </Button>
           </div>

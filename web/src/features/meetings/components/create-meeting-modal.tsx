@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, CheckCheck, Clock, Search, Sparkles, UserCheck, Users, Video, X } from 'lucide-react';
+import { Check, CheckCheck, Clock, Search, UserCheck, Users, Video, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -129,10 +129,10 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
       description="Điền thông tin để tạo một cuộc họp mới cho phòng ban."
       className="max-w-2xl sm:max-w-3xl md:max-w-3xl lg:max-w-4xl"
     >
-      <div className="w-full h-full p-6 sm:p-7 bg-gradient-to-b from-slate-50/80 via-white to-slate-50/80 overflow-y-auto">
-        {/* Bright Header */}
-        <div className="flex items-center gap-3.5 mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-50 via-indigo-50/80 to-purple-50/50 border border-blue-200/80 shadow-xs">
-          <div className="p-3 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-xl text-white shadow-md shadow-blue-500/20">
+      <div className="w-full h-full p-6 sm:p-7 bg-white overflow-y-auto">
+        {/* Header */}
+        <div className="flex items-center gap-3.5 mb-6 p-4 rounded-2xl bg-slate-50 border border-slate-200 shadow-2xs">
+          <div className="p-2.5 bg-blue-600 rounded-xl text-white shadow-xs">
             <Video className="size-5" />
           </div>
           <div>
@@ -145,7 +145,6 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
           {/* Title */}
           <div className="space-y-2">
             <Label htmlFor="title" className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wide">
-              <Sparkles className="size-3.5 text-indigo-600" />
               Tên cuộc họp
             </Label>
             <Input
@@ -154,15 +153,15 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Nhập tên cuộc họp (ví dụ: Họp Sprint Review tuần 3)..."
               disabled={isPending}
-              className="rounded-xl border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-medium text-slate-800 placeholder:text-slate-400 h-11 shadow-2xs"
+              className="rounded-xl border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-medium text-slate-800 placeholder:text-slate-400 h-11 shadow-2xs"
             />
           </div>
 
           {/* Times */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gradient-to-r from-indigo-50/50 via-blue-50/30 to-purple-50/40 p-4 rounded-2xl border border-indigo-100/90 shadow-2xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-2xs">
             <div className="space-y-2">
-              <Label htmlFor="startTime" className="text-xs font-bold text-indigo-900 flex items-center gap-1.5 uppercase tracking-wide">
-                <Clock className="size-3.5 text-indigo-600" />
+              <Label htmlFor="startTime" className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wide">
+                <Clock className="size-3.5 text-slate-500" />
                 Thời gian Bắt đầu
               </Label>
               <Input
@@ -171,12 +170,12 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 disabled={isPending}
-                className="rounded-xl border-slate-200 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800 text-xs h-10 shadow-2xs"
+                className="rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-semibold text-slate-800 text-xs h-10 shadow-2xs"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="endTime" className="text-xs font-bold text-indigo-900 flex items-center gap-1.5 uppercase tracking-wide">
-                <Clock className="size-3.5 text-purple-600" />
+              <Label htmlFor="endTime" className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wide">
+                <Clock className="size-3.5 text-slate-500" />
                 Thời gian Kết thúc
               </Label>
               <Input
@@ -185,7 +184,7 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 disabled={isPending}
-                className="rounded-xl border-slate-200 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-semibold text-slate-800 text-xs h-10 shadow-2xs"
+                className="rounded-xl border-slate-200 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 font-semibold text-slate-800 text-xs h-10 shadow-2xs"
               />
             </div>
           </div>
@@ -194,12 +193,12 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <Label className="text-xs font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wide">
-                <Users className="size-3.5 text-indigo-600" />
+                <Users className="size-3.5 text-slate-500" />
                 Thành viên tham gia
               </Label>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200/80 shadow-2xs">
-                  Đã chọn: <span className="font-bold text-indigo-900">{participants.length}</span> / {memberList.length} thành viên
+                <span className="text-xs font-semibold text-slate-700 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 shadow-2xs">
+                  Đã chọn: <span className="font-bold text-slate-900">{participants.length}</span> / {memberList.length} thành viên
                 </span>
               </div>
             </div>
@@ -213,12 +212,13 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   disabled={isPending}
-                  className="pl-9 h-9 text-xs rounded-xl border-slate-200 bg-white placeholder:text-slate-400 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20"
+                  className="pl-9 h-9 text-xs rounded-xl border-slate-200 bg-white placeholder:text-slate-400 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
+                    aria-label="Xóa tìm kiếm"
                     className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5 rounded-md"
                   >
                     <X className="size-3.5" />
@@ -233,9 +233,9 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
                   size="sm"
                   onClick={handleSelectAllFiltered}
                   disabled={isPending || filteredMembers.length === 0}
-                  className="h-9 text-xs font-semibold rounded-xl border-slate-200 bg-white hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 transition-colors"
+                  className="h-9 text-xs font-semibold rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors"
                 >
-                  <CheckCheck className="size-3.5 mr-1 text-indigo-600" />
+                  <CheckCheck className="size-3.5 mr-1 text-slate-600" />
                   Chọn tất cả
                 </Button>
                 {participants.length > 0 && (
@@ -270,7 +270,7 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
                       className={cn(
                         'flex items-center gap-3 p-2.5 rounded-xl cursor-pointer transition-all border select-none group',
                         isSelected
-                          ? 'bg-gradient-to-r from-blue-50/90 via-indigo-50/90 to-purple-50/50 border-indigo-300 ring-1 ring-indigo-300/50 shadow-xs font-semibold text-indigo-950'
+                          ? 'bg-blue-50/70 border-blue-300 ring-1 ring-blue-300/40 shadow-xs font-semibold text-blue-950'
                           : 'bg-white border-slate-200/80 hover:bg-slate-50 hover:border-slate-300 text-slate-700',
                       )}
                     >
@@ -279,19 +279,19 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
                         image={member.avatar_url}
                         className={cn(
                           'size-8 shrink-0 transition-transform group-hover:scale-105',
-                          isSelected ? 'ring-2 ring-indigo-500' : 'ring-1 ring-slate-200',
+                          isSelected ? 'ring-2 ring-blue-500' : 'ring-1 ring-slate-200',
                         )}
                       />
                       <div className="flex flex-col flex-1 min-w-0 leading-tight">
-                        <span className="text-sm font-semibold truncate group-hover:text-indigo-600 transition-colors">{member.name}</span>
+                        <span className="text-sm font-semibold truncate group-hover:text-blue-600 transition-colors">{member.name}</span>
                         <span className="text-xs text-slate-400 font-normal truncate">{member.email}</span>
                       </div>
                       <div
                         className={cn(
                           'size-5 rounded-md flex items-center justify-center shrink-0 transition-all',
                           isSelected
-                            ? 'bg-indigo-600 text-white shadow-xs'
-                            : 'border border-slate-300 group-hover:border-indigo-400 bg-white',
+                            ? 'bg-blue-600 text-white shadow-xs'
+                            : 'border border-slate-300 group-hover:border-blue-400 bg-white',
                         )}
                       >
                         {isSelected && <Check className="size-3.5 stroke-[3]" />}
@@ -310,7 +310,7 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
                       variant="ghost"
                       size="sm"
                       onClick={() => setSearchQuery('')}
-                      className="text-xs text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 font-semibold mt-1 h-7"
+                      className="text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50 font-semibold mt-1 h-7"
                     >
                       Xóa tìm kiếm
                     </Button>
@@ -341,7 +341,7 @@ export const CreateMeetingModal = ({ isOpen, setIsOpen, workspaceId, initialDate
             <Button
               type="submit"
               disabled={isPending}
-              className="rounded-xl shadow-md shadow-indigo-500/25 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold px-6 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+              className="rounded-xl shadow-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-6 transition-colors"
             >
               Tạo cuộc họp
             </Button>

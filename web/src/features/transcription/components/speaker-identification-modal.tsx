@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, CheckCircle2, Loader2, Sparkles, User, Users } from 'lucide-react';
+import { Check, CheckCircle2, Info, Loader2, User, Users } from 'lucide-react';
 import React, { useState } from 'react';
 import { toast } from 'sonner';
 
@@ -119,7 +119,7 @@ export function SpeakerIdentificationModal({
 
                     <div className="w-full sm:w-60">
                       <Select value={mappings[spk] || ''} onValueChange={(val) => handleSelect(spk, val)}>
-                        <SelectTrigger className="w-full text-xs">
+                        <SelectTrigger className="w-full text-xs" aria-label={`Chọn thành viên cho ${spk}`}>
                           <SelectValue placeholder="Chọn thành viên..." />
                         </SelectTrigger>
                         <SelectContent>
@@ -139,7 +139,7 @@ export function SpeakerIdentificationModal({
         )}
 
         <div className="p-3.5 rounded-xl bg-blue-500/5 border border-blue-500/20 flex items-start gap-2.5 text-xs text-blue-900 dark:text-blue-200">
-          <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
           <span>
             <strong>Tự động ghi nhớ:</strong> Sau khi bấm xác nhận, hệ thống sẽ lưu mẫu giọng nói này để tự động nhận diện thành viên trong các cuộc họp tiếp theo mà không cần chọn lại.
           </span>
@@ -150,9 +150,10 @@ export function SpeakerIdentificationModal({
             Hủy bỏ
           </Button>
           <Button
+            variant="default"
             onClick={handleConfirm}
             disabled={isSubmitting || distinctSpeakers.length === 0}
-            className="gap-2 bg-purple-600 hover:bg-purple-700 text-white"
+            className="gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs font-semibold"
           >
             {isSubmitting ? (
               <>

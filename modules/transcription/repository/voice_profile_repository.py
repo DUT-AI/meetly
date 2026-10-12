@@ -17,35 +17,23 @@ class SqlVoiceProfileRepository(IVoiceProfileRepository):
     async def get_by_user_id(
         self, workspace_id: str, user_id: str
     ) -> VoiceProfileEntity | None:
-        try:
-            stmt = select(MemberVoiceProfileModel).where(
-                MemberVoiceProfileModel.workspace_id == workspace_id,
-                MemberVoiceProfileModel.user_id == user_id,
-            )
-            result = await self.session.execute(stmt)
-            model = result.scalar_one_or_none()
-            return model.to_entity() if model else None
-        except Exception as e:
-            logger.warning(
-                f"[SqlVoiceProfileRepository] Could not fetch voice profile for user {user_id} in workspace {workspace_id}: {e}"
-            )
-            return None
+        stmt = select(MemberVoiceProfileModel).where(
+            MemberVoiceProfileModel.workspace_id == workspace_id,
+            MemberVoiceProfileModel.user_id == user_id,
+        )
+        result = await self.session.execute(stmt)
+        model = result.scalar_one_or_none()
+        return model.to_entity() if model else None
 
     async def list_by_workspace(self, workspace_id: str) -> list[VoiceProfileEntity]:
-        try:
-            stmt = (
-                select(MemberVoiceProfileModel)
-                .where(MemberVoiceProfileModel.workspace_id == workspace_id)
-                .order_by(MemberVoiceProfileModel.member_name.asc())
-            )
-            result = await self.session.execute(stmt)
-            models = result.scalars().all()
-            return [m.to_entity() for m in models]
-        except Exception as e:
-            logger.warning(
-                f"[SqlVoiceProfileRepository] Could not list voice profiles for workspace {workspace_id}: {e}"
-            )
-            return []
+        stmt = (
+            select(MemberVoiceProfileModel)
+            .where(MemberVoiceProfileModel.workspace_id == workspace_id)
+            .order_by(MemberVoiceProfileModel.member_name.asc())
+        )
+        result = await self.session.execute(stmt)
+        models = result.scalars().all()
+        return [m.to_entity() for m in models]
 
     async def save(
         self,
