@@ -3,6 +3,7 @@ from typing import Any
 
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm.attributes import flag_modified
 
 from modules.meetings.domain.entities import MeetingEntity
 from modules.meetings.domain.interfaces import IMeetingRepository
@@ -89,6 +90,7 @@ class SqlMeetingRepository(IMeetingRepository):
             model.participants = participants
         if report is not None:
             model.report = report
+            flag_modified(model, "report")
 
         await self.session.flush()
         return model.to_entity()

@@ -276,6 +276,7 @@ class OfflineMeetingUseCase:
             summary=summary_text,
             speakers=list(identified_speakers),
             tasks=action_items,
+            aligned_lines=aligned_lines,
         )
         report_data["transcript_segments_count"] = len(segments_raw)
         report_data["offline_processed"] = True
@@ -305,6 +306,7 @@ class OfflineMeetingUseCase:
             "synced_tasks": synced_tasks,
             "aligned_transcript": aligned_transcript,
             "summary": summary_text,
+            "report": report_data,
         }
 
     async def confirm_speakers(
@@ -712,6 +714,7 @@ class OfflineMeetingUseCase:
         summary: str,
         speakers: list[str],
         tasks: list[dict[str, Any]],
+        aligned_lines: list[str] | None = None,
     ) -> dict[str, Any]:
         """
         Builds a valid ProseMirror / TipTap doc JSON representation of the meeting report
@@ -820,6 +823,28 @@ class OfflineMeetingUseCase:
                     ],
                 }
             )
+
+        if aligned_lines:
+            content_nodes.append(
+                {
+                    "type": "heading",
+                    "attrs": {"level": 2},
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": "📝 Nội dung chi tiết cuộc họp",
+                        }
+                    ],
+                }
+            )
+            for line in aligned_lines:
+                if line and line.strip():
+                    content_nodes.append(
+                        {
+                            "type": "paragraph",
+                            "content": [{"type": "text", "text": line.strip()}],
+                        }
+                    )
 
         return {
             "type": "doc",

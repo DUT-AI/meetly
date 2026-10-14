@@ -175,12 +175,16 @@ class OfflineSTTProcessor:
         """
         Decodes any incoming audio container (WebM/Opus, MP3, M4A, AAC, FLAC, OGG, WAV)
         to 16kHz mono float32 numpy array using the system FFmpeg CLI.
+        Supports both streaming stdin and seekable tempfile fallback (essential for M4A/MP4/MOV).
         """
         if not audio_bytes or len(audio_bytes) < 32:
             return None
         try:
+            import os
             import subprocess
+            import tempfile
 
+            # 1. Fast in-memory attempt via pipe:0 (works for WebM, MP3, WAV)
             cmd = [
                 "ffmpeg",
                 "-nostdin",
@@ -203,12 +207,50 @@ class OfflineSTTProcessor:
                 pcm16 = np.frombuffer(proc.stdout, dtype=np.int16)
                 waveform = pcm16.astype(np.float32) / 32768.0
                 logger.info(
-                    f"[OfflineSTT] Decoded {len(waveform) / 16000:.2f}s audio via FFmpeg ({len(audio_bytes)} bytes input)"
+                    f"[OfflineSTT] Decoded {len(waveform) / 16000:.2f}s audio via FFmpeg pipe ({len(audio_bytes)} bytes input)"
                 )
                 return waveform
-            else:
-                err_msg = proc.stderr[:300].decode("utf-8", errors="ignore")
-                logger.debug(f"[OfflineSTT] FFmpeg decode non-zero ({proc.returncode}): {err_msg}")
+
+            # 2. Seekable tempfile fallback (required for containers like M4A/MP4 where moov atom requires seeking)
+            suffix = ".m4a" if (b"ftyp" in audio_bytes[:32] or b"moov" in audio_bytes[:2048]) else ".audio"
+            with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+                tmp.write(audio_bytes)
+                tmp_path = tmp.name
+
+            try:
+                cmd_temp = [
+                    "ffmpeg",
+                    "-nostdin",
+                    "-threads", "0",
+                    "-i", tmp_path,
+                    "-f", "s16le",
+                    "-ac", "1",
+                    "-ar", "16000",
+                    "pipe:1",
+                ]
+                proc_temp = subprocess.run(
+                    cmd_temp,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    check=False,
+                    timeout=45.0,
+                )
+                if proc_temp.returncode == 0 and len(proc_temp.stdout) >= 3200:
+                    pcm16 = np.frombuffer(proc_temp.stdout, dtype=np.int16)
+                    waveform = pcm16.astype(np.float32) / 32768.0
+                    logger.info(
+                        f"[OfflineSTT] Decoded {len(waveform) / 16000:.2f}s audio via FFmpeg tempfile ({len(audio_bytes)} bytes input)"
+                    )
+                    return waveform
+                else:
+                    err_msg = proc_temp.stderr[-300:].decode("utf-8", errors="ignore")
+                    logger.debug(f"[OfflineSTT] FFmpeg tempfile decode failed ({proc_temp.returncode}): {err_msg}")
+            finally:
+                if os.path.exists(tmp_path):
+                    try:
+                        os.remove(tmp_path)
+                    except OSError:
+                        pass
         except Exception as e:
             logger.debug(f"[OfflineSTT] FFmpeg decode exception: {e}")
         return None

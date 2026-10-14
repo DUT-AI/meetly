@@ -70,9 +70,20 @@ export default function MeetingReportPage() {
 
   const [pendingInsertion, setPendingInsertion] = useState<string | null>(null);
 
-  const handleOfflineSuccess = () => {
+  const handleOfflineSuccess = (result?: any) => {
+    const newReport = result?.report;
+    if (newReport) {
+      setReport(newReport);
+      if (editorInstance) {
+        editorInstance.commands.setContent(newReport);
+      }
+      queryClient.setQueryData(['meeting', workspaceId, meetingId], (old: any) =>
+        old ? { ...old, report: newReport } : old,
+      );
+    }
     queryClient.invalidateQueries({ queryKey: ['meeting', workspaceId, meetingId] });
     queryClient.invalidateQueries({ queryKey: ['transcripts', workspaceId, meetingId] });
+    queryClient.invalidateQueries({ queryKey: ['tasks'] });
     setActiveTab('report');
   };
 
@@ -444,7 +455,7 @@ export default function MeetingReportPage() {
 
             {/* TipTap Rich Text Editor Body */}
             <MeetingReportEditor
-              initialContent={meeting.report || {}}
+              initialContent={report ?? meeting.report ?? {}}
               onContentChange={handleContentChange}
               onEditorReady={handleEditorReady}
             />

@@ -30,7 +30,7 @@ interface OfflineAudioModalProps {
   onClose: () => void;
   workspaceId: string;
   meetingId: string;
-  onSuccess?: () => void;
+  onSuccess?: (result?: any) => void;
 }
 
 export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onSuccess }: OfflineAudioModalProps) {
@@ -160,7 +160,7 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
       setCurrentStep(4);
       setProcessedResult(res);
       toast.success('Đã xử lý xong cuộc họp offline và trích xuất thành công các Action Items!');
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess(res);
     } catch (err: any) {
       clearInterval(stepInterval);
       const errorMsg = err.response?.data?.detail || err.response?.data?.message || err.message || 'Lỗi khi xử lý file cuộc họp offline.';
@@ -420,7 +420,7 @@ export function OfflineAudioModal({ isOpen, onClose, workspaceId, meetingId, onS
               <Button
                 onClick={() => {
                   onClose();
-                  if (onSuccess) onSuccess();
+                  if (onSuccess) onSuccess(processedResult);
                 }}
                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
               >

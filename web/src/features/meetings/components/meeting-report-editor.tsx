@@ -191,6 +191,10 @@ export const MeetingReportEditor = ({
 
   const initialParsedContent = useMemo(() => normalizeReportContent(initialContent), [initialContent]);
 
+  const lastContentStringRef = useRef<string>(
+    JSON.stringify(formatContentForTipTap(initialContent) || normalizeReportContent(initialContent) || ''),
+  );
+
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -218,6 +222,7 @@ export const MeetingReportEditor = ({
     editable: !readOnly,
     onUpdate: ({ editor }: { editor: any }) => {
       const json = editor.getJSON();
+      lastContentStringRef.current = JSON.stringify(json);
       onContentChangeRef.current?.(json);
     },
     editorProps: {
@@ -230,12 +235,15 @@ export const MeetingReportEditor = ({
     },
   });
 
+  // Sync content when initialContent updates externally (e.g. after AI transcription finishes or query refetched)
   useEffect(() => {
-    if (editor && initialContent) {
-      const normalized = normalizeReportContent(initialContent);
-      if (normalized && (!editor.getText() || editor.getText().trim() === '')) {
-        editor.commands.setContent(normalized);
-      }
+    if (!editor || !initialContent) return;
+    const normalized = formatContentForTipTap(initialContent) || normalizeReportContent(initialContent);
+    if (!normalized) return;
+    const normalizedStr = JSON.stringify(normalized);
+    if (normalizedStr !== lastContentStringRef.current) {
+      lastContentStringRef.current = normalizedStr;
+      editor.commands.setContent(normalized);
     }
   }, [editor, initialContent]);
 
@@ -250,24 +258,6 @@ export const MeetingReportEditor = ({
       onEditorReadyRef.current?.(editor);
     }
   }, [editor]);
-
-  const hasLoadedContentRef = useRef(false);
-
-  // Sync content when initialContent updates externally (e.g. after AI transcription finishes)
-  useEffect(() => {
-    if (editor && initialContent && !hasLoadedContentRef.current) {
-      const formatted = formatContentForTipTap(initialContent);
-      if (formatted) {
-        const currentJson = editor.getJSON();
-        const isEmpty =
-          !currentJson.content || currentJson.content.length === 0 || (currentJson.content.length === 1 && !currentJson.content[0].content);
-        if (isEmpty) {
-          hasLoadedContentRef.current = true;
-          editor.commands.setContent(formatted);
-        }
-      }
-    }
-  }, [editor, initialContent]);
 
   if (!editor) {
     return null;
