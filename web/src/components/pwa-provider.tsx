@@ -92,7 +92,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white shadow-md p-1 border border-slate-700/50">
-                <img src="/icons/icon-192x192.png?v=2" alt="Meetly" className="size-full rounded-lg object-contain" />
+                <img src="/icons/icon-192x192.png?v=3" alt="Meetly" className="size-full rounded-lg object-contain" />
               </div>
               <div>
                 <h4 className="font-semibold text-sm text-slate-100">Cài đặt ứng dụng Meetly</h4>

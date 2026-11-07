@@ -1,5 +1,5 @@
 // Meetly PWA & Web Push Service Worker
-const CACHE_NAME = 'meetly-cache-v1';
+const CACHE_NAME = 'meetly-cache-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
