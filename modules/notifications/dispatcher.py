@@ -23,6 +23,11 @@ class NotificationDispatcher:
 
     async def dispatch(self, message: NotificationMessage) -> None:
         """Enqueue message to Redis for background workers. Fallback to direct execution if Redis fails."""
+        # Ensure web_push is included when website channel is targeted
+        if message.channels is not None:
+            if "website" in message.channels and "web_push" not in message.channels:
+                message.channels.append("web_push")
+
         # Try pushing to Redis Queue
         enqueued = await self.queue_producer.enqueue(message)
         if enqueued:

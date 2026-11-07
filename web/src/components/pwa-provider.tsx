@@ -1,19 +1,27 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Download, X, Share, Bell, Volume2 } from 'lucide-react';
+import { Download, X, Share, Bell, BellRing } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { toast } from 'sonner';
+import { usePushNotification } from '@/features/notifications/hooks/use-push-notification';
 
 export function PwaProvider({ children }: { children: React.ReactNode }) {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBanner, setShowInstallBanner] = useState(false);
+  const [showPushBanner, setShowPushBanner] = useState(false);
   const [isIos, setIsIos] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
+  const {
+    isSupported,
+    isSubscribed,
+    isLoading: isPushLoading,
+    subscribeToPush,
+  } = usePushNotification();
+
   useEffect(() => {
     // 1. Kiểm tra ứng dụng đã chạy ở chế độ standalone (đã cài đặt) chưa
-    const isStandaloneMode = 
+    const isStandaloneMode =
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
     setIsStandalone(isStandaloneMode);
@@ -47,7 +55,7 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
 
-    // Nếu là iOS và chưa cài đặt, hiển thị banner sau 3 giây
+    // Nếu là iOS và chưa cài đặt, hiển thị banner nhắc sau 3 giây
     if (isIosDevice && !isStandaloneMode) {
       const timer = setTimeout(() => {
         const dismissed = localStorage.getItem('meetly_pwa_ios_dismissed');
@@ -62,6 +70,22 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     };
   }, []);
+
+  // Kiểm tra hiển thị banner kích hoạt Push Notification nếu chưa cấp quyền
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+    if (Notification.permission === 'default' && !isSubscribed) {
+      const dismissedUntil = localStorage.getItem('meetly_push_prompt_dismissed_until');
+      if (!dismissedUntil || Date.now() > Number(dismissedUntil)) {
+        const timer = setTimeout(() => setShowPushBanner(true), 1500);
+        return () => clearTimeout(timer);
+      }
+    } else {
+      setShowPushBanner(false);
+    }
+  }, [isSubscribed]);
 
   const handleInstallClick = async () => {
     if (deferredPrompt) {
@@ -82,9 +106,71 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const handleEnablePush = async () => {
+    const success = await subscribeToPush(true);
+    if (success) {
+      setShowPushBanner(false);
+    }
+  };
+
+  const handleDismissPushBanner = () => {
+    setShowPushBanner(false);
+    // Nhắc lại sau 24 giờ nếu người dùng từ chối tạm thời
+    localStorage.setItem(
+      'meetly_push_prompt_dismissed_until',
+      String(Date.now() + 24 * 60 * 60 * 1000)
+    );
+  };
+
   return (
     <>
       {children}
+
+      {/* Banner nhắc kích hoạt Web Push trên điện thoại / trình duyệt */}
+      {showPushBanner && isSupported && !isSubscribed && (
+        <div className="fixed top-4 left-4 right-4 z-50 mx-auto max-w-md rounded-2xl border border-blue-500/30 bg-slate-900/95 p-4 text-white shadow-2xl backdrop-blur-md transition-all animate-in fade-in slide-in-from-top-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-blue-600/20 text-blue-400 border border-blue-500/30">
+                <BellRing className="size-5 animate-bounce" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm text-slate-100">Bật thông báo đẩy trên điện thoại</h4>
+                <p className="text-xs text-slate-400 mt-0.5 leading-relaxed">
+                  Nhận chuông và thông báo tức thì khi có việc mới, thay đổi trạng thái hoặc chỉnh sửa công việc kể cả khi bạn không mở ứng dụng.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleDismissPushBanner}
+              className="text-slate-400 hover:text-white transition p-1"
+              aria-label="Đóng"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+
+          <div className="mt-3.5 flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleDismissPushBanner}
+              className="text-xs text-slate-400 hover:text-white"
+            >
+              Để sau
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleEnablePush}
+              disabled={isPushLoading}
+              className="bg-blue-600 hover:bg-blue-500 text-xs font-medium gap-1.5 shadow-md shadow-blue-600/30"
+            >
+              <Bell className="size-3.5" />
+              {isPushLoading ? 'Đang kích hoạt...' : 'Bật thông báo ngay'}
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Banner hướng dẫn cài đặt PWA trên điện thoại */}
       {showInstallBanner && !isStandalone && (
@@ -157,7 +243,7 @@ export function playNotificationSound() {
         const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
         if (!AudioContext) return;
         const ctx = new AudioContext();
-        
+
         // Tone 1: 659.25Hz (E5)
         const osc1 = ctx.createOscillator();
         const gain1 = ctx.createGain();
@@ -187,4 +273,3 @@ export function playNotificationSound() {
     console.warn('[SoundAlert] Could not play notification sound', e);
   }
 }
-

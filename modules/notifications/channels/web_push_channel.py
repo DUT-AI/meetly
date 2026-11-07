@@ -1,4 +1,5 @@
 import asyncio
+import time
 from loguru import logger
 
 from core.config.notification import notification_settings
@@ -50,7 +51,7 @@ class WebPushChannel(INotificationChannel):
                 "icon": "/icons/icon-192x192.png",
                 "badge": "/icons/icon-192x192.png",
                 "action_url": full_url,
-                "tag": f"meetly-{message.entity_type}-{message.entity_id or message.event_type}",
+                "tag": f"meetly-{message.entity_type}-{message.entity_id or message.event_type}-{int(time.time() * 1000)}",
                 "data": {
                     "url": full_url,
                     "event_type": message.event_type,

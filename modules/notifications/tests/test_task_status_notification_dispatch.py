@@ -119,7 +119,7 @@ async def test_dispatch_when_all_notifications_enabled() -> None:
     assert recipient_ids == {"user_assignee", "user_admin"}
 
     for msg in dispatched_messages:
-        assert msg.channels == ["website", "discord", "zalo"]
+        assert msg.channels == ["website", "web_push", "discord", "zalo"]
         assert "Done" in msg.title
 
     # 2. Check Discord room notification was called

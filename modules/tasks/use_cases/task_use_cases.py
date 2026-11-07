@@ -234,6 +234,7 @@ async def _dispatch_task_status_notifications(
         active_channels: list[str] = []
         if workspace.notify_on_task_status_change:
             active_channels.append("website")
+            active_channels.append("web_push")
         if workspace.notify_task_status_discord:
             active_channels.append("discord")
         if workspace.notify_task_status_zalo:
@@ -683,6 +684,12 @@ class UpdateTaskUseCase:
             raise ForbiddenException("Unauthorized.")
 
         old_status = task.status
+        old_name = task.name
+        old_priority = task.priority
+        old_labels = list(task.labels or [])
+        old_due_date = task.due_date
+        old_description = task.description
+        old_project_id = task.project_id
         old_assignee_ids = set(task.assignee_ids or [])
 
         new_assignee_ids_list: list[str] | None = None
@@ -782,6 +789,83 @@ class UpdateTaskUseCase:
                     action_url=action_url,
                     assignee_ids=updated.assignee_ids,
                 )
+
+            # 3. Check field edits (name, priority, due_date, description, labels, project_id)
+            edit_changes: list[str] = []
+            if name is not None and name.strip() != old_name.strip():
+                edit_changes.append(f"tên thành '{name}'")
+            if priority is not None and priority != old_priority:
+                p_labels = {
+                    TaskPriority.LOW: "Thấp",
+                    TaskPriority.MEDIUM: "Trung bình",
+                    TaskPriority.HIGH: "Cao",
+                    TaskPriority.URGENT: "Khẩn cấp",
+                }
+                edit_changes.append(
+                    f"mức độ ưu tiên thành '{p_labels.get(priority, priority.value)}'"
+                )
+            if due_date != old_due_date:
+                if due_date is not None:
+                    formatted_date = due_date.strftime("%d/%m/%Y %H:%M")
+                    edit_changes.append(f"hạn chót thành {formatted_date}")
+                elif old_due_date is not None:
+                    edit_changes.append("xóa hạn chót")
+            if description is not None and (description or "").strip() != (old_description or "").strip():
+                edit_changes.append("nội dung mô tả")
+            if labels is not None and sorted(labels) != sorted(old_labels):
+                edit_changes.append("nhãn")
+            if project_id is not None and project_id != old_project_id:
+                edit_changes.append("dự án")
+
+            if edit_changes:
+                edit_summary = ", ".join(edit_changes)
+                target_user_ids: set[str] = set()
+
+                # Notify all current assignees (excluding the editor)
+                for a_id in (updated.assignee_ids or []):
+                    assignee_m = await self.member_repo.get_by_id(a_id)
+                    if assignee_m and str(assignee_m.user_id) != user_id:
+                        target_user_ids.add(str(assignee_m.user_id))
+
+                # Also notify workspace admins (excluding the editor)
+                ws_members = await self.member_repo.list_by_workspace(task.workspace_id)
+                for wm in ws_members:
+                    if wm.role == MemberRole.ADMIN and str(wm.user_id) != user_id:
+                        target_user_ids.add(str(wm.user_id))
+
+                for r_uid in target_user_ids:
+                    await self.notification_dispatcher.dispatch(
+                        NotificationMessage(
+                            recipient_user_id=r_uid,
+                            event_type="task_updated",
+                            title=f"{actor_name} đã chỉnh sửa công việc '{updated.name}'",
+                            content=f"Đã cập nhật: {edit_summary}.",
+                            action_url=action_url,
+                            actor_id=user_id,
+                            actor_name=actor_name,
+                            actor_avatar_url=actor_avatar,
+                            workspace_id=task.workspace_id,
+                            entity_type="task",
+                            entity_id=task.id,
+                            channels=["website", "web_push"],
+                        )
+                    )
+
+                # Send note to Zalo room if workspace has room configured
+                ws_obj = await self.workspace_repo.get_by_id(task.workspace_id)
+                if (
+                    ws_obj
+                    and ws_obj.notify_task_status_zalo
+                    and ws_obj.zalo_room_id
+                    and self.zalo_client
+                ):
+                    try:
+                        await self.zalo_client.send_message(
+                            chat_id=ws_obj.zalo_room_id,
+                            message=f"📝 [Meetly] {actor_name} đã cập nhật công việc '{updated.name}':\n• Thay đổi: {edit_summary}",
+                        )
+                    except Exception as ze:
+                        logger.warning(f"Failed to send task update to Zalo room: {ze}")
         except Exception as e:
             logger.warning(f"Failed to dispatch update task notifications: {e}")
 

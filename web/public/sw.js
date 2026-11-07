@@ -1,5 +1,5 @@
 // Meetly PWA & Web Push Service Worker
-const CACHE_NAME = 'meetly-cache-v2';
+const CACHE_NAME = 'meetly-cache-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -55,7 +55,7 @@ self.addEventListener('push', (event) => {
     body: data.body || data.content,
     icon: data.icon || '/icons/icon-192x192.png',
     badge: data.badge || '/icons/icon-192x192.png',
-    vibrate: [200, 100, 200, 100, 200], // Rung cảnh báo trên điện thoại
+    vibrate: [300, 100, 300, 100, 300], // Rung cảnh báo trên điện thoại
     sound: '/sounds/notification.mp3',   // Âm thanh cảnh báo
     data: data.data || { url: data.action_url || 'https://meetly.dutai.io.vn' },
     actions: [
@@ -66,8 +66,20 @@ self.addEventListener('push', (event) => {
     renotify: true,
   };
 
+  const notifyClients = self.clients
+    .matchAll({ type: 'window', includeUncontrolled: true })
+    .then((clients) => {
+      clients.forEach((client) => {
+        client.postMessage({ type: 'MEETLY_PUSH_RECEIVED', payload: data });
+      });
+    })
+    .catch((err) => console.warn('[Meetly SW] Failed to notify clients', err));
+
   event.waitUntil(
-    self.registration.showNotification(data.title, notificationOptions)
+    Promise.all([
+      self.registration.showNotification(data.title, notificationOptions),
+      notifyClients,
+    ])
   );
 });
 

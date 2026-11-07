@@ -10,9 +10,11 @@ import {
   CheckCheck,
   CheckCircle2,
   Clock,
+  Edit3,
   FileText,
   Loader2,
   MessageSquare,
+  Send,
   Smartphone,
   UserMinus,
   UserPlus,
@@ -38,7 +40,7 @@ export const NotificationPopover = () => {
   const { data, isLoading } = useGetNotifications(activeTab === 'unread');
   const { mutate: markRead } = useMarkNotificationRead();
   const { mutate: markAllRead, isPending: isMarkingAll } = useMarkAllNotificationsRead();
-  const { isSupported, isSubscribed, isLoading: isPushLoading, subscribeToPush } = usePushNotification();
+  const { isSupported, isSubscribed, isLoading: isPushLoading, subscribeToPush, sendTestPush } = usePushNotification();
 
   const unreadCount = data?.unreadCount || 0;
   const items = data?.items || [];
@@ -67,6 +69,8 @@ export const NotificationPopover = () => {
         return <UserMinus className="size-3.5 text-rose-500" />;
       case 'task_status_changed':
         return <ArrowRightCircle className="size-3.5 text-violet-500" />;
+      case 'task_updated':
+        return <Edit3 className="size-3.5 text-amber-500" />;
       case 'task_due_soon':
         return <Clock className="size-3.5 text-amber-500" />;
       case 'task_overdue':
@@ -201,10 +205,22 @@ export const NotificationPopover = () => {
         <div className="flex items-center justify-between border-t px-3 py-2 bg-neutral-50/80 rounded-b-xl text-[11px]">
           {isSupported ? (
             isSubscribed ? (
-              <span className="flex items-center gap-1 text-emerald-600 font-medium">
-                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Đã bật Push ĐT
-              </span>
+              <div className="flex items-center gap-1.5">
+                <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                  <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  Đã bật Push ĐT
+                </span>
+                <button
+                  type="button"
+                  onClick={() => sendTestPush()}
+                  disabled={isPushLoading}
+                  title="Gửi chuông thử nghiệm đến điện thoại"
+                  className="flex items-center gap-1 text-[10px] text-neutral-500 hover:text-indigo-600 border border-neutral-200 rounded px-1.5 py-0.5 hover:bg-neutral-100 transition"
+                >
+                  <Send className="size-2.5" />
+                  <span>Thử Push</span>
+                </button>
+              </div>
             ) : (
               <button
                 type="button"

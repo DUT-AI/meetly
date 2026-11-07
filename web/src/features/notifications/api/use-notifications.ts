@@ -13,12 +13,29 @@ let isFirstLoadGlobally = true;
 
 export function useGetNotifications(unreadOnly = false) {
   const isInitializedRef = useRef(false);
+  const queryClient = useQueryClient();
 
   const query = useQuery({
     queryKey: [...NOTIFICATIONS_QUERY_KEY, { unreadOnly }],
     queryFn: () => notificationApi.listNotifications(unreadOnly),
     refetchInterval: 12000, // Poll every 12 seconds for real-time responsiveness
   });
+
+  // Listen for instant push notifications dispatched by Service Worker
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
+
+    const handleSwMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'MEETLY_PUSH_RECEIVED') {
+        queryClient.invalidateQueries({ queryKey: NOTIFICATIONS_QUERY_KEY });
+      }
+    };
+
+    navigator.serviceWorker.addEventListener('message', handleSwMessage);
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleSwMessage);
+    };
+  }, [queryClient]);
 
   useEffect(() => {
     // Nếu dữ liệu chưa tải xong thì không xử lý
