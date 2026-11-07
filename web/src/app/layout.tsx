@@ -19,7 +19,7 @@ const inter = Inter({
 export const metadata: Metadata = siteConfig;
 
 export const viewport: Viewport = {
-  themeColor: '#0b1120',
+  themeColor: '#ffffff',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,

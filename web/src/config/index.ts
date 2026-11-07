@@ -11,7 +11,7 @@ export const siteConfig: Metadata = {
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
-    statusBarStyle: 'black-translucent',
+    statusBarStyle: 'default',
     title: 'Meetly',
   },
   icons: {
