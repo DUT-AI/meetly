@@ -7,8 +7,12 @@ import { notificationApi } from './notification-api';
 
 export const NOTIFICATIONS_QUERY_KEY = ['notifications'];
 
+// Lưu trữ ID thông báo mới nhất đã thông báo để không bị lặp lại qua các lần điều hướng trang
+let globalLastNotifiedId: string | null = null;
+let isFirstLoadGlobally = true;
+
 export function useGetNotifications(unreadOnly = false) {
-  const prevCountRef = useRef<number | null>(null);
+  const isInitializedRef = useRef(false);
 
   const query = useQuery({
     queryKey: [...NOTIFICATIONS_QUERY_KEY, { unreadOnly }],
@@ -17,16 +21,35 @@ export function useGetNotifications(unreadOnly = false) {
   });
 
   useEffect(() => {
-    const currentUnread = query.data?.unreadCount ?? 0;
-    const latestItems = query.data?.items ?? [];
+    // Nếu dữ liệu chưa tải xong thì không xử lý
+    if (!query.data) return;
 
-    if (prevCountRef.current !== null && currentUnread > prevCountRef.current) {
-      // 1. Kích hoạt âm thanh thông báo chime (Sound Alert)
-      playNotificationSound();
+    const latestItems = query.data.items ?? [];
+    const newest = latestItems[0];
 
-      // 2. Hiển thị thông báo nổi Toast
-      const newest = latestItems[0];
-      if (newest) {
+    // Lần tải đầu tiên: chỉ ghi nhận mốc hiện tại, KHÔNG phát chuông và KHÔNG toast các thông báo cũ trong quá khứ
+    if (!isInitializedRef.current) {
+      isInitializedRef.current = true;
+      if (isFirstLoadGlobally) {
+        isFirstLoadGlobally = false;
+        if (newest) {
+          globalLastNotifiedId = newest.id;
+        }
+        return;
+      }
+    }
+
+    // Chỉ kích hoạt toast & âm thanh khi có thông báo THỰC SỰ MỚI phát sinh trong phiên làm việc
+    if (newest && newest.id !== globalLastNotifiedId && !newest.isRead) {
+      // Kiểm tra thời gian: chỉ thông báo nếu được tạo trong vòng 2 phút gần nhất
+      const createdAtMs = new Date(newest.createdAt).getTime();
+      const isRecent = !isNaN(createdAtMs) && Date.now() - createdAtMs < 120_000;
+
+      if (isRecent) {
+        // 1. Kích hoạt âm thanh thông báo chime (Sound Alert)
+        playNotificationSound();
+
+        // 2. Hiển thị thông báo nổi Toast
         toast.info(newest.title, {
           description: newest.content,
           action: newest.actionUrl
@@ -40,9 +63,9 @@ export function useGetNotifications(unreadOnly = false) {
           duration: 5000,
         });
       }
-    }
 
-    prevCountRef.current = currentUnread;
+      globalLastNotifiedId = newest.id;
+    }
   }, [query.data]);
 
   return query;

@@ -91,8 +91,8 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
         <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-md rounded-2xl border border-indigo-500/30 bg-slate-900/95 p-4 text-white shadow-2xl backdrop-blur-md transition-all animate-in fade-in slide-in-from-bottom-5">
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-center gap-3">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 shadow-md">
-                <img src="/icons/icon-192x192.png" alt="Meetly" className="size-8 rounded-lg object-contain" />
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white shadow-md p-1 border border-slate-700/50">
+                <img src="/icons/icon-192x192.png?v=2" alt="Meetly" className="size-full rounded-lg object-contain" />
               </div>
               <div>
                 <h4 className="font-semibold text-sm text-slate-100">Cài đặt ứng dụng Meetly</h4>
