@@ -1,4 +1,5 @@
 import asyncio
+from loguru import logger
 
 from modules.identity.client.manage_client import ManageClient
 from modules.notifications.domain.entities import NotificationMessage
@@ -36,5 +37,11 @@ class SendNotificationUseCase:
                 if getattr(c, "channel_name", "") in allowed_channels
             ]
 
-        tasks = [channel.send(recipient, message) for channel in target_channels]
-        await asyncio.gather(*tasks, return_exceptions=True)
+        # Execute channels sequentially to prevent SQLAlchemy concurrent session operations
+        for channel in target_channels:
+            try:
+                await channel.send(recipient, message)
+            except Exception as exc:
+                logger.error(
+                    f"Channel {getattr(channel, 'channel_name', 'unknown')} failed for user {recipient.id}: {exc}"
+                )

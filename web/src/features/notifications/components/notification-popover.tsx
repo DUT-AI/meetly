@@ -65,6 +65,8 @@ export const NotificationPopover = () => {
         return <MessageSquare className="size-3.5 text-indigo-500" />;
       case 'task_assigned':
         return <CheckCircle2 className="size-3.5 text-emerald-500" />;
+      case 'task_created':
+        return <CheckCircle2 className="size-3.5 text-blue-500" />;
       case 'task_unassigned':
         return <UserMinus className="size-3.5 text-rose-500" />;
       case 'task_status_changed':

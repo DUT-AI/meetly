@@ -61,8 +61,13 @@ class NotificationDispatcher:
                     if getattr(c, "channel_name", "") in allowed_channels
                 ]
 
-            tasks = [channel.send(recipient, message) for channel in target_channels]
-            await asyncio.gather(*tasks, return_exceptions=True)
+            for channel in target_channels:
+                try:
+                    await channel.send(recipient, message)
+                except Exception as ce:
+                    logger.error(
+                        f"Channel {getattr(channel, 'channel_name', 'unknown')} failed directly for user {message.recipient_user_id}: {ce}"
+                    )
         except Exception as e:
             logger.error(
                 f"Error while dispatching notification directly for user {message.recipient_user_id}: {e}"

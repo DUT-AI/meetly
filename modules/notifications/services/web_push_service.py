@@ -39,9 +39,11 @@ class WebPushService:
                 data=json.dumps(payload),
                 vapid_private_key=self.private_key,
                 vapid_claims={"sub": self.claim_email},
-                timeout=5,
+                ttl=86400,
+                headers={"Urgency": "high"},
+                timeout=10,
             )
-            logger.debug(f"[WebPushService] Push delivered to endpoint {endpoint[:30]}...")
+            logger.info(f"[WebPushService] Push delivered to endpoint {endpoint[:30]}...")
             return True
         except pywebpush.WebPushException as ex:
             logger.warning(

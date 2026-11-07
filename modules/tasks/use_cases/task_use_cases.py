@@ -242,13 +242,14 @@ async def _dispatch_task_status_notifications(
 
         # 2. Dispatch personal notifications if any channels active
         if active_channels:
-            # Notify assignee if any and not the actor
             target_ids = assignee_ids or []
+            notified_user_ids: set[str] = set()
 
             for assignee_id in target_ids:
                 assignee_member = await member_repo.get_by_id(assignee_id)
 
-                if assignee_member and str(assignee_member.user_id) != actor_id:
+                if assignee_member:
+                    notified_user_ids.add(str(assignee_member.user_id))
                     await notification_dispatcher.dispatch(
                         NotificationMessage(
                             recipient_user_id=str(assignee_member.user_id),
@@ -266,12 +267,11 @@ async def _dispatch_task_status_notifications(
                         )
                     )
 
-            # Notify department admins if not actor and not duplicate of assignee
+            # Notify department admins if not duplicate of assignee
             members = await member_repo.list_by_workspace(workspace_id)
             for m in members:
-                if m.role == MemberRole.ADMIN and str(m.user_id) != actor_id:
-                    if m.id in target_ids:
-                        continue
+                if m.role == MemberRole.ADMIN and str(m.user_id) not in notified_user_ids:
+                    notified_user_ids.add(str(m.user_id))
                     await notification_dispatcher.dispatch(
                         NotificationMessage(
                             recipient_user_id=str(m.user_id),
@@ -389,19 +389,19 @@ class CreateTaskUseCase:
             description=description,
         )
 
-        # Notify assignees
+        # Notify assignees & admins
         logger.info(f"Task created: id={task.id}, assignee_ids={task.assignee_ids}")
+        creator_user = await self.manage_client.get_user(user_id)
+        creator_name = creator_user.name if creator_user else "Đồng nghiệp"
+        creator_avatar = creator_user.avatar_url if creator_user else None
         target_ids = task.assignee_ids or []
-        if target_ids:
-            creator_user = await self.manage_client.get_user(user_id)
-            creator_name = creator_user.name if creator_user else "Đồng nghiệp"
-            creator_avatar = creator_user.avatar_url if creator_user else None
 
+        if target_ids:
             for a_id in target_ids:
                 assignee_member = await self.member_repo.get_by_id(a_id)
                 if assignee_member:
                     msg = NotificationMessage(
-                        recipient_user_id=assignee_member.user_id,
+                        recipient_user_id=str(assignee_member.user_id),
                         event_type="task_assigned",
                         title=f"{creator_name} đã giao việc cho bạn",
                         content=f"Công việc: {task.name}",
@@ -412,6 +412,26 @@ class CreateTaskUseCase:
                         workspace_id=task.workspace_id,
                         entity_type="task",
                         entity_id=task.id,
+                        channels=["website", "web_push", "zalo", "discord"],
+                    )
+                    await self.notification_dispatcher.dispatch(msg)
+        else:
+            ws_members = await self.member_repo.list_by_workspace(workspace_id)
+            for m in ws_members:
+                if m.role == MemberRole.ADMIN:
+                    msg = NotificationMessage(
+                        recipient_user_id=str(m.user_id),
+                        event_type="task_created",
+                        title=f"{creator_name} đã tạo công việc mới",
+                        content=f"Công việc: {task.name}",
+                        action_url=f"/workspaces/{task.workspace_id}/tasks/{task.id}",
+                        actor_id=user_id,
+                        actor_name=creator_name,
+                        actor_avatar_url=creator_avatar,
+                        workspace_id=task.workspace_id,
+                        entity_type="task",
+                        entity_id=task.id,
+                        channels=["website", "web_push", "zalo", "discord"],
                     )
                     await self.notification_dispatcher.dispatch(msg)
 
@@ -821,16 +841,16 @@ class UpdateTaskUseCase:
                 edit_summary = ", ".join(edit_changes)
                 target_user_ids: set[str] = set()
 
-                # Notify all current assignees (excluding the editor)
+                # Notify all current assignees
                 for a_id in (updated.assignee_ids or []):
                     assignee_m = await self.member_repo.get_by_id(a_id)
-                    if assignee_m and str(assignee_m.user_id) != user_id:
+                    if assignee_m:
                         target_user_ids.add(str(assignee_m.user_id))
 
-                # Also notify workspace admins (excluding the editor)
+                # Also notify workspace admins
                 ws_members = await self.member_repo.list_by_workspace(task.workspace_id)
                 for wm in ws_members:
-                    if wm.role == MemberRole.ADMIN and str(wm.user_id) != user_id:
+                    if wm.role == MemberRole.ADMIN:
                         target_user_ids.add(str(wm.user_id))
 
                 for r_uid in target_user_ids:

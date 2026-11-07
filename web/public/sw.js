@@ -1,5 +1,5 @@
 // Meetly PWA & Web Push Service Worker
-const CACHE_NAME = 'meetly-cache-v3';
+const CACHE_NAME = 'meetly-cache-v4';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -53,18 +53,20 @@ self.addEventListener('push', (event) => {
 
   const notificationOptions = {
     body: data.body || data.content,
-    icon: data.icon || '/icons/icon-192x192.png',
-    badge: data.badge || '/icons/icon-192x192.png',
-    vibrate: [300, 100, 300, 100, 300], // Rung cảnh báo trên điện thoại
-    sound: '/sounds/notification.mp3',   // Âm thanh cảnh báo
+    icon: '/icons/icon-192x192.png',
+    badge: '/icons/icon-192x192.png',
     data: data.data || { url: data.action_url || 'https://meetly.dutai.io.vn' },
-    actions: [
-      { action: 'open', title: '👉 Xem chi tiết' },
-      { action: 'close', title: 'Đóng' },
-    ],
     tag: data.tag || 'meetly-push-' + Date.now(),
     renotify: true,
   };
+
+  // Only include actions on browsers that support them (iOS WebKit throws on actions)
+  if (typeof Notification !== 'undefined' && 'actions' in Notification.prototype) {
+    notificationOptions.actions = [
+      { action: 'open', title: '👉 Xem chi tiết' },
+      { action: 'close', title: 'Đóng' },
+    ];
+  }
 
   const notifyClients = self.clients
     .matchAll({ type: 'window', includeUncontrolled: true })
@@ -75,9 +77,20 @@ self.addEventListener('push', (event) => {
     })
     .catch((err) => console.warn('[Meetly SW] Failed to notify clients', err));
 
+  const showPromise = self.registration
+    .showNotification(data.title, notificationOptions)
+    .catch((err) => {
+      console.warn('[Meetly SW] showNotification error, falling back:', err);
+      return self.registration.showNotification(data.title, {
+        body: data.body || data.content,
+        icon: '/icons/icon-192x192.png',
+        badge: '/icons/icon-192x192.png',
+      });
+    });
+
   event.waitUntil(
     Promise.all([
-      self.registration.showNotification(data.title, notificationOptions),
+      showPromise,
       notifyClients,
     ])
   );
@@ -91,8 +104,8 @@ self.addEventListener('notificationclick', (event) => {
     return;
   }
 
-  const targetUrl = (event.notification.data && event.notification.data.url) 
-    ? event.notification.data.url 
+  const targetUrl = (event.notification.data && event.notification.data.url)
+    ? event.notification.data.url
     : 'https://meetly.dutai.io.vn';
 
   event.waitUntil(
