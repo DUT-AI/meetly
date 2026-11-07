@@ -46,10 +46,14 @@ class NotificationDispatcher:
 
             target_channels = self.channels
             if message.channels is not None:
+                allowed_channels = set(message.channels)
+                # If "website" (in-app) is targeted, also trigger "web_push" for mobile/PWA
+                if "website" in allowed_channels:
+                    allowed_channels.add("web_push")
                 target_channels = [
                     c
                     for c in self.channels
-                    if getattr(c, "channel_name", "") in message.channels
+                    if getattr(c, "channel_name", "") in allowed_channels
                 ]
 
             tasks = [channel.send(recipient, message) for channel in target_channels]

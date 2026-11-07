@@ -17,8 +17,13 @@ class NotificationSettings(BaseSettings):
 
     discord_bot_token: str = ""
     zalo_bot_token: str = ""
-    app_url: str = "http://localhost:3000"
+    app_url: str = "https://meetly.dutai.io.vn"
     environment: str = "development"
+
+    # Web Push Notification (VAPID)
+    vapid_public_key: str = ""
+    vapid_private_key: str = ""
+    vapid_claim_email: str = ""
 
 
 notification_settings = NotificationSettings()

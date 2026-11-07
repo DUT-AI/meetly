@@ -10,6 +10,8 @@ from modules.ai_engine.infrastructure.qwen_extractor import QwenTaskExtractorSer
 from modules.identity.client.manage_client import ManageClient
 from modules.meetings.domain.interfaces import IMeetingRepository
 from modules.members.domain.interfaces import IMemberRepository
+from modules.notifications.dispatcher import NotificationDispatcher
+from modules.notifications.domain.entities import NotificationMessage
 from modules.projects.domain.interfaces import IProjectRepository
 from modules.tasks.domain.enums import TaskPriority, TaskStatus
 from modules.tasks.domain.interfaces import ITaskRepository
@@ -50,6 +52,7 @@ class OfflineMeetingUseCase:
         task_repo: ITaskRepository = None,  # type: ignore[assignment]
         project_repo: IProjectRepository = None,  # type: ignore[assignment]
         manage_client: ManageClient = None,  # type: ignore[assignment]
+        notification_dispatcher: NotificationDispatcher = None,  # type: ignore[assignment]
     ) -> None:
         self.session_repo = session_repo
         self.segment_repo = segment_repo
@@ -63,6 +66,7 @@ class OfflineMeetingUseCase:
         self.manage_client = manage_client or ManageClient()
         self.offline_stt = offline_stt or OfflineSTTProcessor()
         self.voice_matcher = VoicebankMatcher()
+        self.notification_dispatcher = notification_dispatcher
 
     async def _check_member(self, workspace_id: str, user_id: str) -> None:
         member = await self.member_repo.get_member(workspace_id, user_id)
@@ -283,6 +287,38 @@ class OfflineMeetingUseCase:
             session_id=session.id,
             status=SessionStatus.COMPLETED.value,
         )
+
+        # Dispatch meeting_report_ready notification to meeting creator & participants
+        if self.notification_dispatcher:
+            try:
+                recipients_to_notify: set[str] = set()
+                if meeting.created_by:
+                    recipients_to_notify.add(str(meeting.created_by))
+                if meeting.participants:
+                    for p_id in meeting.participants:
+                        p_member = await self.member_repo.get_by_id(p_id)
+                        if p_member:
+                            recipients_to_notify.add(str(p_member.user_id))
+
+                for r_uid in recipients_to_notify:
+                    await self.notification_dispatcher.dispatch(
+                        NotificationMessage(
+                            recipient_user_id=r_uid,
+                            event_type="meeting_report_ready",
+                            title="Báo cáo cuộc họp đã hoàn tất",
+                            content=f"Biên bản cuộc họp '{meeting.title}' đã sẵn sàng kèm {len(action_items)} nhiệm vụ.",
+                            action_url=f"/workspaces/{workspace_id}/meetings/{meeting_id}",
+                            actor_id=actor_id,
+                            actor_name="Meetly AI",
+                            workspace_id=workspace_id,
+                            entity_type="meeting",
+                            entity_id=meeting_id,
+                        )
+                    )
+            except Exception as notify_err:
+                logger.warning(
+                    f"[OfflinePipeline] Failed to dispatch meeting report notification: {notify_err}"
+                )
 
         return {
             "session_id": session.id,
@@ -596,6 +632,32 @@ class OfflineMeetingUseCase:
                     }
                 )
                 existing_task_map[title.lower()] = task_entity
+
+        # Dispatch task_assigned notifications for synced action items
+        if self.notification_dispatcher:
+            for ct in created_tasks:
+                for a_id in ct.get("assignee_ids", []):
+                    try:
+                        assignee_member = await self.member_repo.get_by_id(a_id)
+                        if assignee_member:
+                            await self.notification_dispatcher.dispatch(
+                                NotificationMessage(
+                                    recipient_user_id=str(assignee_member.user_id),
+                                    event_type="task_assigned",
+                                    title="Bạn được giao việc mới từ Cuộc họp",
+                                    content=f"Công việc: {ct['name']} (từ cuộc họp '{meeting.title}')",
+                                    action_url=f"/workspaces/{workspace_id}/tasks/{ct['id']}",
+                                    actor_id=actor_id,
+                                    actor_name="Meetly AI",
+                                    workspace_id=workspace_id,
+                                    entity_type="task",
+                                    entity_id=ct["id"],
+                                )
+                            )
+                    except Exception as notify_err:
+                        logger.warning(
+                            f"[OfflinePipeline] Failed to dispatch task_assigned notification: {notify_err}"
+                        )
 
         logger.info(
             f"[OfflinePipeline] Successfully synced {len(created_tasks)} tasks to Department Task Board"

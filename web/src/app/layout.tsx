@@ -1,9 +1,10 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { NuqsAdapter } from 'nuqs/adapters/next/app';
 import type { PropsWithChildren } from 'react';
 
 import { AgentationDev } from '@/components/agentation-client';
+import { PwaProvider } from '@/components/pwa-provider';
 import { QueryProvider } from '@/components/query-provider';
 import { Toaster } from '@/components/ui/sonner';
 import { siteConfig } from '@/config';
@@ -16,6 +17,14 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = siteConfig;
+
+export const viewport: Viewport = {
+  themeColor: '#0b1120',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {
   return (
@@ -54,7 +63,9 @@ const RootLayout = ({ children }: Readonly<PropsWithChildren>) => {
           <NuqsAdapter>
             <Toaster theme="light" richColors closeButton />
 
-            {children}
+            <PwaProvider>
+              {children}
+            </PwaProvider>
             <AgentationDev />
           </NuqsAdapter>
         </QueryProvider>

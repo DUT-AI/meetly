@@ -10,10 +10,13 @@ import {
   CheckCheck,
   CheckCircle2,
   Clock,
+  FileText,
   Loader2,
   MessageSquare,
+  Smartphone,
   UserMinus,
   UserPlus,
+  Volume2,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -21,8 +24,10 @@ import { useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { playNotificationSound } from '@/components/pwa-provider';
 
 import { useGetNotifications, useMarkAllNotificationsRead, useMarkNotificationRead } from '../api/use-notifications';
+import { usePushNotification } from '../hooks/use-push-notification';
 import type { NotificationItem } from '../types';
 
 export const NotificationPopover = () => {
@@ -33,6 +38,7 @@ export const NotificationPopover = () => {
   const { data, isLoading } = useGetNotifications(activeTab === 'unread');
   const { mutate: markRead } = useMarkNotificationRead();
   const { mutate: markAllRead, isPending: isMarkingAll } = useMarkAllNotificationsRead();
+  const { isSupported, isSubscribed, isLoading: isPushLoading, subscribeToPush } = usePushNotification();
 
   const unreadCount = data?.unreadCount || 0;
   const items = data?.items || [];
@@ -49,6 +55,8 @@ export const NotificationPopover = () => {
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
+      case 'meeting_report_ready':
+        return <FileText className="size-3.5 text-cyan-600" />;
       case 'task_comment_mention':
         return <AtSign className="size-3.5 text-blue-500" />;
       case 'task_new_comment':
@@ -187,6 +195,40 @@ export const NotificationPopover = () => {
               </div>
             ))
           )}
+        </div>
+
+        {/* Footer: Web Push Notification & Sound test */}
+        <div className="flex items-center justify-between border-t px-3 py-2 bg-neutral-50/80 rounded-b-xl text-[11px]">
+          {isSupported ? (
+            isSubscribed ? (
+              <span className="flex items-center gap-1 text-emerald-600 font-medium">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Đã bật Push ĐT
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => subscribeToPush()}
+                disabled={isPushLoading}
+                className="flex items-center gap-1 text-indigo-600 hover:text-indigo-800 font-medium transition"
+              >
+                <Smartphone className="size-3" />
+                {isPushLoading ? 'Đang bật...' : 'Bật Push ĐT'}
+              </button>
+            )
+          ) : (
+            <span className="text-neutral-400">PWA Web Push</span>
+          )}
+
+          <button
+            type="button"
+            onClick={() => playNotificationSound()}
+            title="Thử âm thanh thông báo"
+            className="flex items-center gap-1 text-neutral-500 hover:text-neutral-800 transition px-1.5 py-0.5 rounded hover:bg-neutral-200/60"
+          >
+            <Volume2 className="size-3 text-neutral-500" />
+            <span>Thử chuông</span>
+          </button>
         </div>
       </PopoverContent>
     </Popover>

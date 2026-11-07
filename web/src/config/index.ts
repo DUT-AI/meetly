@@ -1,12 +1,22 @@
 import type { Metadata } from 'next';
 
 export const siteConfig: Metadata = {
-  title: 'Meetly',
-  description: 'Meetly - Task Management',
-  keywords: ['Project Management'] as Array<string>,
+  title: 'Meetly - AI Meeting Assistant',
+  description: 'Meetly - Quản trị cuộc họp thông minh, tự động hóa nhiệm vụ và dịch thuật trực tiếp.',
+  keywords: ['Project Management', 'Meeting Assistant', 'AI Transcription', 'Task Automation'] as Array<string>,
   authors: {
     name: 'DUT AI CLUB',
     url: 'https://github.com/orgs/DUT-AI/repositories',
+  },
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Meetly',
+  },
+  icons: {
+    icon: '/icons/icon-192x192.png',
+    apple: '/icons/apple-touch-icon.png',
   },
 } as const;
 

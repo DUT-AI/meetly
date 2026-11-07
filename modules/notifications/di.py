@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from modules.identity.client.manage_client import ManageClient
 from modules.notifications.channels.discord_channel import DiscordChannel
+from modules.notifications.channels.web_push_channel import WebPushChannel
 from modules.notifications.channels.website_channel import WebsiteInAppChannel
 from modules.notifications.channels.zalo_channel import ZaloBotChannel
 from modules.notifications.dispatcher import NotificationDispatcher
@@ -13,7 +14,11 @@ from modules.notifications.domain.interfaces import (
 from modules.notifications.repository.notification_repository import (
     SqlNotificationRepository,
 )
+from modules.notifications.repository.push_subscription_repository import (
+    PushSubscriptionRepository,
+)
 from modules.notifications.services.discord_service import DiscordService
+from modules.notifications.services.web_push_service import WebPushService
 from modules.notifications.services.zalo_bot_client import ZaloBotClient
 from modules.notifications.use_cases import (
     ListNotificationsUseCase,
@@ -33,6 +38,12 @@ class NotificationProvider(Provider):
     ) -> INotificationRepository:
         return SqlNotificationRepository(session)
 
+    @provide(scope=Scope.REQUEST)
+    def get_push_subscription_repository(
+        self, session: AsyncSession
+    ) -> PushSubscriptionRepository:
+        return PushSubscriptionRepository(session)
+
     @provide(scope=Scope.APP)
     def get_discord_service(self) -> DiscordService:
         return DiscordService()
@@ -40,6 +51,10 @@ class NotificationProvider(Provider):
     @provide(scope=Scope.APP)
     def get_zalo_bot_client(self) -> ZaloBotClient:
         return ZaloBotClient()
+
+    @provide(scope=Scope.APP)
+    def get_web_push_service(self) -> WebPushService:
+        return WebPushService()
 
     @provide(scope=Scope.REQUEST)
     def get_website_channel(
@@ -56,17 +71,27 @@ class NotificationProvider(Provider):
         return ZaloBotChannel(zalo_client)
 
     @provide(scope=Scope.REQUEST)
+    def get_web_push_channel(
+        self,
+        push_repo: PushSubscriptionRepository,
+        push_service: WebPushService,
+    ) -> WebPushChannel:
+        return WebPushChannel(push_repo=push_repo, push_service=push_service)
+
+    @provide(scope=Scope.REQUEST)
     def get_notification_dispatcher(
         self,
         website_channel: WebsiteInAppChannel,
         discord_channel: DiscordChannel,
         zalo_channel: ZaloBotChannel,
+        web_push_channel: WebPushChannel,
         manage_client: ManageClient,
     ) -> NotificationDispatcher:
         channels: list[INotificationChannel] = [
             website_channel,
             discord_channel,
             zalo_channel,
+            web_push_channel,
         ]
         return NotificationDispatcher(channels=channels, manage_client=manage_client)
 
@@ -76,12 +101,14 @@ class NotificationProvider(Provider):
         website_channel: WebsiteInAppChannel,
         discord_channel: DiscordChannel,
         zalo_channel: ZaloBotChannel,
+        web_push_channel: WebPushChannel,
         manage_client: ManageClient,
     ) -> SendNotificationUseCase:
         channels: list[INotificationChannel] = [
             website_channel,
             discord_channel,
             zalo_channel,
+            web_push_channel,
         ]
         return SendNotificationUseCase(channels=channels, manage_client=manage_client)
 
