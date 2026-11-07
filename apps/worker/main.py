@@ -88,7 +88,7 @@ class WorkerSettings:
     on_shutdown = shutdown
     redis_settings = ArqRedisSettings.from_dsn(redis_settings.redis_url)
     max_jobs: int = 10
-    poll_delay: float = 0.5
+    poll_delay: float = 0.1
 
 
 def main() -> None:

@@ -81,34 +81,34 @@ class NotificationProvider(Provider):
     @provide(scope=Scope.REQUEST)
     def get_notification_dispatcher(
         self,
-        website_channel: WebsiteInAppChannel,
-        discord_channel: DiscordChannel,
-        zalo_channel: ZaloBotChannel,
         web_push_channel: WebPushChannel,
+        website_channel: WebsiteInAppChannel,
+        zalo_channel: ZaloBotChannel,
+        discord_channel: DiscordChannel,
         manage_client: ManageClient,
     ) -> NotificationDispatcher:
         channels: list[INotificationChannel] = [
-            website_channel,
-            discord_channel,
-            zalo_channel,
             web_push_channel,
+            website_channel,
+            zalo_channel,
+            discord_channel,
         ]
         return NotificationDispatcher(channels=channels, manage_client=manage_client)
 
     @provide(scope=Scope.REQUEST)
     def get_send_notification_use_case(
         self,
-        website_channel: WebsiteInAppChannel,
-        discord_channel: DiscordChannel,
-        zalo_channel: ZaloBotChannel,
         web_push_channel: WebPushChannel,
+        website_channel: WebsiteInAppChannel,
+        zalo_channel: ZaloBotChannel,
+        discord_channel: DiscordChannel,
         manage_client: ManageClient,
     ) -> SendNotificationUseCase:
         channels: list[INotificationChannel] = [
-            website_channel,
-            discord_channel,
-            zalo_channel,
             web_push_channel,
+            website_channel,
+            zalo_channel,
+            discord_channel,
         ]
         return SendNotificationUseCase(channels=channels, manage_client=manage_client)
 

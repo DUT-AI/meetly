@@ -33,6 +33,14 @@ class WebPushService:
             },
         }
 
+        headers = {
+            "Urgency": "high",
+            "TTL": "86400",
+        }
+        if "apple.com" in endpoint:
+            headers["apns-push-type"] = "alert"
+            headers["apns-priority"] = "10"
+
         try:
             pywebpush.webpush(
                 subscription_info=subscription_info,
@@ -40,7 +48,7 @@ class WebPushService:
                 vapid_private_key=self.private_key,
                 vapid_claims={"sub": self.claim_email},
                 ttl=86400,
-                headers={"Urgency": "high"},
+                headers=headers,
                 timeout=10,
             )
             logger.info(f"[WebPushService] Push delivered to endpoint {endpoint[:30]}...")

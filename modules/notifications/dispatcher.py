@@ -61,13 +61,37 @@ class NotificationDispatcher:
                     if getattr(c, "channel_name", "") in allowed_channels
                 ]
 
-            for channel in target_channels:
+            # 1. Dispatch Web Push immediately for instant real-time alert on mobile devices
+            web_push = next(
+                (c for c in target_channels if getattr(c, "channel_name", "") == "web_push"),
+                None,
+            )
+            if web_push:
                 try:
-                    await channel.send(recipient, message)
+                    await web_push.send(recipient, message)
                 except Exception as ce:
-                    logger.error(
-                        f"Channel {getattr(channel, 'channel_name', 'unknown')} failed directly for user {message.recipient_user_id}: {ce}"
-                    )
+                    logger.error(f"[WebPushChannel] Direct failed for user {message.recipient_user_id}: {ce}")
+
+            # 2. Record in-app notification in DB
+            website = next(
+                (c for c in target_channels if getattr(c, "channel_name", "") == "website"),
+                None,
+            )
+            if website:
+                try:
+                    await website.send(recipient, message)
+                except Exception as ce:
+                    logger.error(f"[WebsiteChannel] Direct failed for user {message.recipient_user_id}: {ce}")
+
+            # 3. Dispatch external bot channels (Zalo & Discord) in parallel
+            ext_channels = [
+                c
+                for c in target_channels
+                if getattr(c, "channel_name", "") not in ("web_push", "website")
+            ]
+            if ext_channels:
+                tasks = [channel.send(recipient, message) for channel in ext_channels]
+                await asyncio.gather(*tasks, return_exceptions=True)
         except Exception as e:
             logger.error(
                 f"Error while dispatching notification directly for user {message.recipient_user_id}: {e}"

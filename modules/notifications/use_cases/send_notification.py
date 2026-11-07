@@ -37,11 +37,34 @@ class SendNotificationUseCase:
                 if getattr(c, "channel_name", "") in allowed_channels
             ]
 
-        # Execute channels sequentially to prevent SQLAlchemy concurrent session operations
-        for channel in target_channels:
+        # 1. Dispatch Web Push immediately for instant real-time alert on mobile devices
+        web_push = next(
+            (c for c in target_channels if getattr(c, "channel_name", "") == "web_push"),
+            None,
+        )
+        if web_push:
             try:
-                await channel.send(recipient, message)
+                await web_push.send(recipient, message)
             except Exception as exc:
-                logger.error(
-                    f"Channel {getattr(channel, 'channel_name', 'unknown')} failed for user {recipient.id}: {exc}"
-                )
+                logger.error(f"[WebPushChannel] Failed for user {recipient.id}: {exc}")
+
+        # 2. Record in-app notification in DB
+        website = next(
+            (c for c in target_channels if getattr(c, "channel_name", "") == "website"),
+            None,
+        )
+        if website:
+            try:
+                await website.send(recipient, message)
+            except Exception as exc:
+                logger.error(f"[WebsiteChannel] Failed for user {recipient.id}: {exc}")
+
+        # 3. Dispatch external bot channels (Zalo & Discord) in parallel
+        ext_channels = [
+            c
+            for c in target_channels
+            if getattr(c, "channel_name", "") not in ("web_push", "website")
+        ]
+        if ext_channels:
+            tasks = [channel.send(recipient, message) for channel in ext_channels]
+            await asyncio.gather(*tasks, return_exceptions=True)
