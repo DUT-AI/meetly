@@ -69,6 +69,7 @@ class ITaskRepository(ABC):
         project_id: str | None = None,
         assignee_ids: list[str] | None = None,
         due_date: datetime | None = None,
+        clear_due_date: bool = False,
         description: str | None = None,
         position: int | None = None,
     ) -> TaskEntity:

@@ -15,6 +15,7 @@ export type Member = {
   role: MemberRole;
   avatar_url?: string | null;
   avatarUrl?: string | null;
+  teams?: string[];
   $createdAt?: string;
   $updatedAt?: string;
   created_at?: string;
@@ -38,6 +39,7 @@ export function normalizeMember(m: any): Member {
     avatar_url: avatarUrl,
     avatarUrl: avatarUrl,
     role: m.role as MemberRole,
+    teams: Array.isArray(m.teams) ? m.teams : Array.isArray(m.roles) ? m.roles : [],
     $createdAt: m.$createdAt ?? m.created_at,
     $updatedAt: m.$updatedAt ?? m.updated_at,
   };

@@ -18,6 +18,7 @@ interface DateTimePickerProps {
   className?: string;
   placeholder?: string;
   showReset?: boolean;
+  resetLabel?: string;
 }
 
 export const DateTimePicker = ({
@@ -27,6 +28,7 @@ export const DateTimePicker = ({
   className,
   placeholder = 'Select date & time',
   showReset = false,
+  resetLabel,
 }: DateTimePickerProps) => {
   // Extract time from value if exists, otherwise default to 12:00
   const [time, setTime] = React.useState<string>(() => {
@@ -94,9 +96,9 @@ export const DateTimePicker = ({
 
         {showReset && value && (
           <PopoverClose asChild>
-            <Button onClick={handleReset} variant="secondary" size="sm" className="w-full rounded-t-none">
-              <OctagonMinus className="size-4" />
-              Reset Filter
+            <Button onClick={handleReset} variant="secondary" size="sm" className="w-full rounded-t-none text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+              <OctagonMinus className="size-4 mr-1.5" />
+              {resetLabel || 'Xóa hạn chót'}
             </Button>
           </PopoverClose>
         )}

@@ -27,12 +27,13 @@ import { TaskPriority, TaskStatus } from '@/features/tasks/types';
 import { useGetLabels } from '@/features/workspaces/api/use-get-labels';
 import { useWorkspaceId } from '@/features/workspaces/hooks/use-workspace-id';
 import { cn } from '@/lib/utils';
+import { TeamAssigneeSelector, type AssigneeMemberOption } from './team-assignee-selector';
 
 interface CreateTaskFormProps {
   initialStatus?: TaskStatus | null;
   onCancel?: () => void;
   projectOptions: { id: string; name: string; imageUrl?: string }[];
-  memberOptions: { id: string; name: string; imageUrl?: string }[];
+  memberOptions: AssigneeMemberOption[];
 }
 
 export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, projectOptions }: CreateTaskFormProps) => {
@@ -250,77 +251,20 @@ export const CreateTaskForm = ({ initialStatus, onCancel, memberOptions, project
                     disabled={isPending}
                     control={createTaskForm.control}
                     name="assigneeIds"
-                    render={({ field }) => {
-                      const selectedIds = field.value || [];
-                      const selectedMembers = memberOptions.filter((m) => selectedIds.includes(m.id));
-
-                      const toggleMember = (memberId: string) => {
-                        const next = selectedIds.includes(memberId)
-                          ? selectedIds.filter((id) => id !== memberId)
-                          : [...selectedIds, memberId];
-                        field.onChange(next);
-                      };
-
-                      return (
-                        <FormItem>
-                          <FormLabel>Assignees (Người thực hiện)</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
-                                  disabled={isPending}
-                                  className="w-full justify-between font-normal h-10 px-3"
-                                >
-                                  {selectedMembers.length === 0 && <span className="text-muted-foreground">Select assignees</span>}
-                                  {selectedMembers.length > 0 && (
-                                    <div className="flex items-center gap-1.5 overflow-hidden">
-                                      <div className="flex -space-x-1.5 overflow-hidden">
-                                        {selectedMembers.slice(0, 3).map((m) => (
-                                          <MemberAvatar
-                                            key={m.id}
-                                            className="size-5 border border-background"
-                                            name={m.name}
-                                            image={m.imageUrl}
-                                          />
-                                        ))}
-                                      </div>
-                                      <span className="truncate text-xs">{selectedMembers.map((m) => m.name).join(', ')}</span>
-                                    </div>
-                                  )}
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-64 p-2" align="start">
-                              <div className="space-y-1 max-h-56 overflow-y-auto">
-                                {memberOptions.map((member) => {
-                                  const isSelected = selectedIds.includes(member.id);
-                                  return (
-                                    <div
-                                      key={member.id}
-                                      onClick={() => toggleMember(member.id)}
-                                      className={cn(
-                                        'flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-accent text-sm',
-                                        isSelected && 'bg-accent/50 font-medium',
-                                      )}
-                                    >
-                                      <div className="flex items-center gap-x-2 truncate">
-                                        <MemberAvatar className="size-5" name={member.name} image={member.imageUrl} />
-                                        <span className="truncate">{member.name}</span>
-                                      </div>
-                                      {isSelected && <Check className="size-4 text-primary shrink-0" />}
-                                    </div>
-                                  );
-                                })}
-                                {memberOptions.length === 0 && <p className="text-xs text-muted-foreground p-2">No members found</p>}
-                              </div>
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assignees (Người thực hiện)</FormLabel>
+                        <FormControl>
+                          <TeamAssigneeSelector
+                            memberOptions={memberOptions}
+                            selectedIds={field.value || []}
+                            onChange={field.onChange}
+                            disabled={isPending}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
 

@@ -693,6 +693,7 @@ class UpdateTaskUseCase:
         project_id: str | None = None,
         assignee_ids: list[str] | None = None,
         due_date: datetime | None = None,
+        clear_due_date: bool = False,
         description: str | None = None,
     ) -> TaskResponseDTO:
         task = await self.task_repo.get_by_id(task_id)
@@ -733,6 +734,7 @@ class UpdateTaskUseCase:
             project_id=project_id,
             assignee_ids=new_assignee_ids_list,
             due_date=due_date,
+            clear_due_date=clear_due_date,
             description=description,
         )
 
@@ -824,12 +826,11 @@ class UpdateTaskUseCase:
                 edit_changes.append(
                     f"mức độ ưu tiên thành '{p_labels.get(priority, priority.value)}'"
                 )
-            if due_date != old_due_date:
-                if due_date is not None:
-                    formatted_date = due_date.strftime("%d/%m/%Y %H:%M")
-                    edit_changes.append(f"hạn chót thành {formatted_date}")
-                elif old_due_date is not None:
-                    edit_changes.append("xóa hạn chót")
+            if clear_due_date and old_due_date is not None:
+                edit_changes.append("xóa hạn chót")
+            elif due_date is not None and due_date != old_due_date:
+                formatted_date = due_date.strftime("%d/%m/%Y %H:%M")
+                edit_changes.append(f"hạn chót thành {formatted_date}")
             if description is not None and (description or "").strip() != (old_description or "").strip():
                 edit_changes.append("nội dung mô tả")
             if labels is not None and sorted(labels) != sorted(old_labels):

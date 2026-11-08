@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from modules.members.domain.enums import MemberRole
 
@@ -17,6 +17,7 @@ class MemberResponseDTO(BaseModel):
     email: str = ""
     avatar_url: str | None = None
     role: MemberRole
+    teams: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime
 

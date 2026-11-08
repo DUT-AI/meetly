@@ -162,16 +162,20 @@ async def update_task(
     current_user: CurrentUser,
     use_case: FromDishka[UpdateTaskUseCase],
 ) -> dict:
+    clear_due_date = False
     parsed_due_date = None
-    if isinstance(payload.due_date, str):
-        try:
-            parsed_due_date = datetime.fromisoformat(
-                payload.due_date.replace("Z", "+00:00")
-            )
-        except Exception:
-            pass
-    elif isinstance(payload.due_date, datetime):
-        parsed_due_date = payload.due_date
+    if "due_date" in payload.model_fields_set:
+        if payload.due_date is None or payload.due_date == "":
+            clear_due_date = True
+        elif isinstance(payload.due_date, str):
+            try:
+                parsed_due_date = datetime.fromisoformat(
+                    payload.due_date.replace("Z", "+00:00")
+                )
+            except Exception:
+                pass
+        elif isinstance(payload.due_date, datetime):
+            parsed_due_date = payload.due_date
 
     result = await use_case.execute(
         task_id=task_id,
@@ -183,6 +187,7 @@ async def update_task(
         project_id=payload.project_id,
         assignee_ids=payload.assignee_ids,
         due_date=parsed_due_date,
+        clear_due_date=clear_due_date,
         description=payload.description,
     )
     return {"data": result}

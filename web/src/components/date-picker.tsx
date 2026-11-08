@@ -17,6 +17,7 @@ interface DatePickerProps {
   className?: string;
   placeholder?: string;
   showReset?: boolean;
+  resetLabel?: string;
 }
 
 export const DatePicker = ({
@@ -26,6 +27,7 @@ export const DatePicker = ({
   className,
   placeholder = 'Select date',
   showReset = false,
+  resetLabel,
 }: DatePickerProps) => {
   return (
     <Popover>
@@ -46,9 +48,9 @@ export const DatePicker = ({
 
         {showReset && value && (
           <PopoverClose asChild>
-            <Button onClick={() => onChange(null)} variant="secondary" size="sm" className="w-full">
-              <OctagonMinus className="size-4" />
-              Reset Filter
+            <Button onClick={() => onChange(null)} variant="secondary" size="sm" className="w-full text-rose-600 hover:text-rose-700 hover:bg-rose-50">
+              <OctagonMinus className="size-4 mr-1.5" />
+              {resetLabel || 'Xóa ngày'}
             </Button>
           </PopoverClose>
         )}

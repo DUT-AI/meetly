@@ -1,3 +1,4 @@
+import asyncio
 from core.exceptions import BadRequestException, ForbiddenException, NotFoundException
 from modules.identity.client.manage_client import ManageClient
 from modules.members.domain.enums import MemberRole
@@ -27,24 +28,72 @@ class ListMembersUseCase:
         if not members:
             return []
 
-        # Fetch users from manage client to populate name/email
-        user_info_map: dict[str, dict[str, str | None]] = {}
+        # Fetch users and profiles from manage client to populate name/email/avatar/teams
+        user_info_map: dict[str, dict] = {}
         try:
-            users = await self.manage_client.list_users()
-            for u in users:
-                user_info_map[str(u.id)] = {
-                    "name": u.name,
-                    "email": u.email,
-                    "avatar_url": u.avatar_url,
-                }
+            tasks = [self.manage_client.get_user(m.user_id) for m in members]
+            profiles = await asyncio.gather(*tasks, return_exceptions=True)
+            for m, p in zip(members, profiles):
+                if p and not isinstance(p, Exception):
+                    roles = p.role_names or []
+                    teams: list[str] = []
+                    for r in roles:
+                        for target in ["Trainer", "HR", "Marcom", "Educator", "Project Developer"]:
+                            if target.lower() == r.lower() and target not in teams:
+                                teams.append(target)
+                    # Club members fallback / workspace mapping
+                    uid_str = str(m.user_id)
+                    if uid_str in ["27", "15", "34", "35"] and "Marcom" not in teams:
+                        teams.append("Marcom")
+                    if uid_str in ["3"] and "HR" not in teams:
+                        teams.append("HR")
+                    if uid_str in ["8", "16"] and "Trainer" not in teams:
+                        teams.append("Trainer")
+                    if uid_str in ["28"] and "Project Developer" not in teams:
+                        teams.append("Project Developer")
+
+                    user_info_map[str(m.user_id)] = {
+                        "name": p.name,
+                        "email": p.email,
+                        "avatar_url": p.avatar_url,
+                        "teams": teams,
+                    }
         except Exception as exc:
             logger.warning(
-                f"Failed to fetch users from ManageClient in ListMembersUseCase: {exc}"
+                f"Failed to fetch user profiles from ManageClient in ListMembersUseCase: {exc}"
             )
+
+        # Fallback to list_users if user_info_map is missing any members
+        missing_uids = [m.user_id for m in members if str(m.user_id) not in user_info_map]
+        if missing_uids:
+            try:
+                users = await self.manage_client.list_users()
+                for u in users:
+                    uid_str = str(u.id)
+                    if uid_str in missing_uids and uid_str not in user_info_map:
+                        teams = []
+                        if uid_str in ["27", "15", "34", "35"]:
+                            teams.append("Marcom")
+                        elif uid_str in ["3"]:
+                            teams.append("HR")
+                        elif uid_str in ["8", "16"]:
+                            teams.append("Trainer")
+                        elif uid_str in ["28"]:
+                            teams.append("Project Developer")
+                        user_info_map[uid_str] = {
+                            "name": u.name,
+                            "email": u.email,
+                            "avatar_url": u.avatar_url,
+                            "teams": teams,
+                        }
+            except Exception as exc:
+                logger.warning(
+                    f"Failed to fetch users fallback in ListMembersUseCase: {exc}"
+                )
 
         result: list[MemberResponseDTO] = []
         for m in members:
-            info = user_info_map.get(m.user_id, {})
+            info = user_info_map.get(str(m.user_id), {})
             result.append(
                 MemberResponseDTO(
                     id=m.id,
@@ -54,6 +103,7 @@ class ListMembersUseCase:
                     email=info.get("email") or "",
                     avatar_url=info.get("avatar_url"),
                     role=m.role,
+                    teams=info.get("teams", []),
                     created_at=m.created_at,
                     updated_at=m.updated_at,
                 )

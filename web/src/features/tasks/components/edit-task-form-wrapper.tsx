@@ -30,8 +30,11 @@ export const EditTaskFormWrapper = ({ id, onCancel }: EditTaskFormWrapperProps) 
 
   const memberOptions = members?.documents.map((member) => ({
     id: member.$id || member.id,
+    userId: member.userId || member.user_id,
     name: member.name,
+    email: member.email,
     imageUrl: member.avatarUrl || member.avatar_url || undefined,
+    teams: member.teams || [],
   }));
 
   const isLoading = isLoadingTask || isLoadingMembers || isLoadingProjects;

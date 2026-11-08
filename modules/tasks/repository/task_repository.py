@@ -155,6 +155,7 @@ class SqlTaskRepository(ITaskRepository):
         project_id: str | None = None,
         assignee_ids: list[str] | None = None,
         due_date: datetime | None = None,
+        clear_due_date: bool = False,
         description: str | None = None,
         position: int | None = None,
     ) -> TaskEntity:
@@ -172,7 +173,9 @@ class SqlTaskRepository(ITaskRepository):
             model.labels = labels
         if project_id is not None:
             model.project_id = project_id
-        if due_date is not None:
+        if clear_due_date:
+            model.due_date = None
+        elif due_date is not None:
             model.due_date = due_date
         if description is not None:
             model.description = description
