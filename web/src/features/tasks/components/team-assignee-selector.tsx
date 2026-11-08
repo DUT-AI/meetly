@@ -1,7 +1,7 @@
 'use client';
 
 import { Check, CheckSquare, Search, Square, Users, X } from 'lucide-react';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -164,6 +164,14 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
   const [selectedTeam, setSelectedTeam] = useState<string>('Trainer');
   const [searchQuery, setSearchQuery] = useState('');
   const [open, setOpen] = useState(false);
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to top of member list when switching teams or searching
+  useEffect(() => {
+    if (listRef.current) {
+      listRef.current.scrollTop = 0;
+    }
+  }, [selectedTeam, searchQuery]);
 
   // Map each member with their assigned teams
   const enrichedMembers = useMemo(() => {
@@ -307,9 +315,8 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
         side="bottom"
         align="start"
         sideOffset={4}
-        collisionPadding={12}
-        avoidCollisions={true}
-        className="w-[340px] sm:w-[380px] p-0 z-50 shadow-2xl border bg-popover text-popover-foreground rounded-xl overflow-hidden max-h-[min(460px,80vh)] flex flex-col"
+        avoidCollisions={false}
+        className="w-[340px] sm:w-[380px] p-0 z-50 shadow-2xl border bg-popover text-popover-foreground rounded-xl overflow-hidden flex flex-col"
       >
         {/* Header: Team Tabs */}
         <div className="p-2.5 border-b bg-muted/20 shrink-0 space-y-2">
@@ -447,8 +454,12 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
           )}
         </div>
 
-        {/* Member List */}
-        <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[160px]">
+        {/* Member List - compact to 3 members with smooth mouse wheel scroll */}
+        <div
+          ref={listRef}
+          onWheel={(e) => e.stopPropagation()}
+          className="h-[138px] overflow-y-auto custom-scrollbar p-1.5 space-y-1 scroll-smooth"
+        >
           {displayedMembers.map((member) => {
             const isSelected = selectedIds.includes(member.id);
 
@@ -457,7 +468,7 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
                 key={member.id}
                 onClick={() => toggleMember(member.id)}
                 className={cn(
-                  'flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-colors text-xs',
+                  'flex items-center justify-between px-2.5 py-1.5 rounded-lg cursor-pointer transition-colors text-xs select-none',
                   isSelected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent/60 text-foreground',
                 )}
               >
@@ -487,7 +498,7 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
           })}
 
           {displayedMembers.length === 0 && (
-            <div className="py-8 text-center text-xs text-muted-foreground">
+            <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
               Không tìm thấy thành viên nào trong danh sách
             </div>
           )}

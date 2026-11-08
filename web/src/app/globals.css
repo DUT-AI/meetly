@@ -90,12 +90,22 @@ body {
   display: none;
 }
 
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+}
+
 .custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
   height: 5px;
 }
 
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  @apply rounded-sm bg-neutral-300 shadow-sm;
+  @apply rounded-full bg-neutral-300/80 shadow-sm;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
