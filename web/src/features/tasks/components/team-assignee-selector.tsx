@@ -1,6 +1,6 @@
 'use client';
 
-import { Check, CheckSquare, Search, Square, Users } from 'lucide-react';
+import { Check, CheckSquare, Search, Square, Users, X } from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
@@ -29,46 +29,40 @@ interface TeamAssigneeSelectorProps {
 interface TeamConfig {
   key: string;
   label: string;
+  shortLabel: string;
   icon: string;
-  colorClass: string;
-  badgeClass: string;
 }
 
 const CANONICAL_TEAMS: TeamConfig[] = [
   {
     key: 'Trainer',
     label: 'Trainer',
+    shortLabel: 'Trainer',
     icon: '🧑‍🏫',
-    colorClass: 'text-blue-700 bg-blue-50 border-blue-200',
-    badgeClass: 'hover:bg-blue-100 data-[selected=true]:bg-blue-600 data-[selected=true]:text-white',
   },
   {
     key: 'HR',
     label: 'HR',
+    shortLabel: 'HR',
     icon: '👥',
-    colorClass: 'text-emerald-700 bg-emerald-50 border-emerald-200',
-    badgeClass: 'hover:bg-emerald-100 data-[selected=true]:bg-emerald-600 data-[selected=true]:text-white',
   },
   {
     key: 'Marcom',
     label: 'Marcom',
+    shortLabel: 'Marcom',
     icon: '📢',
-    colorClass: 'text-amber-700 bg-amber-50 border-amber-200',
-    badgeClass: 'hover:bg-amber-100 data-[selected=true]:bg-amber-600 data-[selected=true]:text-white',
   },
   {
     key: 'Educator',
     label: 'Educator',
+    shortLabel: 'Educator',
     icon: '🎓',
-    colorClass: 'text-purple-700 bg-purple-50 border-purple-200',
-    badgeClass: 'hover:bg-purple-100 data-[selected=true]:bg-purple-600 data-[selected=true]:text-white',
   },
   {
     key: 'Project Developer',
     label: 'Project Developer',
+    shortLabel: 'Project Dev',
     icon: '💻',
-    colorClass: 'text-indigo-700 bg-indigo-50 border-indigo-200',
-    badgeClass: 'hover:bg-indigo-100 data-[selected=true]:bg-indigo-600 data-[selected=true]:text-white',
   },
 ];
 
@@ -167,6 +161,7 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
   onChange,
   disabled = false,
 }) => {
+  const [selectedTeam, setSelectedTeam] = useState<string>('Trainer');
   const [searchQuery, setSearchQuery] = useState('');
   const [open, setOpen] = useState(false);
 
@@ -178,52 +173,52 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
     }));
   }, [memberOptions]);
 
-  // Group members into the 5 canonical teams + other
-  const teamGroups = useMemo(() => {
+  // Group members into team lookup
+  const teamMembersMap = useMemo(() => {
     const map = new Map<string, typeof enrichedMembers>();
     for (const team of CANONICAL_TEAMS) {
       map.set(team.key, []);
     }
-    const otherMembers: typeof enrichedMembers = [];
-
     for (const m of enrichedMembers) {
-      if (m.resolvedTeams.length === 0) {
-        otherMembers.push(m);
-      } else {
-        for (const t of m.resolvedTeams) {
-          const list = map.get(t);
-          if (list) {
-            list.push(m);
-          }
+      for (const t of m.resolvedTeams) {
+        const list = map.get(t);
+        if (list) {
+          list.push(m);
         }
       }
     }
-
-    return { map, otherMembers };
+    return map;
   }, [enrichedMembers]);
 
-  // Filter members by search query
-  const filteredGroups = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim();
-    if (!q) {
-      return teamGroups;
-    }
-
-    const filteredMap = new Map<string, typeof enrichedMembers>();
+  // Count of selected members for each team
+  const teamSelectedCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
     for (const team of CANONICAL_TEAMS) {
-      const teamMatches = team.label.toLowerCase().includes(q);
-      const members = (teamGroups.map.get(team.key) || []).filter(
-        (m) => teamMatches || m.name.toLowerCase().includes(q) || (m.email && m.email.toLowerCase().includes(q)),
-      );
-      filteredMap.set(team.key, members);
+      const members = teamMembersMap.get(team.key) || [];
+      counts[team.key] = members.filter((m) => selectedIds.includes(m.id)).length;
+    }
+    return counts;
+  }, [teamMembersMap, selectedIds]);
+
+  // Members to display based on selected team tab & search query
+  const displayedMembers = useMemo(() => {
+    let list: typeof enrichedMembers;
+    if (selectedTeam === 'all') {
+      list = enrichedMembers;
+    } else {
+      list = teamMembersMap.get(selectedTeam) || [];
     }
 
-    const filteredOther = teamGroups.otherMembers.filter(
-      (m) => m.name.toLowerCase().includes(q) || (m.email && m.email.toLowerCase().includes(q)),
-    );
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return list;
 
-    return { map: filteredMap, otherMembers: filteredOther };
-  }, [teamGroups, searchQuery]);
+    return list.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        (m.email && m.email.toLowerCase().includes(q)) ||
+        m.resolvedTeams.some((t) => t.toLowerCase().includes(q)),
+    );
+  }, [selectedTeam, enrichedMembers, teamMembersMap, searchQuery]);
 
   // Toggle single member
   const toggleMember = (memberId: string) => {
@@ -233,28 +228,26 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
     onChange(next);
   };
 
-  // Toggle entire team
-  const toggleTeam = (teamKey: string) => {
-    const membersInTeam = teamGroups.map.get(teamKey) || [];
-    if (membersInTeam.length === 0) return;
+  // Toggle all members in currently active team view
+  const activeTeamMembers = useMemo(() => {
+    if (selectedTeam === 'all') return enrichedMembers;
+    return teamMembersMap.get(selectedTeam) || [];
+  }, [selectedTeam, enrichedMembers, teamMembersMap]);
 
-    const teamMemberIds = membersInTeam.map((m) => m.id);
-    const allSelected = teamMemberIds.every((id) => selectedIds.includes(id));
+  const areAllActiveTeamSelected = useMemo(() => {
+    if (activeTeamMembers.length === 0) return false;
+    return activeTeamMembers.every((m) => selectedIds.includes(m.id));
+  }, [activeTeamMembers, selectedIds]);
 
-    if (allSelected) {
-      // Unselect all members of this team
-      const next = selectedIds.filter((id) => !teamMemberIds.includes(id));
-      onChange(next);
+  const toggleAllInActiveTeam = () => {
+    const activeIds = activeTeamMembers.map((m) => m.id);
+    if (areAllActiveTeamSelected) {
+      // Unselect all active team members
+      onChange(selectedIds.filter((id) => !activeIds.includes(id)));
     } else {
-      // Add all missing members of this team
-      const next = Array.from(new Set([...selectedIds, ...teamMemberIds]));
-      onChange(next);
+      // Select all active team members
+      onChange(Array.from(new Set([...selectedIds, ...activeIds])));
     }
-  };
-
-  // Clear all selections
-  const clearAll = () => {
-    onChange([]);
   };
 
   // Selected members for trigger display
@@ -262,13 +255,9 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
     return memberOptions.filter((m) => selectedIds.includes(m.id));
   }, [memberOptions, selectedIds]);
 
-  // Check which teams are fully selected for trigger label
-  const fullySelectedTeams = useMemo(() => {
-    return CANONICAL_TEAMS.filter((t) => {
-      const members = teamGroups.map.get(t.key) || [];
-      return members.length > 0 && members.every((m) => selectedIds.includes(m.id));
-    });
-  }, [teamGroups, selectedIds]);
+  const activeTeamConfig = useMemo(() => {
+    return CANONICAL_TEAMS.find((t) => t.key === selectedTeam);
+  }, [selectedTeam]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -281,9 +270,9 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
           className="w-full justify-between font-normal h-10 px-3 hover:bg-accent/40"
         >
           {selectedMembers.length === 0 && (
-            <span className="text-muted-foreground flex items-center gap-1.5 text-sm">
-              <Users className="size-4 opacity-50" />
-              Chọn người thực hiện (hoặc chọn team)
+            <span className="text-muted-foreground flex items-center gap-1.5 text-sm truncate">
+              <Users className="size-4 opacity-50 shrink-0" />
+              Chọn người thực hiện (chọn theo team)
             </span>
           )}
 
@@ -301,17 +290,9 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
                   ))}
                 </div>
 
-                <div className="flex items-center gap-1.5 truncate text-xs">
-                  {fullySelectedTeams.length > 0 && (
-                    <span className="font-semibold text-primary">
-                      {fullySelectedTeams.map((t) => t.label).join(', ')}
-                      {fullySelectedTeams.length < 5 && selectedMembers.length > fullySelectedTeams.reduce((acc, t) => acc + (teamGroups.map.get(t.key)?.length || 0), 0) && ' + khác'}
-                    </span>
-                  )}
-                  {fullySelectedTeams.length === 0 && (
-                    <span className="truncate">{selectedMembers.map((m) => m.name).join(', ')}</span>
-                  )}
-                </div>
+                <span className="truncate text-xs font-medium text-foreground">
+                  {selectedMembers.map((m) => m.name).join(', ')}
+                </span>
               </div>
 
               <Badge variant="secondary" className="text-[11px] font-semibold px-1.5 h-5 shrink-0">
@@ -322,205 +303,211 @@ export const TeamAssigneeSelector: React.FC<TeamAssigneeSelectorProps> = ({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-[360px] p-0" align="start">
-        <div className="p-2.5 border-b space-y-2 bg-muted/20">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-foreground flex items-center gap-1">
-              <Users className="size-3.5 text-muted-foreground" />
-              Giao nhanh cho toàn Team:
-            </span>
+      <PopoverContent
+        side="bottom"
+        align="start"
+        sideOffset={4}
+        collisionPadding={12}
+        avoidCollisions={true}
+        className="w-[340px] sm:w-[380px] p-0 z-50 shadow-2xl border bg-popover text-popover-foreground rounded-xl overflow-hidden max-h-[min(460px,80vh)] flex flex-col"
+      >
+        {/* Header: Team Tabs */}
+        <div className="p-2.5 border-b bg-muted/20 shrink-0 space-y-2">
+          <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground">
+            <span>Chọn team để xem thành viên:</span>
             {selectedIds.length > 0 && (
               <button
                 type="button"
-                onClick={clearAll}
+                onClick={() => onChange([])}
                 className="text-[11px] text-muted-foreground hover:text-rose-600 underline font-medium cursor-pointer"
               >
-                Bỏ chọn tất cả
+                Bỏ chọn tất cả ({selectedIds.length})
               </button>
             )}
           </div>
 
-          {/* Quick Team Chips */}
-          <div className="flex flex-wrap gap-1.5">
+          {/* Team Tabs Row */}
+          <div className="grid grid-cols-3 gap-1">
             {CANONICAL_TEAMS.map((team) => {
-              const members = teamGroups.map.get(team.key) || [];
-              if (members.length === 0) return null;
-
-              const memberIds = members.map((m) => m.id);
-              const selectedCount = memberIds.filter((id) => selectedIds.includes(id)).length;
-              const isAll = selectedCount === members.length;
-              const isPartial = selectedCount > 0 && !isAll;
+              const isCurrent = selectedTeam === team.key;
+              const selectedCount = teamSelectedCounts[team.key] || 0;
+              const totalCount = (teamMembersMap.get(team.key) || []).length;
 
               return (
                 <button
                   key={team.key}
                   type="button"
-                  onClick={() => toggleTeam(team.key)}
-                  data-selected={isAll}
+                  onClick={() => setSelectedTeam(team.key)}
                   className={cn(
-                    'inline-flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border transition-colors cursor-pointer',
-                    isAll
+                    'flex items-center justify-between px-2 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer text-left',
+                    isCurrent
                       ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                      : isPartial
-                        ? 'bg-primary/10 text-primary border-primary/30'
-                        : 'bg-background hover:bg-accent text-muted-foreground border-border',
+                      : 'bg-background hover:bg-accent text-foreground border-border/80',
                   )}
-                  title={`Giao việc cho cả team ${team.label} (${members.length} bạn)`}
                 >
-                  <span>{team.icon}</span>
-                  <span>{team.label}</span>
-                  <span className={cn('text-[10px] ml-0.5 opacity-80', isAll ? 'text-primary-foreground' : 'text-muted-foreground')}>
-                    ({selectedCount}/{members.length})
+                  <span className="truncate flex items-center gap-1">
+                    <span>{team.icon}</span>
+                    <span className="truncate">{team.shortLabel}</span>
                   </span>
+                  {selectedCount > 0 && (
+                    <span
+                      className={cn(
+                        'text-[10px] px-1 py-0.2 rounded-full font-bold shrink-0 ml-1',
+                        isCurrent ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-primary/10 text-primary',
+                      )}
+                    >
+                      {selectedCount}
+                    </span>
+                  )}
+                  {selectedCount === 0 && (
+                    <span className={cn('text-[10px] shrink-0 ml-1 opacity-60')}>
+                      {totalCount}
+                    </span>
+                  )}
                 </button>
               );
             })}
+
+            {/* All members tab */}
+            <button
+              type="button"
+              onClick={() => setSelectedTeam('all')}
+              className={cn(
+                'flex items-center justify-center gap-1 px-2 py-1.5 rounded-lg text-xs font-medium border transition-all cursor-pointer',
+                selectedTeam === 'all'
+                  ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                  : 'bg-background hover:bg-accent text-foreground border-border/80',
+              )}
+            >
+              <span>🌐</span>
+              <span>Tất cả ({enrichedMembers.length})</span>
+            </button>
           </div>
 
-          {/* Search Input */}
+          {/* Search Bar */}
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 size-3.5 text-muted-foreground" />
             <Input
               type="text"
-              placeholder="Tìm theo tên thành viên hoặc team..."
+              placeholder={`Tìm trong ${selectedTeam === 'all' ? 'tất cả thành viên' : `team ${activeTeamConfig?.label || ''}`}...`}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="h-8 pl-8 text-xs"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Member List Grouped by Teams */}
-        <div className="max-h-[340px] overflow-y-auto p-2 space-y-3">
-          {CANONICAL_TEAMS.map((team) => {
-            const members = filteredGroups.map.get(team.key) || [];
-            if (members.length === 0) return null;
+        {/* Action Toolbar for Current Active Team */}
+        <div className="px-3 py-1.5 bg-muted/40 border-b flex items-center justify-between text-xs shrink-0">
+          <div className="flex items-center gap-1.5 font-medium text-foreground">
+            {activeTeamConfig ? (
+              <>
+                <span>{activeTeamConfig.icon}</span>
+                <span>Team {activeTeamConfig.label}</span>
+                <span className="text-muted-foreground text-[11px]">({activeTeamMembers.length} bạn)</span>
+              </>
+            ) : (
+              <>
+                <span>🌐</span>
+                <span>Tất cả thành viên</span>
+                <span className="text-muted-foreground text-[11px]">({activeTeamMembers.length} bạn)</span>
+              </>
+            )}
+          </div>
 
-            const allTeamMemberIds = (teamGroups.map.get(team.key) || []).map((m) => m.id);
-            const allSelected = allTeamMemberIds.length > 0 && allTeamMemberIds.every((id) => selectedIds.includes(id));
-            const selectedCount = allTeamMemberIds.filter((id) => selectedIds.includes(id)).length;
+          {activeTeamMembers.length > 0 && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={toggleAllInActiveTeam}
+              className="h-6 px-1.5 text-[11px] font-medium text-primary hover:text-primary hover:bg-primary/10 cursor-pointer"
+            >
+              {areAllActiveTeamSelected ? (
+                <span className="flex items-center gap-1 text-rose-600">
+                  <CheckSquare className="size-3" />
+                  Bỏ chọn cả team
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Square className="size-3" />
+                  Chọn cả team
+                </span>
+              )}
+            </Button>
+          )}
+        </div>
+
+        {/* Member List */}
+        <div className="flex-1 overflow-y-auto p-2 space-y-1 min-h-[160px]">
+          {displayedMembers.map((member) => {
+            const isSelected = selectedIds.includes(member.id);
 
             return (
-              <div key={team.key} className="rounded-lg border border-border/60 overflow-hidden bg-card">
-                {/* Team Section Header */}
-                <div className="flex items-center justify-between px-2.5 py-1.5 bg-muted/40 border-b border-border/40">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm">{team.icon}</span>
-                    <span className="text-xs font-semibold">{team.label}</span>
-                    <span className="text-[11px] text-muted-foreground">
-                      ({selectedCount}/{allTeamMemberIds.length})
-                    </span>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleTeam(team.key)}
-                    className="h-6 px-2 text-[11px] font-medium text-primary hover:text-primary hover:bg-primary/10 cursor-pointer"
-                  >
-                    {allSelected ? (
-                      <span className="flex items-center gap-1 text-rose-600">
-                        <CheckSquare className="size-3" />
-                        Bỏ chọn
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1">
-                        <Square className="size-3" />
-                        Chọn cả team
+              <div
+                key={member.id}
+                onClick={() => toggleMember(member.id)}
+                className={cn(
+                  'flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-colors text-xs',
+                  isSelected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent/60 text-foreground',
+                )}
+              >
+                <div className="flex items-center gap-2.5 truncate">
+                  <MemberAvatar className="size-6 shrink-0" name={member.name} image={member.imageUrl} />
+                  <div className="truncate">
+                    <span className="truncate block leading-tight font-medium">{member.name}</span>
+                    {member.email && (
+                      <span className="text-[10px] text-muted-foreground truncate block leading-none mt-0.5">
+                        {member.email}
                       </span>
                     )}
-                  </Button>
+                  </div>
                 </div>
 
-                {/* Team Members List */}
-                <div className="p-1 space-y-0.5">
-                  {members.map((member) => {
-                    const isSelected = selectedIds.includes(member.id);
-                    return (
-                      <div
-                        key={`${team.key}-${member.id}`}
-                        onClick={() => toggleMember(member.id)}
-                        className={cn(
-                          'flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors text-xs',
-                          isSelected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent/60 text-foreground',
-                        )}
-                      >
-                        <div className="flex items-center gap-2 truncate">
-                          <MemberAvatar className="size-5 shrink-0" name={member.name} image={member.imageUrl} />
-                          <div className="truncate">
-                            <span className="truncate block leading-tight">{member.name}</span>
-                            {member.email && (
-                              <span className="text-[10px] text-muted-foreground truncate block leading-none">
-                                {member.email}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="shrink-0 ml-2">
-                          {isSelected ? (
-                            <div className="size-4 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                              <Check className="size-2.5 stroke-[3]" />
-                            </div>
-                          ) : (
-                            <div className="size-4 rounded-full border border-muted-foreground/30" />
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                <div className="shrink-0 ml-2 flex items-center gap-1.5">
+                  {isSelected ? (
+                    <div className="size-4 rounded bg-primary flex items-center justify-center text-primary-foreground shadow-xs">
+                      <Check className="size-3 stroke-[3]" />
+                    </div>
+                  ) : (
+                    <div className="size-4 rounded border border-muted-foreground/40 hover:border-foreground" />
+                  )}
                 </div>
               </div>
             );
           })}
 
-          {/* Other Members (if any) */}
-          {filteredGroups.otherMembers.length > 0 && (
-            <div className="rounded-lg border border-border/60 overflow-hidden bg-card">
-              <div className="px-2.5 py-1.5 bg-muted/40 border-b border-border/40 flex items-center justify-between">
-                <span className="text-xs font-semibold text-muted-foreground">Thành viên khác</span>
-                <span className="text-[11px] text-muted-foreground">({filteredGroups.otherMembers.length})</span>
-              </div>
-              <div className="p-1 space-y-0.5">
-                {filteredGroups.otherMembers.map((member) => {
-                  const isSelected = selectedIds.includes(member.id);
-                  return (
-                    <div
-                      key={`other-${member.id}`}
-                      onClick={() => toggleMember(member.id)}
-                      className={cn(
-                        'flex items-center justify-between px-2 py-1.5 rounded-md cursor-pointer transition-colors text-xs',
-                        isSelected ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-accent/60',
-                      )}
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <MemberAvatar className="size-5 shrink-0" name={member.name} image={member.imageUrl} />
-                        <span className="truncate">{member.name}</span>
-                      </div>
-                      <div className="shrink-0 ml-2">
-                        {isSelected ? (
-                          <div className="size-4 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
-                            <Check className="size-2.5 stroke-[3]" />
-                          </div>
-                        ) : (
-                          <div className="size-4 rounded-full border border-muted-foreground/30" />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+          {displayedMembers.length === 0 && (
+            <div className="py-8 text-center text-xs text-muted-foreground">
+              Không tìm thấy thành viên nào trong danh sách
             </div>
           )}
+        </div>
 
-          {CANONICAL_TEAMS.every((t) => (filteredGroups.map.get(t.key) || []).length === 0) &&
-            filteredGroups.otherMembers.length === 0 && (
-              <p className="text-xs text-muted-foreground text-center py-4">Không tìm thấy thành viên phù hợp</p>
-            )}
+        {/* Footer: Done button */}
+        <div className="p-2 border-t bg-muted/20 shrink-0 flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">
+            Đã chọn <strong className="text-foreground">{selectedMembers.length}</strong> thành viên
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setOpen(false)}
+            className="h-7 px-3 text-xs font-semibold cursor-pointer"
+          >
+            Xong
+          </Button>
         </div>
       </PopoverContent>
     </Popover>
   );
 };
-
