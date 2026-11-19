@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  basePath: '/meetly',
   output: 'standalone',
   images: {
     remotePatterns: [
@@ -12,6 +13,16 @@ const nextConfig = {
         hostname: '**',
       },
     ],
+  },
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/meetly/tasks',
+        basePath: false,
+        permanent: false,
+      },
+    ];
   },
   async rewrites() {
     const internalApiUrl = process.env.INTERNAL_API_URL || 'http://api:8000/api/v1';

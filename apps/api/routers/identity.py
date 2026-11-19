@@ -27,6 +27,9 @@ async def login(
     use_case: FromDishka[LoginUseCase],
 ) -> LoginResponseDTO:
     res = await use_case.execute(payload)
+    cookie_kwargs = {}
+    if auth_settings.cookie_domain:
+        cookie_kwargs["domain"] = auth_settings.cookie_domain
     response.set_cookie(
         key=auth_settings.auth_cookie_name,
         value=res.access_token,
@@ -35,6 +38,7 @@ async def login(
         samesite=auth_settings.auth_cookie_samesite,
         max_age=auth_settings.auth_cookie_max_age,
         path="/",
+        **cookie_kwargs,
     )
     return res
 
@@ -73,10 +77,14 @@ async def get_current(
 )
 async def logout(response: Response) -> LogoutResponseDTO:
     """Perform user session logout (clearing HttpOnly auth cookie)."""
+    cookie_kwargs = {}
+    if auth_settings.cookie_domain:
+        cookie_kwargs["domain"] = auth_settings.cookie_domain
     response.delete_cookie(
         key=auth_settings.auth_cookie_name,
         path="/",
         secure=auth_settings.auth_cookie_secure,
         samesite=auth_settings.auth_cookie_samesite,
+        **cookie_kwargs,
     )
     return LogoutResponseDTO()

@@ -54,12 +54,22 @@ async def get_current_user(
     except (ValueError, TypeError):
         user_id = user_id_raw
 
+    raw_roles = payload.get("role_names") or payload.get("roles")
+    if isinstance(raw_roles, list):
+        role_names = [str(r) for r in raw_roles]
+    elif isinstance(raw_roles, str) and raw_roles:
+        role_names = [raw_roles]
+    elif payload.get("role"):
+        role_names = [str(payload.get("role"))]
+    else:
+        role_names = []
+
     return AuthUser(
         id=user_id,
         email=payload.get("email", ""),
         name=payload.get("name", ""),
-        avatar_url=payload.get("avatar_url"),
-        role_names=payload.get("role_names", []),
+        avatar_url=payload.get("avatar_url") or payload.get("avatar"),
+        role_names=role_names,
         status="ACTIVE",
     )
 

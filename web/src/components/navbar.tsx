@@ -7,6 +7,7 @@ import { NotificationPopover } from '@/features/notifications/components/notific
 
 import { MobileSidebar } from './mobile-sidebar';
 import { SourceCode } from './source-code';
+import { WaffleLauncher } from './waffle-launcher';
 
 const pathnameMap = {
   tasks: {
@@ -45,8 +46,10 @@ export const Navbar = () => {
 
       <MobileSidebar />
 
-      <div className="flex items-center gap-x-3">
+      <div className="flex items-center gap-x-2">
         <NotificationPopover />
+
+        <WaffleLauncher />
 
         <UserButton />
       </div>

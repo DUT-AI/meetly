@@ -26,6 +26,7 @@ class AuthSettings(BaseSettings):
     auth_cookie_secure: bool = False
     auth_cookie_samesite: Literal["lax", "strict", "none"] = "lax"
     auth_cookie_max_age: int = 86400
+    cookie_domain: str | None = None
 
     # Auth Server
     auth_server_url: str = "http://localhost:8000/api/v1/auth/login"
