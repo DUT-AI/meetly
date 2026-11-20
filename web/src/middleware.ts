@@ -5,29 +5,37 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('access_token')?.value;
   const { pathname } = request.nextUrl;
 
+  // Strip unwanted /meetly prefix and redirect to clean URL
+  if (pathname === '/meetly' || pathname === '/meetly/') {
+    return NextResponse.redirect(new URL('/tasks', request.url), 308);
+  }
+
+  if (pathname.startsWith('/meetly/') && !pathname.startsWith('/meetly/api')) {
+    const cleanPath = pathname.replace(/^\/meetly/, '') || '/tasks';
+    const redirectUrl = new URL(cleanPath, request.url);
+    request.nextUrl.searchParams.forEach((value, key) => {
+      redirectUrl.searchParams.set(key, value);
+    });
+    return NextResponse.redirect(redirectUrl, 308);
+  }
+
   const isAuthPage =
     pathname.startsWith('/login') ||
-    pathname.startsWith('/sign-in') ||
-    pathname.startsWith('/meetly/sign-in') ||
-    pathname.startsWith('/meetly/login');
+    pathname.startsWith('/sign-in');
   const isPublicPage =
     isAuthPage ||
     pathname.startsWith('/privacy') ||
     pathname.startsWith('/api') ||
-    pathname.startsWith('/meetly/privacy') ||
     pathname.startsWith('/meetly/api');
 
   if (!token && !isPublicPage) {
-    const signInPath = pathname.startsWith('/meetly') ? '/meetly/sign-in' : '/sign-in';
-    const loginUrl = new URL(signInPath, request.url);
+    const loginUrl = new URL('/sign-in', request.url);
     loginUrl.searchParams.set('returnUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   if (token && isAuthPage) {
-    const destinationPath = pathname.startsWith('/meetly') ? '/meetly/tasks' : '/tasks';
-    const defaultUrl = new URL(destinationPath, request.url);
-    return NextResponse.redirect(defaultUrl);
+    return NextResponse.redirect(new URL('/tasks', request.url));
   }
 
   return NextResponse.next();

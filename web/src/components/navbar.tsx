@@ -7,7 +7,7 @@ import { NotificationPopover } from '@/features/notifications/components/notific
 
 import { MobileSidebar } from './mobile-sidebar';
 import { SourceCode } from './source-code';
-import { WaffleLauncher } from './waffle-launcher';
+import { DutaiWaffle } from './common/DutaiWaffle';
 
 const pathnameMap = {
   tasks: {
@@ -49,7 +49,7 @@ export const Navbar = () => {
       <div className="flex items-center gap-x-2">
         <NotificationPopover />
 
-        <WaffleLauncher />
+        <DutaiWaffle current="meetly" />
 
         <UserButton />
       </div>

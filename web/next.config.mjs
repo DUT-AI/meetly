@@ -20,6 +20,21 @@ const nextConfig = {
         destination: '/tasks',
         permanent: false,
       },
+      {
+        source: '/meetly',
+        destination: '/tasks',
+        permanent: true,
+      },
+      {
+        source: '/meetly/tasks',
+        destination: '/tasks',
+        permanent: true,
+      },
+      {
+        source: '/login',
+        destination: '/sign-in',
+        permanent: true,
+      },
     ];
   },
   async rewrites() {
@@ -29,10 +44,6 @@ const nextConfig = {
       {
         source: '/meetly/api/:path*',
         destination: `${apiHost}/api/:path*`,
-      },
-      {
-        source: '/meetly/:path*',
-        destination: '/:path*',
       },
       {
         source: '/api/:path*',

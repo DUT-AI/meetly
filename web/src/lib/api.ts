@@ -2,9 +2,6 @@ import axios from 'axios';
 
 const getApiBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_BASE_URL) return process.env.NEXT_PUBLIC_API_BASE_URL;
-  if (typeof window !== 'undefined' && window.location.pathname.startsWith('/meetly')) {
-    return '/meetly/api/v1';
-  }
   return '/api/v1';
 };
 
