@@ -17,8 +17,7 @@ const nextConfig = {
     return [
       {
         source: '/',
-        destination: '/meetly/tasks',
-        basePath: false,
+        destination: '/tasks',
         permanent: false,
       },
     ];
@@ -27,6 +26,14 @@ const nextConfig = {
     const internalApiUrl = process.env.INTERNAL_API_URL || 'http://api:8000/api/v1';
     const apiHost = internalApiUrl.replace(/\/api\/v1\/?$/, '');
     return [
+      {
+        source: '/meetly/api/:path*',
+        destination: `${apiHost}/api/:path*`,
+      },
+      {
+        source: '/meetly/:path*',
+        destination: '/:path*',
+      },
       {
         source: '/api/:path*',
         destination: `${apiHost}/api/:path*`,

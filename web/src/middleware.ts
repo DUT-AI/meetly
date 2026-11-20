@@ -5,17 +5,28 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('access_token')?.value;
   const { pathname } = request.nextUrl;
 
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/sign-in');
-  const isPublicPage = isAuthPage || pathname.startsWith('/privacy') || pathname.startsWith('/api');
+  const isAuthPage =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/sign-in') ||
+    pathname.startsWith('/meetly/sign-in') ||
+    pathname.startsWith('/meetly/login');
+  const isPublicPage =
+    isAuthPage ||
+    pathname.startsWith('/privacy') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/meetly/privacy') ||
+    pathname.startsWith('/meetly/api');
 
   if (!token && !isPublicPage) {
-    const loginUrl = new URL('/login', request.url);
+    const signInPath = pathname.startsWith('/meetly') ? '/meetly/sign-in' : '/sign-in';
+    const loginUrl = new URL(signInPath, request.url);
     loginUrl.searchParams.set('returnUrl', pathname);
     return NextResponse.redirect(loginUrl);
   }
 
   if (token && isAuthPage) {
-    const defaultUrl = new URL('/tasks', request.url);
+    const destinationPath = pathname.startsWith('/meetly') ? '/meetly/tasks' : '/tasks';
+    const defaultUrl = new URL(destinationPath, request.url);
     return NextResponse.redirect(defaultUrl);
   }
 
